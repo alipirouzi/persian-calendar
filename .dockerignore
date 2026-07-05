@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.git/
+.gitignore
+.idea/
+.vs/
+.DS_Store
+**/.DS_Store
+.claude/
+Web/appsettings.Development.json
+README.md
+LICENSE
+Dockerfile
+.dockerignore
+.github/

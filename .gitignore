@@ -1,0 +1,20 @@
+# .NET build artifacts
+bin/
+obj/
+publish/
+
+# User-specific files
+*.user
+*.suo
+
+# JetBrains Rider / IntelliJ
+.idea/
+
+# Visual Studio
+.vs/
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/

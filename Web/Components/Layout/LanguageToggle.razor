@@ -1,0 +1,32 @@
+@using Web.Services
+@inject LocalizationService LocalizationService
+@implements IDisposable
+@rendermode InteractiveServer
+
+<button class="language-toggle" @onclick="ToggleLanguage">
+    <span class="toggle-slider">
+        <span class="toggle-text">@(LocalizationService.CurrentLanguage == "en" ? "English" : "فارسی")</span>
+    </span>
+</button>
+
+@code {
+    protected override void OnInitialized()
+    {
+        LocalizationService.OnLanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleLanguage()
+    {
+        LocalizationService.ToggleLanguage();
+    }
+
+    public void Dispose()
+    {
+        LocalizationService.OnLanguageChanged -= OnLanguageChanged;
+    }
+}

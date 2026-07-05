@@ -1,0 +1,38 @@
+﻿@using Web.Services
+@inject LocalizationService LocalizationService
+@implements IDisposable
+@inherits LayoutComponentBase
+
+<div class="page" dir="@LocalizationService.Direction">
+    <header class="app-header">
+        <LanguageToggle />
+    </header>
+    <main>
+        <article class="content">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        LocalizationService.OnLanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        LocalizationService.OnLanguageChanged -= OnLanguageChanged;
+    }
+}
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>

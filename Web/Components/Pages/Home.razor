@@ -1,0 +1,252 @@
+@page "/"
+@using Lib
+@using Web.Services
+@inject CalendarService CalendarService
+@inject LocalizationService LocalizationService
+@implements IDisposable
+@rendermode InteractiveServer
+
+<PageTitle>@LocalizationService.Translate("PageTitle")</PageTitle>
+
+<div class="calendar-container">
+    <h1 class="main-title">@LocalizationService.Translate("MainTitle")</h1>
+
+    <div class="current-time-section">
+        <h2>@LocalizationService.Translate("CurrentDateTime")</h2>
+        <div class="time-display">
+            <div class="calendar-display persian">
+                <div class="calendar-label">@LocalizationService.Translate("PersianCalendar")</div>
+                <div class="timezone-selector">
+                    <label>@LocalizationService.Translate("Timezone")</label>
+                    <select @bind="selectedPersianTimeZone" class="timezone-dropdown">
+                        @foreach (var tz in CalendarService.GetAvailableTimeZones())
+                        {
+                            <option value="@tz">@CalendarService.GetTimeZoneDisplayName(tz)</option>
+                        }
+                    </select>
+                </div>
+                <div class="calendar-date">@FormatPersianDate(CalendarService.CurrentPersianTimeZonePersianDate)</div>
+                <div class="calendar-time">@CalendarService.CurrentPersianTimeZoneDateTime.ToString("HH:mm:ss")</div>
+            </div>
+            <div class="calendar-display gregorian">
+                <div class="calendar-label">@LocalizationService.Translate("GregorianCalendar")</div>
+                <div class="timezone-selector">
+                    <label>@LocalizationService.Translate("Timezone")</label>
+                    <select @bind="selectedGregorianTimeZone" class="timezone-dropdown">
+                        @foreach (var tz in CalendarService.GetAvailableTimeZones())
+                        {
+                            <option value="@tz">@CalendarService.GetTimeZoneDisplayName(tz)</option>
+                        }
+                    </select>
+                </div>
+                <div class="calendar-date">@FormatGregorianDate(CalendarService.CurrentGregorianTimeZoneDateTime)</div>
+                <div class="calendar-time">@CalendarService.CurrentGregorianTimeZoneDateTime.ToString("HH:mm:ss")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="converter-section">
+        <div class="converter-card">
+            <h3>@LocalizationService.Translate("PersianToGregorian")</h3>
+            <div class="input-group">
+                <div class="input-field">
+                    <label>@LocalizationService.Translate("Year")</label>
+                    <input type="number" @bind="persianYear" placeholder="1403" min="1" max="9999" />
+                </div>
+                <div class="input-field">
+                    <label>@LocalizationService.Translate("Month")</label>
+                    <input type="number" @bind="persianMonth" placeholder="10" min="1" max="12" />
+                </div>
+                <div class="input-field">
+                    <label>@LocalizationService.Translate("Day")</label>
+                    <input type="number" @bind="persianDay" placeholder="22" min="1" max="31" />
+                </div>
+            </div>
+            <button class="convert-button" @onclick="ConvertPersianToGregorian">@LocalizationService.Translate("Convert")</button>
+            @if (!string.IsNullOrEmpty(persianToGregorianError))
+            {
+                <div class="error-message">@persianToGregorianError</div>
+            }
+            @if (persianToGregorianResult != null)
+            {
+                <div class="result-box">
+                    <div class="result-label">@LocalizationService.Translate("Result")</div>
+                    <div class="result-value">@FormatGregorianDate(persianToGregorianResult.Value)</div>
+                </div>
+            }
+        </div>
+
+        <div class="converter-card">
+            <h3>@LocalizationService.Translate("GregorianToPersian")</h3>
+            <div class="input-group">
+                <div class="input-field">
+                    <label>@LocalizationService.Translate("Year")</label>
+                    <input type="number" @bind="gregorianYear" placeholder="2025" min="622" max="9999" />
+                </div>
+                <div class="input-field">
+                    <label>@LocalizationService.Translate("Month")</label>
+                    <input type="number" @bind="gregorianMonth" placeholder="1" min="1" max="12" />
+                </div>
+                <div class="input-field">
+                    <label>@LocalizationService.Translate("Day")</label>
+                    <input type="number" @bind="gregorianDay" placeholder="11" min="1" max="31" />
+                </div>
+            </div>
+            <button class="convert-button" @onclick="ConvertGregorianToPersian">@LocalizationService.Translate("Convert")</button>
+            @if (!string.IsNullOrEmpty(gregorianToPersianError))
+            {
+                <div class="error-message">@gregorianToPersianError</div>
+            }
+            @if (gregorianToPersianResult != null)
+            {
+                <div class="result-box">
+                    <div class="result-label">@LocalizationService.Translate("Result")</div>
+                    <div class="result-value">@FormatPersianDate(gregorianToPersianResult.Value)</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private int persianYear = 1403;
+    private int persianMonth = 10;
+    private int persianDay = 22;
+    private DateTime? persianToGregorianResult;
+    private string persianToGregorianError = string.Empty;
+
+    private int gregorianYear = 2025;
+    private int gregorianMonth = 1;
+    private int gregorianDay = 11;
+    private PersianDate? gregorianToPersianResult;
+    private string gregorianToPersianError = string.Empty;
+
+    private string selectedPersianTimeZone
+    {
+        get => CalendarService.PersianTimeZoneId;
+        set => CalendarService.PersianTimeZoneId = value;
+    }
+
+    private string selectedGregorianTimeZone
+    {
+        get => CalendarService.GregorianTimeZoneId;
+        set => CalendarService.GregorianTimeZoneId = value;
+    }
+
+    protected override void OnInitialized()
+    {
+        CalendarService.OnTimeChanged += OnTimeChanged;
+        CalendarService.OnTimeZoneChanged += OnTimeZoneChanged;
+        LocalizationService.OnLanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnTimeChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnTimeZoneChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnLanguageChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ConvertPersianToGregorian()
+    {
+        persianToGregorianError = string.Empty;
+        persianToGregorianResult = null;
+
+        try
+        {
+            if (persianYear < 1 || persianYear > 9999)
+            {
+                persianToGregorianError = LocalizationService.Translate("ErrorYearRange", 1, 9999);
+                return;
+            }
+
+            if (persianMonth < 1 || persianMonth > 12)
+            {
+                persianToGregorianError = LocalizationService.Translate("ErrorMonthRange");
+                return;
+            }
+
+            if (persianDay < 1 || persianDay > 31)
+            {
+                persianToGregorianError = LocalizationService.Translate("ErrorDayRange");
+                return;
+            }
+
+            var persianDate = new PersianDate(persianYear, persianMonth, persianDay);
+            persianToGregorianResult = CalendarService.ConvertToGregorian(persianDate);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            persianToGregorianError = LocalizationService.Translate("ErrorInvalidDate");
+        }
+        catch (Exception ex)
+        {
+            persianToGregorianError = LocalizationService.Translate("ErrorGeneral", ex.Message);
+        }
+    }
+
+    private void ConvertGregorianToPersian()
+    {
+        gregorianToPersianError = string.Empty;
+        gregorianToPersianResult = null;
+
+        try
+        {
+            if (gregorianYear < 622 || gregorianYear > 9999)
+            {
+                gregorianToPersianError = LocalizationService.Translate("ErrorYearRange", 622, 9999);
+                return;
+            }
+
+            if (gregorianMonth < 1 || gregorianMonth > 12)
+            {
+                gregorianToPersianError = LocalizationService.Translate("ErrorMonthRange");
+                return;
+            }
+
+            if (gregorianDay < 1 || gregorianDay > 31)
+            {
+                gregorianToPersianError = LocalizationService.Translate("ErrorDayRange");
+                return;
+            }
+
+            var gregorianDate = new DateTime(gregorianYear, gregorianMonth, gregorianDay);
+            gregorianToPersianResult = CalendarService.ConvertToPersian(gregorianDate);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            gregorianToPersianError = LocalizationService.Translate("ErrorInvalidDate");
+        }
+        catch (Exception ex)
+        {
+            gregorianToPersianError = LocalizationService.Translate("ErrorGeneral", ex.Message);
+        }
+    }
+
+    private string FormatPersianDate(PersianDate date)
+    {
+        var monthName = LocalizationService.GetPersianMonthName(date.Month);
+        return $"{monthName} {date.Day}, {date.Year}";
+    }
+
+    private string FormatGregorianDate(DateTime date)
+    {
+        var monthName = LocalizationService.GetGregorianMonthName(date.Month);
+        return $"{monthName} {date.Day}, {date.Year}";
+    }
+
+    public void Dispose()
+    {
+        CalendarService.OnTimeChanged -= OnTimeChanged;
+        CalendarService.OnTimeZoneChanged -= OnTimeZoneChanged;
+        LocalizationService.OnLanguageChanged -= OnLanguageChanged;
+    }
+}
