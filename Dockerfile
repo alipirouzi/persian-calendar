@@ -9,7 +9,10 @@ COPY Tests/Tests.csproj Tests/
 RUN dotnet restore Web/Web.csproj
 
 COPY . .
-RUN dotnet publish Web/Web.csproj --configuration Release --output /app/publish --no-restore
+# Note: no --no-restore here. Publishing with the full source tree present lets the
+# SDK's Static Web Assets step materialize framework assets (e.g. _framework/blazor.web.js).
+# With --no-restore after a csproj-only restore, those assets are silently omitted.
+RUN dotnet publish Web/Web.csproj --configuration Release --output /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
