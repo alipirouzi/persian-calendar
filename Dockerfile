@@ -1,34 +1,14 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM node:22-alpine AS build
 WORKDIR /src
+COPY Site/package.json Site/package-lock.json ./
+RUN npm ci
+COPY Site/ ./
+RUN npm run build
 
-COPY PersianCalendar.sln ./
-COPY Lib/Lib.csproj Lib/
-COPY Web/Web.csproj Web/
-COPY Console/Console.csproj Console/
-COPY Tests/Tests.csproj Tests/
-RUN dotnet restore Web/Web.csproj
-
-COPY . .
-# Note: no --no-restore here. Publishing with the full source tree present lets the
-# SDK's Static Web Assets step materialize framework assets (e.g. _framework/blazor.web.js).
-# With --no-restore after a csproj-only restore, those assets are silently omitted.
-RUN dotnet publish Web/Web.csproj --configuration Release --output /app/publish
-
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
-WORKDIR /app
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=build /app/publish .
-
-ENV ASPNETCORE_HTTP_PORTS=8080
+FROM nginx:1.27-alpine AS runtime
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY deploy/security-headers.conf /etc/nginx/security-headers.conf
+COPY --from=build /src/dist /usr/share/nginx/html
 EXPOSE 8080
-
-USER app
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
-
-ENTRYPOINT ["dotnet", "Web.dll"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget -qO- http://localhost:8080/health || exit 1
