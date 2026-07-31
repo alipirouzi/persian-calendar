@@ -19,7 +19,7 @@ describe('toGregorian', () => {
   });
   it('rejects years outside the supported range', () => {
     expect(() => toGregorian({ py: 1199, pm: 1, pd: 1 })).toThrow(RangeError);
-    expect(() => toGregorian({ py: 1601, pm: 1, pd: 1 })).toThrow(RangeError);
+    expect(() => toGregorian({ py: 1501, pm: 1, pd: 1 })).toThrow(RangeError);
   });
   it('rejects invalid month and day', () => {
     expect(() => toGregorian({ py: 1404, pm: 13, pd: 1 })).toThrow(RangeError);
@@ -64,8 +64,8 @@ describe('persianDayOfYear', () => {
 });
 
 describe('round-trip', () => {
-  it('every day of 1200–1600 survives P→G→P', () => {
-    for (let py = 1200; py <= 1600; py += 1) {
+  it('every day of 1200–1500 survives P→G→P', () => {
+    for (let py = 1200; py <= 1500; py += 1) {
       for (let pm = 1; pm <= 12; pm += 1) {
         const days = daysInPersianMonth(py, pm);
         for (let pd = 1; pd <= days; pd += 1) {

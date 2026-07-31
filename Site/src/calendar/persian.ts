@@ -2,7 +2,7 @@ export interface PersianDateParts { py: number; pm: number; pd: number }
 export interface GregorianDateParts { gy: number; gm: number; gd: number }
 
 export const PERSIAN_YEAR_MIN = 1200;
-export const PERSIAN_YEAR_MAX = 1600;
+export const PERSIAN_YEAR_MAX = 1500;
 
 // Break years of the Birashk arithmetic Jalaali calendar (jalaali-js, MIT).
 const BREAKS = [
