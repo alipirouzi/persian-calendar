@@ -35,3 +35,8 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
 #quote-text::after { content: '”'; color: var(--accent); }
 html[lang='fa'] #quote-text { font-style: normal; }
 #quote-author { color: var(--text-muted); font-size: 0.85rem; letter-spacing: 0.06em; }
+
+.clock { color: var(--text); display: block; }
+.clock .second-hand { stroke: var(--accent); }
+#clock-section { display: grid; justify-items: center; }
+@media (max-width: 480px) { .clock { width: 200px; height: 200px; } }
