@@ -123,8 +123,14 @@ PersianCalendar/
    Rendered in the active language with author attribution.
 5. **Language toggle** — EN ⇄ FA, persisted in `localStorage`. Default: `fa` if
    `navigator.language` starts with `fa`, else `en`. FA mode sets
-   `<html lang="fa" dir="rtl">` and uses Persian-Indic digits throughout
-   (dates, clock numerals, converter values via `Intl.NumberFormat('fa')`).
+   `<html lang="fa" dir="rtl">` and uses Persian-Indic digits in all **rendered
+   text** — the two date lines and the Tehran time line. The clock dial is analog
+   and carries no numerals. The converter's `<input type="number">` fields keep
+   **Western digits deliberately**: a native numeric input only accepts and
+   round-trips ASCII digits, so localizing them would break typing, the spinner,
+   `min`/`max` validation, and mobile numeric keypads. Digit conversion is a
+   simple ASCII→Persian mapping in `toLocaleDigits`, not `Intl.NumberFormat`,
+   because grouping separators are unwanted in a year.
 
 ### 6.2 Visual direction — horological minimal
 

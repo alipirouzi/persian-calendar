@@ -46,7 +46,7 @@ grew a backend.
 | X11 forwarding disabled | `X11Forwarding no` (was `yes`) | same file |
 | Dedicated non-root deploy identity | user `deploy` (uid 1001); CI no longer authenticates as root | `id deploy` |
 | Deploy key cannot get a shell | `authorized_keys` entry is `command="/usr/local/bin/time-app-deploy",restrict` — `restrict` disables pty, port/agent/X11 forwarding, and user rc | verified: a request for `whoami` and a request for `cat /etc/shadow` both ran the deploy script instead and leaked nothing |
-| Deploy credentials never in the repo | `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS` exist only as GitHub Actions secrets; the private key was generated, installed, and deleted from local disk in one session and never echoed | secret list, 2026-07-31 |
+| Deploy credentials never in the repo | `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS` exist only as GitHub Actions secrets in the branch-restricted `production` environment (no repo-scoped copies remain); the private key was generated, installed, and shredded from local disk in one session and never echoed | `gh secret list --env production` / empty `gh secret list`, 2026-07-31 |
 | Host key pinning in CI | `DEPLOY_KNOWN_HOSTS` is pre-seeded, so a rebuilt or spoofed host fails the deploy instead of being trusted | `.github/workflows/ci.yml` |
 
 ### Network security (CC6.6, CC6.7)
@@ -57,17 +57,22 @@ grew a backend.
 | Only necessary ports reachable | three allows: **22/tcp, 80/tcp, 443/tcp**, IPv4 and IPv6 | same |
 | No unintended public listeners | audited before enabling the firewall: only 22, 80, 443 bound publicly; the co-tenant application's Postgres and MinIO listen on the docker network only, never on a host port | `ss -tulpn`, 2026-07-31 |
 | TLS terminated at the edge | Caddy terminates TLS for `time.automated.ink` and reverse-proxies to the container over an internal docker network; the container itself is never published to the host | `/opt/caddy/Caddyfile`, `/opt/time/docker-compose.yml` |
-| Browser-side hardening | CSP `default-src 'self'` with no external origins (every asset self-hosted), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`; HSTS added by Caddy | `deploy/security-headers.conf`; verified live in response headers |
+| Browser-side hardening | CSP `default-src 'self'` with no external origins (every asset self-hosted), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()` | `deploy/security-headers.conf`; verified live in response headers |
+| HSTS | `Strict-Transport-Security: max-age=31536000; includeSubDomains`, set **by nginx at the origin** — not by Caddy. An earlier revision of this document claimed Caddy adds HSTS automatically; it does not, and the header was in fact absent until 2026-07-31 | `deploy/security-headers.conf`; verified in the container image and live in `curl -sI https://time.automated.ink/` after the 2026-07-31 deploy |
+| Version disclosure suppressed | `server_tokens off` — responses carry `Server: nginx` with no version | `deploy/nginx.conf`; verified live |
 
 ### Change management (CC8.1)
 
 | Control | Implementation | Evidence |
 |---|---|---|
 | All changes go through version control | no manual edits to the running site; the only path to production is a commit on `master` | `.github/workflows/ci.yml` |
-| Automated gates before deploy | the deploy job `needs: [dotnet, site]` — it cannot run unless `dotnet build -warnaserror`, 19 NUnit tests, 46 Vitest tests (including bit-exact parity against `System.Globalization.PersianCalendar` for ~110,000 days), and 13 Playwright E2E tests have all passed | same |
+| Automated gates before deploy | the deploy job `needs: [dotnet, site]` — it cannot run unless `dotnet build -warnaserror`, 19 NUnit tests, 46 Vitest tests (including bit-exact parity against `System.Globalization.PersianCalendar` for ~110,000 days), and 14 Playwright E2E tests have all passed | same |
 | Deploys are health-verified, not fire-and-forget | after shipping the image, CI polls `https://time.automated.ink/health` and asserts the page contains the expected mount point; the run **fails** if the site does not become healthy within 3 minutes | same |
-| Deploy actions are constrained | the host executes one fixed script for the deploy key — load image, `compose up -d`, prune. CI cannot run arbitrary commands even if the workflow were modified | `/usr/local/bin/time-app-deploy` |
-| Deploy audit trail | every deploy is a GitHub Actions run: who pushed, which commit, which jobs passed, what the deploy step output, and when — retained in the repository's run history | GitHub Actions run history |
+| Host shell is unreachable from CI | the deploy key's `authorized_keys` entry forces one fixed script — load image, `compose up -d`, prune — and `restrict` denies a pty and all forwarding. Any command string sent by the client is discarded. **This contains the host shell only.** The script still `docker load`s whatever image is piped to it and starts it, so anyone holding `DEPLOY_SSH_KEY` can run arbitrary code *inside a container* on this host — and because `deploy` is in the `docker` group, that container can be privileged (see gap 2). The forced command is not a sandbox; it narrows the attack from "shell as a docker-group user" to "arbitrary image started by compose" | `/usr/local/bin/time-app-deploy`; verified 2026-07-31 that `cat /etc/shadow` sent as the SSH command ran the deploy script instead |
+| Deploy credentials are scoped to a branch-restricted environment | the three `DEPLOY_*` secrets live in the GitHub `production` environment, whose deployment branch policy allows **only `master`**, and the deploy job declares `environment: production`. Until 2026-07-31 they were **repo-scoped**, which meant any workflow run on any branch — including one added by a pull request from a fork-less contributor with push access — could read the deploy private key. That was the gap; environment scoping closes it | `.github/workflows/ci.yml`; `gh secret list --env production`, 2026-07-31 |
+| Deploy keypair rotated on scope change | the old key was revoked by replacing the forced-command line in `/home/deploy/.ssh/authorized_keys`; the new key exists only as the environment secret. Verified before the repo-scoped copies were deleted by piping a `hello-world` image through the real deploy pipe under `StrictHostKeyChecking=yes` | rotation performed 2026-07-31 |
+| CI token is least-privilege | `permissions: contents: read` at workflow level; the default `GITHUB_TOKEN` was previously read-write across every scope | `.github/workflows/ci.yml` |
+| Deploy audit trail | every deploy is a GitHub Actions run: who pushed, which commit, which jobs passed, what the deploy step output, and when — retained in the repository's run history. Environment deployments are additionally listed under the repository's `production` environment | GitHub Actions run history |
 | Rollback path is documented | previous images remain on the host and are retagged to `time-app:current` to revert | README, "Rolling back" |
 
 ### Vulnerability and patch management (CC7.1)
@@ -76,7 +81,7 @@ grew a backend.
 |---|---|---|
 | Automatic OS security updates | `unattended-upgrades` enabled | verified 2026-07-31 |
 | Host fully patched at review time | 14 pending updates applied; pending count **0** afterwards | `apt`, 2026-07-31 |
-| Container base images pinned to a minor version | `node:22-alpine` (build stage, not shipped) and `nginx:1.27-alpine` (runtime) | `Dockerfile` |
+| Container base images tracked at a minor-version tag | `node:22-alpine` (build stage, not shipped) and `nginx:1.27-alpine` (runtime). These are **mutable tags, not digest pins** — a rebuild picks up whatever the tag currently points at, which delivers patches automatically but means builds are not bit-reproducible and a compromised upstream tag would be pulled silently. Digest pinning plus an update bot would trade one risk for the other; it has not been done | `Dockerfile` |
 | Minimal runtime surface | the shipped image contains nginx plus static files — no application runtime, no interpreter, no package manager in the serving path | `Dockerfile` |
 | No third-party client code | zero external origins; no CDN scripts, no analytics tags, no fonts loaded from a third party. Supply-chain risk is confined to build-time npm dependencies, which do not execute in visitors' browsers beyond the bundled output | CSP + `Site/package.json` |
 
@@ -103,7 +108,7 @@ grew a backend.
 |---|---|
 | No personal data processed | no accounts, no forms, no submissions, no cookies, no analytics, no fingerprinting, no logging of user input — the site never sends anything about the visitor anywhere |
 | No client-side persistence of personal data | `localStorage` holds exactly one value: the chosen UI language (`en` / `fa`). It is a preference, not personal data, and never leaves the browser |
-| No third-party processors in the serving path | all assets self-hosted; CSP forbids external origins, so a rogue dependency cannot exfiltrate to a third party at runtime |
+| No third-party processors in the serving path | all assets self-hosted; CSP restricts every **subresource and connection** destination (`default-src 'self'`, no `connect-src` escape hatch) to this origin, so a rogue dependency cannot load or `fetch`/`XHR`/WebSocket to a third party. CSP does **not** restrict top-level navigation, so it is not a complete exfiltration control — script that runs in the page could still navigate the visitor elsewhere. There is no visitor data to carry in such a navigation, which is why this is acceptable here rather than mitigated |
 | GDPR posture | trivial **by design**: with no personal data collected there is no processing to find a lawful basis for, no data subject rights machinery required, no DPA needed with a sub-processor for user data, and no cross-border transfer of personal data. The hosting provider (Hetzner) is EU-based |
 | Confidentiality of secrets | the only secrets in scope are the three GitHub Actions deploy secrets; nothing sensitive is committed and the repository contains no credentials |
 

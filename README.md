@@ -33,11 +33,11 @@ vectors that prove the TypeScript port correct) and the **static site** (the pro
 PersianCalendar/
 ├── Lib/                    C# reference implementation
 │   ├── PersianDate.cs        record struct
-│   └── CalendarConverter.cs  Convert(PersianDate) / Convert(DateTime),
-│                             backed by System.Globalization.PersianCalendar
+│   ├── CalendarConverter.cs  Convert(PersianDate) / Convert(DateTime),
+│   │                         backed by System.Globalization.PersianCalendar
+│   └── VectorGenerator.cs    emits parity vectors as JSON, via CalendarConverter
 ├── Console/                CLI
-│   ├── Program.cs          prints today's Persian date; --generate-vectors mode
-│   └── VectorGenerator.cs  emits parity vectors as JSON
+│   └── Program.cs          prints today's Persian date; --generate-vectors mode
 ├── Tests/                  NUnit tests for Lib + the vector generator (19 tests)
 │
 ├── Site/                   THE PRODUCT — static site, Vite + vanilla TypeScript
@@ -51,7 +51,7 @@ PersianCalendar/
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/quotes.json  366 bilingual quotes
 │   ├── tests/              Vitest (46 tests, incl. .NET parity)
-│   └── e2e/                Playwright (13 tests, incl. screenshot matrix)
+│   └── e2e/                Playwright (14 tests, incl. screenshot matrix)
 │
 ├── deploy/
 │   ├── nginx.conf             static serving, caching, /health
@@ -61,8 +61,10 @@ PersianCalendar/
 ```
 
 The C# side is **not** dead code and is not shipped to users. It is the correctness oracle:
-`Console --generate-vectors` walks `System.Globalization.PersianCalendar` day by day and
-emits the vectors that the TypeScript parity test asserts against. If a .NET version ever
+`Console --generate-vectors` walks every day in range through
+`Lib.CalendarConverter` — the same conversion path the .NET app uses, itself backed by
+`System.Globalization.PersianCalendar` — and emits the vectors that the TypeScript parity
+test asserts against. If a .NET version ever
 changes its Persian calendar behaviour, CI fails.
 
 ## Running locally
@@ -112,7 +114,7 @@ npm test
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 13 tests
+### E2E (Playwright) — 14 tests
 
 ```bash
 cd Site
@@ -123,8 +125,9 @@ npm run e2e
 Playwright starts `npm run preview` itself and tests the real production build. Coverage:
 today prefilled and cross-checked against ICU's Persian calendar, live conversion in both
 directions, month-aware localized validation errors, FA toggle → RTL + Persian digits,
-daily quote, clock hands actually moving, and a light/dark × 320/768/1440 screenshot
-matrix written to `Site/test-results/screens/`.
+daily quote, clock hands actually moving, the `prefers-reduced-motion` interval fallback
+still advancing them, and a light/dark × 320/768/1440 screenshot matrix written to
+`Site/test-results/screens/`.
 
 ## Supported conversion range: Persian years 1200–1500 AP
 
@@ -170,7 +173,10 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   deliberately. There is no manual toggle, by design.
 - **Language** — EN ⇄ FA toggle persisted in `localStorage`, defaulting to `fa` when
   `navigator.language` starts with `fa`. FA sets `<html lang="fa" dir="rtl">` and switches
-  every numeral to Persian-Indic digits.
+  every numeral in **rendered text** — the two date lines and the Tehran time line — to
+  Persian-Indic digits. The converter's `<input type="number">` fields keep Western digits
+  on purpose: a native numeric input only accepts ASCII digits, so localizing them would
+  break typing, the spinner, `min`/`max` validation, and mobile numeric keypads.
 - **Privacy** — no cookies, no analytics, no third-party requests, no personal data
   processed or stored anywhere. See `docs/SECURITY.md`.
 
@@ -186,6 +192,7 @@ GitHub Actions (.github/workflows/ci.yml)
    └─ deploy   (master push only, needs both)
         docker build -t time-app:current .
         docker save | gzip | ssh deploy@HOST      ← forced-command key, no shell
+                                                  ← environment: production (master only)
         curl https://time.automated.ink/health    ← polled up to 3 min, run fails if unhealthy
    │
    ▼
@@ -202,8 +209,12 @@ Hetzner host
 No container registry is involved — the image is streamed straight from the runner to the
 host over SSH and loaded locally as `time-app:current`.
 
-**Deploy secrets** (GitHub Actions repository secrets, never in the repo):
-`DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`.
+**Deploy secrets** — `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS` — are never in
+the repo. They live in the GitHub **`production` environment**, whose deployment branch
+policy allows only `master`, and the deploy job declares `environment: production`. The
+workflow's `GITHUB_TOKEN` is `contents: read`. Secrets are passed to steps via `env:` rather
+than interpolated into shell command lines, and the SSH call uses
+`-o StrictHostKeyChecking=yes` against the pinned `DEPLOY_KNOWN_HOSTS` entry.
 
 ### Serving configuration
 
@@ -212,8 +223,12 @@ host over SSH and loaded locally as `time-app:current`.
 - `quotes.json`: `Cache-Control: public, max-age=86400`
 - `/health` → `200 ok` (an nginx `return`, not a file)
 - Security headers on every response: CSP (`default-src 'self'`, no external origins —
-  every asset is self-hosted), `X-Content-Type-Options`, `Referrer-Policy`,
-  `Permissions-Policy`. HSTS is added by Caddy.
+  every asset is self-hosted), `Strict-Transport-Security`, `X-Content-Type-Options`,
+  `Referrer-Policy`, `Permissions-Policy`. **HSTS is set by nginx at the origin** — Caddy
+  does not add it automatically, contrary to what this file previously claimed.
+- `server_tokens off`, so no nginx version is advertised.
+- A 404 under `/assets/` deliberately does *not* get the immutable `Cache-Control` (the
+  `add_header` there omits `always`), so a mistyped asset path is not cached for a year.
 
 ### Rolling back
 
