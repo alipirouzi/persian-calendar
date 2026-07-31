@@ -1933,7 +1933,8 @@ COPY deploy/security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /src/dist /usr/share/nginx/html
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -qO- http://localhost:8080/health || exit 1
+    CMD wget -qO- http://127.0.0.1:8080/health || exit 1
+# 127.0.0.1, not localhost: Alpine resolves localhost to ::1 first and nginx binds IPv4 only
 ```
 
 Note: `npm run build` runs `tsc --noEmit` first — the image build fails on type errors. Vitest/Playwright run in CI, not in the image build. nginx:alpine ships `wget` (busybox), not `curl`.
