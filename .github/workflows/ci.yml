@@ -6,33 +6,82 @@ on:
   pull_request:
     branches: [master]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  test:
+  dotnet:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+      - run: dotnet restore
+      - run: dotnet build --no-restore -warnaserror
+      - run: dotnet test --no-build
+      - name: Generate parity vectors
+        run: dotnet run --project Console -c Release -- --generate-vectors vectors.json 1200 1500
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vectors
+          path: vectors.json
 
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore -warnaserror
-
-      - name: Test
-        run: dotnet test --no-build
+  site:
+    needs: dotnet
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Site/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: vectors
+          path: Site/tests/fixtures
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: Site/test-results/screens/
 
   deploy:
-    needs: test
+    needs: [dotnet, site]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Coolify deploy webhook
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t time-app:current .
+      - name: Configure SSH
         run: |
-          curl -fsS "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+      - name: Ship image and restart
+        run: |
+          docker save time-app:current | gzip \
+            | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes \
+                deploy@${{ secrets.DEPLOY_HOST }} deploy
+      - name: Verify deployment
+        run: |
+          for i in $(seq 1 36); do
+            if curl -fsS https://time.automated.ink/health >/dev/null 2>&1 \
+               && curl -fsS https://time.automated.ink/ | grep -q 'clock-mount'; then
+              echo "Live and healthy"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Deployment did not become healthy within 3 minutes"; exit 1
