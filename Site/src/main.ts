@@ -11,7 +11,7 @@ import { persianDayOfYear } from './calendar/persian';
 import { setupConverter } from './converter/converter';
 import {
   GREGORIAN_MONTHS, initialLang, PERSIAN_MONTHS, persistLang, STRINGS,
-  toLocaleDigits, type Lang,
+  toLocaleDigits, type Lang, type StringKey,
 } from './i18n/strings';
 import { loadQuotes, quoteForPersianDay, type Quote } from './quotes/quotes';
 import { createClock } from './clock/clock';
@@ -31,9 +31,13 @@ function renderStatic(): void {
   text('lang-toggle', STRINGS[lang].langToggle);
   text('legend-persian', STRINGS[lang].persianLabel);
   text('legend-gregorian', STRINGS[lang].gregorianLabel);
+  const dictionary = STRINGS[lang];
   for (const span of document.querySelectorAll<HTMLElement>('[data-str]')) {
-    const key = span.dataset['str'] as keyof typeof STRINGS.en;
-    span.textContent = STRINGS[lang][key];
+    const key = span.dataset['str'];
+    // Unknown or missing keys are markup bugs, not runtime data — skip rather
+    // than writing "undefined" into the page.
+    if (key === undefined || !Object.hasOwn(dictionary, key)) continue;
+    span.textContent = dictionary[key as StringKey];
   }
 }
 

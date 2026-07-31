@@ -69,6 +69,22 @@ test('clock hands are driven', async ({ page }) => {
   expect(after).not.toBe(before);
 });
 
+test('reduced motion still advances the clock via the interval fallback', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  const second = page.locator('#hand-second');
+  // The hand is positioned immediately, before any tick fires.
+  await expect(second).toHaveAttribute('transform', /^rotate\([\d.]+ 100 100\)$/);
+  const before = await second.getAttribute('transform');
+  // The 1 s interval fallback must keep it moving even with rAF disabled.
+  await expect
+    .poll(async () => (await second.getAttribute('transform')) !== before, {
+      timeout: 5000,
+      intervals: [250, 250, 250, 250],
+    })
+    .toBe(true);
+});
+
 for (const scheme of ['light', 'dark'] as const) {
   for (const width of [320, 768, 1440]) {
     test(`screenshot ${scheme} @${width}`, async ({ page }) => {
