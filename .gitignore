@@ -18,3 +18,9 @@ publish/
 
 # Claude Code
 .claude/
+
+Site/node_modules/
+Site/dist/
+Site/tests/fixtures/vectors.json
+Site/test-results/
+Site/playwright-report/
