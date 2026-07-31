@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -60,21 +63,33 @@ jobs:
     needs: [dotnet, site]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    # Deploy credentials are environment-scoped, not repo-scoped: the environment
+    # is restricted to the master branch, so a workflow on any other ref cannot
+    # reach them even if it requests this job.
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - name: Build image
         run: docker build -t time-app:current .
+      # Secrets are passed through env: rather than interpolated into the script
+      # body, so their values never become part of the shell command line.
       - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" >> ~/.ssh/known_hosts
       - name: Ship image and restart
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           docker save time-app:current | gzip \
             | ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes \
-                deploy@${{ secrets.DEPLOY_HOST }} deploy
+                -o StrictHostKeyChecking=yes \
+                "deploy@$DEPLOY_HOST" deploy
       - name: Verify deployment
         run: |
           for i in $(seq 1 36); do
