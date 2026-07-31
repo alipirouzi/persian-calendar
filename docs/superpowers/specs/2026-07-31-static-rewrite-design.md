@@ -1,7 +1,7 @@
 # Persian Calendar — Static Rewrite Design
 
 **Date:** 2026-07-31
-**Status:** Approved by Ali (design conversation, 2026-07-31)
+**Status:** Implemented 2026-07-31
 **Deployed at:** https://time.automated.ink/
 
 ## 1. Goal

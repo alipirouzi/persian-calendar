@@ -7,7 +7,6 @@
 .DS_Store
 **/.DS_Store
 .claude/
-Web/appsettings.Development.json
 README.md
 LICENSE
 Dockerfile

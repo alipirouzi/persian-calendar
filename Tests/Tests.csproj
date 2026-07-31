@@ -23,7 +23,6 @@
     <ItemGroup>
         <ProjectReference Include="../Console/Console.csproj"/>
         <ProjectReference Include="../Lib/Lib.csproj"/>
-        <ProjectReference Include="../Web/Web.csproj"/>
     </ItemGroup>
 
 </Project>

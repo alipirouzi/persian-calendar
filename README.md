@@ -1,504 +1,252 @@
-# Persian Calendar Converter
+# Persian Calendar
 
-A comprehensive Persian (Shamsi/Solar Hijri) to Gregorian calendar converter built with .NET 10 and Blazor. The application provides real-time calendar conversion, multi-timezone support, and bilingual interface in English and Farsi.
+Persian (Shamsi / Solar Hijri) ↔ Gregorian date conversion, a live analog clock, and a
+daily Stoic thought — bilingual EN/FA with full RTL.
 
-## Overview
+**Live:** <https://time.automated.ink/>
 
-This project enables seamless conversion between Persian and Gregorian calendars with precise timezone handling. It includes a web interface for interactive conversions, a console application for quick conversions, and a robust library for integration into other projects.
+## What it is
 
-## Features
+A **fully static, client-side site**. There is no application server: nginx serves a
+handful of hashed files, and every conversion, clock frame, and language switch happens
+in the visitor's browser. After first paint there are zero network round-trips (the only
+deferred fetch is `quotes.json`).
 
-- Real-time bidirectional calendar conversion between Persian and Gregorian calendars
-- Live clock display with automatic updates
-- Multi-timezone support with 15+ predefined timezones
-- Bilingual interface with full RTL support for Farsi
-- Date validation with comprehensive error handling
-- Round-trip conversion accuracy preservation
-- Responsive web interface built with Blazor Server
-- Comprehensive test coverage with NUnit
+### Why static
 
-## Technologies
+The previous version of this project was Blazor Server. That meant every keystroke in the
+converter was a SignalR round-trip, a server-side timer re-rendered and pushed the clock
+to every connected client once per second, and each visitor held an open websocket plus a
+server-side circuit. The conversion arithmetic itself takes microseconds — effectively all
+of the perceived latency was transport. Moving to a static bundle removes the transport,
+the per-visitor server state, and the server-side scaling concern in one step.
 
-- .NET 10.0
-- ASP.NET Core Blazor Server
-- C# with nullable reference types enabled
-- NUnit for testing
-- System.Globalization.PersianCalendar for calendar calculations
+The shipped bundle is **10.3 kB of JavaScript (4.6 kB gzipped)** and **9.9 kB of CSS
+(2.2 kB gzipped)**, with no runtime framework.
 
-## Project Structure
+## Repo layout
+
+Two things live here: a **C# reference implementation** (which also generates the test
+vectors that prove the TypeScript port correct) and the **static site** (the product).
 
 ```
 PersianCalendar/
-├── Lib/                          # Core library
-│   ├── PersianDate.cs           # Persian date record structure
-│   └── CalendarConverter.cs     # Conversion logic
-├── Console/                      # Console application
-│   └── Program.cs               # Command-line interface
-├── Web/                          # Web application
-│   ├── Program.cs               # Application entry point
-│   ├── Components/
-│   │   ├── Pages/
-│   │   │   ├── Home.razor       # Main calendar interface
-│   │   │   ├── Error.razor      # Error page
-│   │   │   └── NotFound.razor   # 404 page
-│   │   ├── Layout/
-│   │   │   ├── MainLayout.razor       # Main layout wrapper
-│   │   │   ├── NavMenu.razor          # Navigation menu
-│   │   │   ├── LanguageToggle.razor   # Language switcher
-│   │   │   └── ReconnectModal.razor   # Reconnection UI
-│   │   └── App.razor            # Root component
-│   ├── Services/
-│   │   ├── CalendarService.cs         # Calendar operations
-│   │   └── LocalizationService.cs     # Translation service
-│   └── wwwroot/
-│       ├── app.css              # Styling
-│       └── favicon.png          # Application icon
-└── Tests/                        # Test suite
-    ├── CalendarConverterTests.cs      # Converter tests
-    └── LocalizationServiceTests.cs    # Localization tests
+├── Lib/                    C# reference implementation
+│   ├── PersianDate.cs        record struct
+│   └── CalendarConverter.cs  Convert(PersianDate) / Convert(DateTime),
+│                             backed by System.Globalization.PersianCalendar
+├── Console/                CLI
+│   ├── Program.cs          prints today's Persian date; --generate-vectors mode
+│   └── VectorGenerator.cs  emits parity vectors as JSON
+├── Tests/                  NUnit tests for Lib + the vector generator (19 tests)
+│
+├── Site/                   THE PRODUCT — static site, Vite + vanilla TypeScript
+│   ├── index.html          single page, semantic markup
+│   ├── src/
+│   │   ├── calendar/       persian.ts (algorithm port), now.ts (today snapshot)
+│   │   ├── clock/          clock-math.ts (hand angles), clock.ts (SVG + rAF driver)
+│   │   ├── converter/      converter-core.ts (pure), converter.ts (DOM wiring)
+│   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits
+│   │   ├── quotes/         quotes.ts — day-of-year selection
+│   │   └── styles/         tokens.css, base.css, components.css
+│   ├── public/quotes.json  366 bilingual quotes
+│   ├── tests/              Vitest (46 tests, incl. .NET parity)
+│   └── e2e/                Playwright (13 tests, incl. screenshot matrix)
+│
+├── deploy/
+│   ├── nginx.conf             static serving, caching, /health
+│   └── security-headers.conf  CSP and friends
+├── Dockerfile              node:22-alpine build → nginx:1.27-alpine runtime
+└── .github/workflows/ci.yml   dotnet → site → deploy
 ```
 
-## Prerequisites
+The C# side is **not** dead code and is not shipped to users. It is the correctness oracle:
+`Console --generate-vectors` walks `System.Globalization.PersianCalendar` day by day and
+emits the vectors that the TypeScript parity test asserts against. If a .NET version ever
+changes its Persian calendar behaviour, CI fails.
 
-- .NET 10.0 SDK or later
-- Operating system with timezone data support (Windows, macOS, Linux)
+## Running locally
 
-### Verify Prerequisites
-
-Check if .NET 10 SDK is installed:
+The site needs only Node 22+:
 
 ```bash
-dotnet --version
+cd Site
+npm install
+npm run dev          # http://localhost:5173
 ```
 
-Expected output: `10.0.100` or higher
-
-If not installed, download from [Microsoft .NET Downloads](https://dotnet.microsoft.com/download/dotnet/10.0).
-
-## Installation
-
-### Clone or Download the Project
-
-Navigate to the project directory:
+Production build and a local preview of exactly what ships:
 
 ```bash
-cd /Users/ali/Projects/PersianCalendar
+cd Site
+npm run build        # tsc --noEmit + vite build → Site/dist
+npm run preview      # http://localhost:4173
 ```
 
-### Restore Dependencies
-
-Restore NuGet packages for all projects:
+The C# side needs the .NET 10 SDK:
 
 ```bash
-dotnet restore
+dotnet run --project Console     # prints today's Persian date
 ```
 
-### Build the Solution
+## Testing
 
-Build all projects:
+### C# (NUnit) — 19 tests
 
 ```bash
-dotnet build
-```
-
-This will compile:
-- `Lib.csproj` - Core library
-- `Console.csproj` - Console application
-- `Web.csproj` - Web application
-- `Tests.csproj` - Test suite
-
-## Running the Application
-
-### Web Application
-
-Start the Blazor web application:
-
-```bash
-cd Web
-dotnet run
-```
-
-The application will start and display URLs in the console:
-
-```
-Now listening on: https://localhost:7257
-Now listening on: http://localhost:5189
-```
-
-Open your browser and navigate to:
-- HTTPS: `https://localhost:7257`
-- HTTP: `http://localhost:5189`
-
-To stop the application, press `Ctrl+C` in the terminal.
-
-### Console Application
-
-Run the console application for quick date conversion:
-
-```bash
-cd Console
-dotnet run
-```
-
-This will display the current Persian date converted from the system time.
-
-## Debugging the Application
-
-### Visual Studio / JetBrains Rider
-
-1. Open `PersianCalendar.sln` in your IDE
-2. Set `Web` as the startup project
-3. Press F5 to start debugging
-4. Breakpoints can be set in any `.cs` or `.razor` file
-
-### Visual Studio Code
-
-1. Open the project folder in VS Code
-2. Install the C# Dev Kit extension
-3. Open the Debug panel (Ctrl+Shift+D)
-4. Select ".NET Core Launch (web)" configuration
-5. Press F5 to start debugging
-
-### Command Line Debugging
-
-Run the application in debug mode:
-
-```bash
-cd Web
-dotnet run --configuration Debug
-```
-
-Attach a debugger using your IDE's attach to process feature, targeting the `dotnet` process.
-
-### Launch Profiles
-
-The web application includes two launch profiles defined in `Web/Properties/launchSettings.json`:
-
-- `http`: Runs on `http://localhost:5189`
-- `https`: Runs on `https://localhost:7257` with HTTP redirect
-
-## Running Tests
-
-### Run All Tests
-
-Execute the complete test suite:
-
-```bash
-cd Tests
+dotnet build -warnaserror
 dotnet test
 ```
 
-### Run Tests with Detailed Output
+### Site unit tests (Vitest) — 46 tests
+
+The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
+committed**. Generate it first (requires the .NET 10 SDK):
 
 ```bash
-dotnet test --verbosity normal
+cd Site
+npm run gen:vectors   # dotnet run --project ../Console -- --generate-vectors ... 1200 1500
+npm test
 ```
 
-### Run Tests with Coverage
+`npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
+changes. Without it the parity test cannot run.
+
+### E2E (Playwright) — 13 tests
 
 ```bash
-dotnet test --collect:"XPlat Code Coverage"
+cd Site
+npx playwright install --with-deps chromium   # first time only
+npm run e2e
 ```
 
-### Test Organization
+Playwright starts `npm run preview` itself and tests the real production build. Coverage:
+today prefilled and cross-checked against ICU's Persian calendar, live conversion in both
+directions, month-aware localized validation errors, FA toggle → RTL + Persian digits,
+daily quote, clock hands actually moving, and a light/dark × 320/768/1440 screenshot
+matrix written to `Site/test-results/screens/`.
 
-The test suite includes:
+## Supported conversion range: Persian years 1200–1500 AP
 
-- **CalendarConverterTests.cs**: 20+ tests covering:
-  - Persian to Gregorian conversion
-  - Gregorian to Persian conversion
-  - Time component preservation
-  - Round-trip conversion accuracy
-  - Historical date validation
-  - Timezone conversion
-  - Leap year handling
-  - Special dates (Nowruz, year boundaries)
+The UI accepts and the algorithm guarantees **1200–1500 AP** (roughly 1821–2121 CE), and
+nothing outside it.
 
-- **LocalizationServiceTests.cs**: 30+ tests covering:
-  - Language switching (English/Farsi)
-  - Translation functionality
-  - RTL/LTR direction handling
-  - Month name localization
-  - Format string handling
-  - Event triggering
+This is not an arbitrary limit — it is exactly the range where correctness is *proven*.
+The parity suite asserts the TypeScript port is bit-exact against
+`System.Globalization.PersianCalendar` for every single day in that range (~110,000 days),
+in both directions, including every leap year and 30 Esfand. At 1502 AP the arithmetic
+(Birashk-style) algorithm and the astronomical calendar begin to diverge, so beyond 1500
+the two implementations no longer agree and correctness could not be asserted. Rather than
+ship dates we cannot prove, the range is capped where the proof holds.
 
-## Configuration
+## Quotes and licensing
 
-### Default Timezones
+`Site/public/quotes.json` holds 366 entries keyed to Persian day-of-year (1 Farvardin = 1,
+30 Esfand = 366, used only in leap years). Each entry carries EN and FA text, author in
+both languages, and a source citation.
 
-The application uses these default timezones:
-- Persian Calendar: `Asia/Tehran`
-- Gregorian Calendar: `Europe/Berlin`
+- **English texts** are drawn from **public-domain translations**: Marcus Aurelius
+  (*Meditations*, George Long), Seneca (*Moral Letters*, Richard Gummere), Epictetus
+  (Higginson / Carter). These translations are out of copyright.
+- **Farsi texts** were written for this project as translations of those public-domain
+  English texts. They have **not** been proofread by a native Farsi speaker — treat them
+  as best-effort.
 
-### Supported Timezones
+The project code is MIT licensed (see `LICENSE`). Fonts are self-hosted via npm:
+Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
 
-- UTC
-- Asia/Tehran
-- Europe/Berlin
-- Europe/London
-- Europe/Paris
-- America/New_York
-- America/Los_Angeles
-- America/Chicago
-- America/Toronto
-- Asia/Dubai
-- Asia/Tokyo
-- Asia/Shanghai
-- Asia/Singapore
-- Australia/Sydney
-- Pacific/Auckland
+## Design and behaviour notes
 
-### Customizing Timezones
+- **Clock** — inline SVG; the seconds hand glides continuously (angle recomputed from
+  `Date.now()` every `requestAnimationFrame`, Spring-Drive style) rather than ticking.
+  `prefers-reduced-motion: reduce` steps the hands once per second instead. The rAF loop
+  pauses on `visibilitychange`.
+- **Converter** — prefilled with today, no Convert button; editing either side converts on
+  input, last-edited side wins. Validation messages are localized and month-aware
+  ("Esfand has 29 days in 1404").
+- **Timezones** — visitor's local zone, auto-detected. A quiet secondary line shows Tehran
+  time when the visitor is not in `Asia/Tehran`. No dropdowns.
+- **Dark mode** — driven purely by `prefers-color-scheme`; both themes designed
+  deliberately. There is no manual toggle, by design.
+- **Language** — EN ⇄ FA toggle persisted in `localStorage`, defaulting to `fa` when
+  `navigator.language` starts with `fa`. FA sets `<html lang="fa" dir="rtl">` and switches
+  every numeral to Persian-Indic digits.
+- **Privacy** — no cookies, no analytics, no third-party requests, no personal data
+  processed or stored anywhere. See `docs/SECURITY.md`.
 
-To add or modify available timezones, edit the `GetAvailableTimeZones()` method in:
+## Deployment
 
 ```
-Web/Services/CalendarService.cs
+push to master
+   │
+   ▼
+GitHub Actions (.github/workflows/ci.yml)
+   ├─ dotnet   build -warnaserror → NUnit → Console --generate-vectors → vectors artifact
+   ├─ site     npm ci → build → Vitest (with vectors) → Playwright E2E → screenshots
+   └─ deploy   (master push only, needs both)
+        docker build -t time-app:current .
+        docker save | gzip | ssh deploy@HOST      ← forced-command key, no shell
+        curl https://time.automated.ink/health    ← polled up to 3 min, run fails if unhealthy
+   │
+   ▼
+Hetzner host
+   ├─ sshd runs /usr/local/bin/time-app-deploy for that key only:
+   │     gunzip | docker load
+   │     docker compose -f /opt/time/docker-compose.yml up -d
+   │     docker image prune -f
+   ├─ Caddy terminates TLS and reverse-proxies
+   │     time.automated.ink → time-app:8080  (external `edge` docker network)
+   └─ time-app container: nginx:1.27-alpine serving Site/dist on :8080
 ```
 
-## Using the Web Interface
+No container registry is involved — the image is streamed straight from the runner to the
+host over SSH and loaded locally as `time-app:current`.
 
-### Real-Time Clock Display
+**Deploy secrets** (GitHub Actions repository secrets, never in the repo):
+`DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`.
 
-The home page displays:
-- Current Persian date and time in selected timezone
-- Current Gregorian date and time in selected timezone
-- Live updates every second
-- Timezone selector for both calendars
+### Serving configuration
 
-### Persian to Gregorian Conversion
+- Hashed assets under `/assets/`: `Cache-Control: public, max-age=31536000, immutable`
+- `index.html`: `Cache-Control: no-cache`
+- `quotes.json`: `Cache-Control: public, max-age=86400`
+- `/health` → `200 ok` (an nginx `return`, not a file)
+- Security headers on every response: CSP (`default-src 'self'`, no external origins —
+  every asset is self-hosted), `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`. HSTS is added by Caddy.
 
-1. Enter the Persian date components:
-   - Year (1-9999)
-   - Month (1-12)
-   - Day (1-31)
-2. Click "Convert" or "تبدیل"
-3. View the converted Gregorian date
+### Rolling back
 
-### Gregorian to Persian Conversion
-
-1. Enter the Gregorian date components:
-   - Year (622-9999)
-   - Month (1-12)
-   - Day (1-31)
-2. Click "Convert" or "تبدیل"
-3. View the converted Persian date
-
-### Language Toggle
-
-Click the language toggle button in the navigation bar to switch between English and Farsi. The interface will automatically adjust direction (LTR/RTL) and translations.
-
-## Using the Library
-
-### Reference the Library
-
-Add a project reference to `Lib.csproj`:
-
-```xml
-<ItemGroup>
-  <ProjectReference Include="../Lib/Lib.csproj" />
-</ItemGroup>
-```
-
-### Basic Usage
-
-```csharp
-using Lib;
-
-// Convert Gregorian to Persian
-var gregorianDate = new DateTime(2025, 1, 11);
-var persianDate = CalendarConverter.Convert(gregorianDate);
-// Result: Year=1403, Month=10, Day=22
-
-// Convert Persian to Gregorian
-var persianDate = new PersianDate(1403, 10, 22);
-var gregorianDate = CalendarConverter.Convert(persianDate);
-// Result: 2025-01-11
-
-// Include time components
-var persianDateTime = new PersianDate(1403, 10, 22, 14, 30, 45, 123);
-var gregorianDateTime = CalendarConverter.Convert(persianDateTime);
-// Time components are preserved
-```
-
-### PersianDate Structure
-
-```csharp
-public record struct PersianDate(
-    int Year,
-    int Month,
-    int Day,
-    int Hour = 0,
-    int Minute = 0,
-    int Second = 0,
-    int Millisecond = 0
-);
-```
-
-## API Reference
-
-### CalendarConverter
-
-Static class providing conversion methods:
-
-**Convert(PersianDate date) -> DateTime**
-- Converts a Persian date to Gregorian DateTime
-- Preserves time components
-- Throws `ArgumentOutOfRangeException` for invalid dates
-
-**Convert(DateTime date) -> PersianDate**
-- Converts a Gregorian DateTime to Persian date
-- Preserves time components
-- Always succeeds for valid DateTime values
-
-### CalendarService
-
-Service for web application with real-time updates:
-
-**Properties**
-- `CurrentDateTime`: System DateTime
-- `CurrentPersianDate`: Current date as Persian
-- `CurrentPersianTimeZoneDateTime`: Current time in Persian timezone
-- `CurrentGregorianTimeZoneDateTime`: Current time in Gregorian timezone
-- `PersianTimeZoneId`: Persian timezone identifier
-- `GregorianTimeZoneId`: Gregorian timezone identifier
-
-**Methods**
-- `ConvertToPersian(DateTime)`: Convert to Persian
-- `ConvertToGregorian(PersianDate)`: Convert to Gregorian
-- `GetAvailableTimeZones()`: List supported timezones
-- `GetTimeZoneDisplayName(string)`: Format timezone display name
-
-**Events**
-- `OnTimeChanged`: Fires every second
-- `OnTimeZoneChanged`: Fires when timezone changes
-
-### LocalizationService
-
-Service for managing translations and localization:
-
-**Properties**
-- `CurrentLanguage`: Current language code ("en" or "fa")
-- `IsRightToLeft`: Boolean indicating RTL mode
-- `Direction`: "rtl" or "ltr"
-
-**Methods**
-- `Translate(string key)`: Get translation for key
-- `Translate(string key, params object[] args)`: Get formatted translation
-- `SetLanguage(string language)`: Change language
-- `ToggleLanguage()`: Switch between English and Farsi
-- `GetPersianMonthName(int month)`: Get Persian month name
-- `GetGregorianMonthName(int month)`: Get Gregorian month name
-
-**Events**
-- `OnLanguageChanged`: Fires when language changes
-
-## Troubleshooting
-
-### Port Already in Use
-
-If port 5189 or 7257 is already in use:
-
-1. Stop any running instances of the application
-2. Or modify ports in `Web/Properties/launchSettings.json`
-
-### Timezone Not Found
-
-If you encounter timezone errors:
-
-1. Ensure your operating system has up-to-date timezone data
-2. Verify the timezone ID format matches your OS:
-   - Windows: Use IANA timezone IDs
-   - macOS/Linux: Use IANA timezone IDs
-
-### Build Errors
-
-If you encounter build errors:
-
-1. Ensure .NET 10 SDK is installed: `dotnet --version`
-2. Clean the solution: `dotnet clean`
-3. Restore packages: `dotnet restore`
-4. Rebuild: `dotnet build`
-
-### Test Failures
-
-If timezone tests fail:
-
-1. Check that your system timezone data is current
-2. Some tests allow for hour variance due to DST
-3. Run tests individually to isolate issues:
-   ```bash
-   dotnet test --filter "FullyQualifiedName~CalendarConverterTests.ConvertPersianToGregorian_ValidDate_ReturnsCorrectDateTime"
-   ```
-
-## Development
-
-### Building for Release
+Images are host-local and tagged. To roll back, retag a previous image as
+`time-app:current` on the host and bring the stack up again:
 
 ```bash
-dotnet build --configuration Release
+ssh root@HOST 'docker images time-app'                       # find the previous image id
+ssh root@HOST 'docker tag <previous-image-id> time-app:current && \
+               docker compose -f /opt/time/docker-compose.yml up -d'
 ```
 
-### Publishing the Web Application
+Note that the deploy script runs `docker image prune -f`, which reaps *untagged* images —
+tag anything you want to keep as a rollback target.
 
-```bash
-cd Web
-dotnet publish --configuration Release --output ./publish
-```
+## Security posture
 
-The published files will be in `Web/publish/` directory.
+See **[docs/SECURITY.md](docs/SECURITY.md)** for the control inventory (host hardening,
+least-privilege deploy identity, change management, data privacy) and an honest list of
+known gaps.
 
-### Code Quality
+## Documentation
 
-The project enforces:
-- Nullable reference types
-- Implicit usings
-- Latest C# language version
-- No compiler warnings
+- `docs/SECURITY.md` — security controls and known gaps
+- `docs/superpowers/specs/2026-07-31-static-rewrite-design.md` — design decisions
+- `docs/superpowers/plans/2026-07-31-static-rewrite.md` — implementation plan
 
-## Deployment (Docker + Coolify CI/CD)
+## Not implemented
 
-The application deploys as a container built from the repository's `Dockerfile`:
-
-1. A change is merged into `master`.
-2. GitHub Actions (`.github/workflows/ci.yml`) runs the `test` job: restore, build with
-   `-warnaserror`, and run the full test suite.
-3. If tests pass, the `deploy` job fires a GET request against the Coolify deploy webhook
-   (`COOLIFY_WEBHOOK_URL`, authenticated with `COOLIFY_API_TOKEN`, both stored as GitHub
-   Actions secrets — never committed to the repository).
-4. Coolify builds the multi-stage `Dockerfile` (SDK build stage, ASP.NET runtime stage) and
-   runs the resulting container on the private server network.
-5. A Caddy reverse-proxy gateway terminates TLS and forwards plain HTTP to the container,
-   serving the app at **https://time.automated.ink**. Blazor Server's SignalR circuit runs
-   over a WebSocket that passes through this proxy.
-
-The container listens on port `8080` (`ASPNETCORE_HTTP_PORTS=8080`), runs as the non-root
-`app` user from the base image, and exposes `/health` for container health checks — reachable
-without authentication, matching the `HEALTHCHECK` instruction in the `Dockerfile`.
-
-Because the app sits behind a TLS-terminating proxy, `Program.cs` configures
-`ForwardedHeadersOptions` (`XForwardedFor` and `XForwardedProto`) so `UseHttpsRedirection`
-and HSTS see the original scheme instead of the proxy's plain-HTTP connection.
-
-### Building the Docker Image Locally
-
-```bash
-docker build -t persian-calendar .
-docker run -p 8080:8080 persian-calendar
-```
+- Service worker / offline PWA *(planned)* — repeat visits are already near-instant via
+  immutable caching, so this has not been built.
+- Additional calendars (Hijri lunar, Hebrew) — not planned.
 
 ## License
 
 MIT — © 2026 Ali Pirouzi
-
-## Contributing
-
-When contributing:
-1. Follow existing code style and conventions
-2. Ensure all tests pass
-3. Add tests for new functionality
-4. Update documentation as needed
-
-## Support
-
-For issues, questions, or contributions, refer to the project repository or documentation.
