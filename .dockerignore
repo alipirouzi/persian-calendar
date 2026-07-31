@@ -12,3 +12,7 @@ LICENSE
 Dockerfile
 .dockerignore
 .github/
+Site/node_modules/
+Site/dist/
+Site/test-results/
+Site/playwright-report/
