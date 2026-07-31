@@ -94,7 +94,7 @@ PersianCalendar/
   `daysInPersianMonth(py, pm)`, `persianDayOfYear(py, pm, pd)`.
 - **Parity is proven, not assumed:** `Console --generate-vectors` uses
   `System.Globalization.PersianCalendar` to emit `vectors.json` covering every day
-  of Persian years 1200–1600 (~146 000 days) plus boundary edges (year 1, month
+  of Persian years 1200–1500 (~110 000 days) plus boundary edges (year 1, month
   boundaries, 30 Esfand leap days). A Vitest suite asserts the TS port is
   bit-exact against the vectors in both directions. Any mismatch fails the build.
 - Vectors are generated in CI (not committed) so drift between .NET versions is
@@ -118,7 +118,7 @@ PersianCalendar/
    Gregorian Y/M/D on the other. **Prefilled with today on load.** Editing either
    side converts live on input — no Convert button. Last-edited side is the
    source of truth. Inline, localized validation (e.g. "Esfand has 29 days in 1404").
-   Supported range: Persian years 1200–1600 — identical to the parity-verified range; the UI only accepts dates whose correctness is proven against .NET.
+   Supported range: Persian years 1200–1500 — identical to the parity-verified range; the UI only accepts dates whose correctness is proven against .NET.
 4. **Daily stoic quote** — selected by Persian day-of-year from `quotes.json`.
    Rendered in the active language with author attribution.
 5. **Language toggle** — EN ⇄ FA, persisted in `localStorage`. Default: `fa` if
@@ -167,7 +167,7 @@ PersianCalendar/
 
 | Layer | Tool | Coverage |
 |---|---|---|
-| Calendar parity | Vitest + generated vectors | every day 1200–1600 AP, both directions, leap years |
+| Calendar parity | Vitest + generated vectors | every day 1200–1500 AP, both directions, leap years |
 | Quote selection | Vitest | day-of-year mapping, 30 Esfand → 366, quotes.json shape |
 | i18n/digits | Vitest | EN/FA strings, Persian digit formatting |
 | Lib (C#) | NUnit (existing) | unchanged |

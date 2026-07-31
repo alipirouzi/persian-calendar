@@ -14,7 +14,7 @@
 
 - JS < 20 KB gzipped; CSS < 15 KB gzipped (fonts excluded; they are separate woff2 files).
 - No runtime JS framework; no external origins — CSP `default-src 'self'`; all fonts self-hosted.
-- **Supported conversion range = parity-verified range:** Persian years **1200–1600** inclusive (≈ Gregorian 1821–2222). Vectors cover every day of that range. (Amends spec §5/§6.1 — see Task 2 Step 6.)
+- **Supported conversion range = parity-verified range:** Persian years **1200–1500** inclusive (≈ Gregorian 1821–2122). Vectors cover every day of that range. (Amends spec §5/§6.1 — see Task 2 Step 6.)
 - Bilingual EN/FA. FA mode: `<html lang="fa" dir="rtl">`, Persian-Indic digits everywhere, Vazirmatn font.
 - Dark/light purely via `prefers-color-scheme`. No toggle.
 - Quote of the day keyed by **Persian day-of-year** (1 Farvardin = 1, 30 Esfand = 366).
@@ -84,7 +84,7 @@ Web/                              # DELETED in Task 14
     "preview": "vite preview --port 4173 --strictPort",
     "test": "vitest run",
     "test:watch": "vitest",
-    "gen:vectors": "dotnet run --project ../Console -c Release -- --generate-vectors tests/fixtures/vectors.json 1200 1600",
+    "gen:vectors": "dotnet run --project ../Console -c Release -- --generate-vectors tests/fixtures/vectors.json 1200 1500",
     "e2e": "playwright test"
   },
   "devDependencies": {
@@ -204,7 +204,7 @@ The algorithm is the arithmetic Jalaali algorithm (Birashk break-years method, a
 export interface PersianDateParts { py: number; pm: number; pd: number }
 export interface GregorianDateParts { gy: number; gm: number; gd: number }
 export const PERSIAN_YEAR_MIN = 1200;
-export const PERSIAN_YEAR_MAX = 1600;
+export const PERSIAN_YEAR_MAX = 1500;
 export function toGregorian(p: PersianDateParts): GregorianDateParts; // throws RangeError
 export function toPersian(g: GregorianDateParts): PersianDateParts;   // throws RangeError
 export function isLeapPersianYear(py: number): boolean;
@@ -237,7 +237,7 @@ describe('toGregorian', () => {
   });
   it('rejects years outside the supported range', () => {
     expect(() => toGregorian({ py: 1199, pm: 1, pd: 1 })).toThrow(RangeError);
-    expect(() => toGregorian({ py: 1601, pm: 1, pd: 1 })).toThrow(RangeError);
+    expect(() => toGregorian({ py: 1501, pm: 1, pd: 1 })).toThrow(RangeError);
   });
   it('rejects invalid month and day', () => {
     expect(() => toGregorian({ py: 1404, pm: 13, pd: 1 })).toThrow(RangeError);
@@ -291,7 +291,7 @@ export interface PersianDateParts { py: number; pm: number; pd: number }
 export interface GregorianDateParts { gy: number; gm: number; gd: number }
 
 export const PERSIAN_YEAR_MIN = 1200;
-export const PERSIAN_YEAR_MAX = 1600;
+export const PERSIAN_YEAR_MAX = 1500;
 
 // Break years of the Birashk arithmetic Jalaali calendar (jalaali-js, MIT).
 const BREAKS = [
@@ -426,8 +426,8 @@ export function persianDayOfYear(p: PersianDateParts): number {
 
 ```ts
 describe('round-trip', () => {
-  it('every day of 1200–1600 survives P→G→P', () => {
-    for (let py = 1200; py <= 1600; py += 1) {
+  it('every day of 1200–1500 survives P→G→P', () => {
+    for (let py = 1200; py <= 1500; py += 1) {
       for (let pm = 1; pm <= 12; pm += 1) {
         const days = daysInPersianMonth(py, pm);
         for (let pd = 1; pd <= days; pd += 1) {
@@ -439,7 +439,7 @@ describe('round-trip', () => {
 });
 ```
 
-- [ ] **Step 6: Amend the spec** — in `docs/superpowers/specs/2026-07-31-static-rewrite-design.md`: change §5 vector range "1300–1500 (~73 000 days)" → "1200–1600 (~146 000 days)", and §6.1 "Supported range: Persian years 1–9999 (matching Lib)" → "Supported range: Persian years 1200–1600 — identical to the parity-verified range; the UI only accepts dates whose correctness is proven against .NET." (Rationale: 'fastest' must not mean 'unverified'; the arithmetic algorithm and .NET's astronomical one are only guaranteed to agree where vectors prove it.)
+- [ ] **Step 6: Amend the spec** — in `docs/superpowers/specs/2026-07-31-static-rewrite-design.md`: change §5 vector range "1300–1500 (~73 000 days)" → "1200–1500 (~110 000 days)", and §6.1 "Supported range: Persian years 1–9999 (matching Lib)" → "Supported range: Persian years 1200–1500 — identical to the parity-verified range; the UI only accepts dates whose correctness is proven against .NET." (Rationale: 'fastest' must not mean 'unverified'; the arithmetic algorithm and .NET's astronomical one are only guaranteed to agree where vectors prove it.)
 
 - [ ] **Step 7: Commit**
 
@@ -578,7 +578,7 @@ git commit -m "feat(console): test-vector generator from System.Globalization.Pe
 - Consumes: `toGregorian`/`toPersian`/`isLeapPersianYear` (Task 2); `npm run gen:vectors` (Tasks 1+3).
 
 - [ ] **Step 1: Generate vectors** — `cd Site && npm run gen:vectors`
-Expected: `Site/tests/fixtures/vectors.json` exists, ~146 000 entries.
+Expected: `Site/tests/fixtures/vectors.json` exists, ~110 000 entries.
 
 - [ ] **Step 2: Write the parity test** — `Site/tests/parity.test.ts`:
 
@@ -607,11 +607,11 @@ describe('parity with System.Globalization.PersianCalendar', () => {
 
   it('covers the full supported range', () => {
     expect(vectors[0]).toMatchObject({ py: 1200, pm: 1, pd: 1 });
-    expect(vectors[vectors.length - 1]).toMatchObject({ py: 1600, pm: 12 });
-    expect(vectors.length).toBeGreaterThan(146_000);
+    expect(vectors[vectors.length - 1]).toMatchObject({ py: 1500, pm: 12 });
+    expect(vectors.length).toBeGreaterThan(109_000);
   });
 
-  it('toGregorian matches .NET for every day 1200–1600', () => {
+  it('toGregorian matches .NET for every day 1200–1500', () => {
     for (const v of vectors) {
       const g = toGregorian({ py: v.py, pm: v.pm, pd: v.pd });
       if (g.gy !== v.gy || g.gm !== v.gm || g.gd !== v.gd) {
@@ -620,7 +620,7 @@ describe('parity with System.Globalization.PersianCalendar', () => {
     }
   });
 
-  it('toPersian matches .NET for every day 1200–1600', () => {
+  it('toPersian matches .NET for every day 1200–1500', () => {
     for (const v of vectors) {
       const p = toPersian({ gy: v.gy, gm: v.gm, gd: v.gd });
       if (p.py !== v.py || p.pm !== v.pm || p.pd !== v.pd) {
@@ -645,7 +645,7 @@ describe('parity with System.Globalization.PersianCalendar', () => {
 
 ```bash
 git add Site/tests/parity.test.ts
-git commit -m "test(site): bit-exact parity of TS calendar with .NET over 1200-1600"
+git commit -m "test(site): bit-exact parity of TS calendar with .NET over 1200-1500"
 ```
 
 ---
@@ -1098,8 +1098,8 @@ git commit -m "feat(site): today snapshot (local+Tehran) and continuous clock-ha
 ```ts
 export type Side = 'persian' | 'gregorian';
 export interface RawFields { y: string; m: string; d: string }
-export const GREGORIAN_YEAR_MIN = 1822; // interior bounds: always convert into 1200–1600
-export const GREGORIAN_YEAR_MAX = 2221;
+export const GREGORIAN_YEAR_MIN = 1822; // interior bounds: always convert into 1200–1500
+export const GREGORIAN_YEAR_MAX = 2121;
 export type ConversionOutcome =
   | { status: 'ok'; persian: PersianDateParts; gregorian: GregorianDateParts }
   | { status: 'incomplete' }
@@ -1129,7 +1129,7 @@ describe('convertFrom persian', () => {
   });
   it('rejects out-of-range year with bounds in params', () => {
     const r = convertFrom('persian', { y: '1150', m: '1', d: '1' });
-    expect(r).toMatchObject({ status: 'error', errorKey: 'errYearRange', params: { min: 1200, max: 1600 } });
+    expect(r).toMatchObject({ status: 'error', errorKey: 'errYearRange', params: { min: 1200, max: 1500 } });
   });
   it('rejects bad month', () => {
     expect(convertFrom('persian', { y: '1404', m: '13', d: '1' }))
@@ -1155,7 +1155,7 @@ describe('convertFrom gregorian', () => {
   });
   it('rejects out-of-range Gregorian years', () => {
     expect(convertFrom('gregorian', { y: '1500', m: '1', d: '1' }))
-      .toMatchObject({ status: 'error', errorKey: 'errYearRange', params: { min: 1822, max: 2221 } });
+      .toMatchObject({ status: 'error', errorKey: 'errYearRange', params: { min: 1822, max: 2121 } });
   });
 });
 ```
@@ -1176,7 +1176,7 @@ export type Side = 'persian' | 'gregorian';
 export interface RawFields { y: string; m: string; d: string }
 
 export const GREGORIAN_YEAR_MIN = 1822;
-export const GREGORIAN_YEAR_MAX = 2221;
+export const GREGORIAN_YEAR_MAX = 2121;
 
 export type ConversionOutcome =
   | { status: 'ok'; persian: PersianDateParts; gregorian: GregorianDateParts }
@@ -1282,7 +1282,7 @@ One cohesive deliverable: the full page working in a browser (`npm run dev`), mi
           <legend id="legend-persian"></legend>
           <div class="fields">
             <label>​<span data-str="year"></span>
-              <input id="p-y" type="number" inputmode="numeric" min="1200" max="1600" /></label>
+              <input id="p-y" type="number" inputmode="numeric" min="1200" max="1500" /></label>
             <label><span data-str="month"></span>
               <input id="p-m" type="number" inputmode="numeric" min="1" max="12" /></label>
             <label><span data-str="day"></span>
@@ -1294,7 +1294,7 @@ One cohesive deliverable: the full page working in a browser (`npm run dev`), mi
           <legend id="legend-gregorian"></legend>
           <div class="fields">
             <label><span data-str="year"></span>
-              <input id="g-y" type="number" inputmode="numeric" min="1822" max="2221" /></label>
+              <input id="g-y" type="number" inputmode="numeric" min="1822" max="2121" /></label>
             <label><span data-str="month"></span>
               <input id="g-m" type="number" inputmode="numeric" min="1" max="12" /></label>
             <label><span data-str="day"></span>
@@ -2068,7 +2068,7 @@ jobs:
       - run: dotnet build --no-restore -warnaserror
       - run: dotnet test --no-build
       - name: Generate parity vectors
-        run: dotnet run --project Console -c Release -- --generate-vectors vectors.json 1200 1600
+        run: dotnet run --project Console -c Release -- --generate-vectors vectors.json 1200 1500
       - uses: actions/upload-artifact@v4
         with:
           name: vectors
@@ -2180,7 +2180,7 @@ echo "*.DotSettings.user" >> .gitignore
 dotnet build -warnaserror && dotnet test   # solution still green without Web
 ```
 
-- [ ] **Step 5: Rewrite README.md** — must accurately cover: what the site is (static, client-side, why), architecture diagram of repo layout (Lib/Console/Tests as reference implementation + vector source, Site as the product), how to run (`cd Site && npm install && npm run dev`), how to test (dotnet test, npm test incl. `npm run gen:vectors` prerequisite, npm run e2e), deployment (CI → SSH → compose on Hetzner, Caddy in front), supported conversion range 1200–1600 AP and why, quote licensing note (public-domain translations). Remove all Blazor/Coolify references.
+- [ ] **Step 5: Rewrite README.md** — must accurately cover: what the site is (static, client-side, why), architecture diagram of repo layout (Lib/Console/Tests as reference implementation + vector source, Site as the product), how to run (`cd Site && npm install && npm run dev`), how to test (dotnet test, npm test incl. `npm run gen:vectors` prerequisite, npm run e2e), deployment (CI → SSH → compose on Hetzner, Caddy in front), supported conversion range 1200–1500 AP and why, quote licensing note (public-domain translations). Remove all Blazor/Coolify references.
 
 - [ ] **Step 6: Write `docs/SECURITY.md`** — the SOC 2-alignment document. Contents: honest scope statement ("SOC 2 Type II is an organizational audit; this document maps this project's technical controls to SOC 2 Trust Services Criteria"); control inventory with evidence from Task 13's closing audit: access control (key-only SSH, forced-command deploy identity, no password auth), network (ufw allowlist, only 22/80/443), change management (all changes via git + CI with tests and health-verified deploys), vulnerability management (unattended-upgrades, Docker base image pinned), logging/monitoring (journald, fail2ban, GitHub Actions run history as deploy audit trail), data privacy (static site: no cookies, no analytics, no personal data processed — GDPR posture trivial by design). List known gaps honestly: no centralized log retention, no uptime alerting, single-region single-host, Hetzner console backups not verified.
 
@@ -2209,5 +2209,5 @@ gh run watch   # all green, site still healthy after redeploy
 
 - **Spec coverage:** performance/architecture → Tasks 1, 9, 12; parity → 2–4; quotes → 5; i18n/RTL/digits → 6, 9; current-date default → 8, 9, 11; Spring-Drive clock → 7, 10; horological design + dark mode → 9, 10, 11 (design gate in 11 Step 4); local+Tehran → 7, 9; error handling → 5, 8, 9; testing pyramid → 2–8, 11; CI + verified deploy → 13, 14; migration/cleanup/README → 15; Coolify removal pivot → 13–15; SOC 2 alignment + host hardening → 13, 15 Step 6; standards review → 16.
 - **Type consistency:** `PersianDateParts {py,pm,pd}` / `GregorianDateParts {gy,gm,gd}` used uniformly across Tasks 2, 7, 8, 9; `createClock` signature matches between 9 (stub) and 10; error keys `errYearRange|errMonth|errDay` consistent across 6, 8, 9.
-- **Known judgment calls:** number inputs keep Western digits in FA (documented in Global Constraints); supported range narrowed to the parity-verified 1200–1600 (spec amended in Task 2 Step 6); Playwright asserts behavior, screenshots reviewed manually as a design gate.
+- **Known judgment calls:** number inputs keep Western digits in FA (documented in Global Constraints); supported range narrowed to the parity-verified 1200–1500 (spec amended in Task 2 Step 6); Playwright asserts behavior, screenshots reviewed manually as a design gate.
 
