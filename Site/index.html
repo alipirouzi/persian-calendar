@@ -3,10 +3,62 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Persian Calendar</title>
+  <title>Persian Calendar — Converter & Clock</title>
+  <meta name="description" content="Instant Persian (Shamsi) ↔ Gregorian date conversion, a live clock, and a daily Stoic thought. No servers involved — everything runs in your browser." />
+  <meta property="og:title" content="Persian Calendar" />
+  <meta property="og:description" content="Instant Persian ↔ Gregorian date conversion." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://time.automated.ink/" />
+  <link rel="icon" href="/favicon.png" />
 </head>
 <body>
-  <main id="app"></main>
+  <button id="lang-toggle" type="button" aria-label="Switch language"></button>
+  <main>
+    <section id="clock-section" aria-label="Clock">
+      <div id="clock-mount"></div>
+    </section>
+
+    <section id="today" aria-label="Today">
+      <p id="today-persian" class="date-display"></p>
+      <hr class="hairline" />
+      <p id="today-gregorian" class="date-display"></p>
+      <p id="tehran-line" class="tehran-line" hidden></p>
+    </section>
+
+    <section id="converter" aria-label="Date converter">
+      <form id="converter-form" autocomplete="off">
+        <fieldset id="side-persian">
+          <legend id="legend-persian"></legend>
+          <div class="fields">
+            <label><span data-str="year"></span>
+              <input id="p-y" type="number" inputmode="numeric" min="1200" max="1500" /></label>
+            <label><span data-str="month"></span>
+              <input id="p-m" type="number" inputmode="numeric" min="1" max="12" /></label>
+            <label><span data-str="day"></span>
+              <input id="p-d" type="number" inputmode="numeric" min="1" max="31" /></label>
+          </div>
+        </fieldset>
+        <div class="exchange" aria-hidden="true">⇄</div>
+        <fieldset id="side-gregorian">
+          <legend id="legend-gregorian"></legend>
+          <div class="fields">
+            <label><span data-str="year"></span>
+              <input id="g-y" type="number" inputmode="numeric" min="1822" max="2121" /></label>
+            <label><span data-str="month"></span>
+              <input id="g-m" type="number" inputmode="numeric" min="1" max="12" /></label>
+            <label><span data-str="day"></span>
+              <input id="g-d" type="number" inputmode="numeric" min="1" max="31" /></label>
+          </div>
+        </fieldset>
+      </form>
+      <p id="converter-error" role="status" hidden></p>
+    </section>
+
+    <blockquote id="quote" hidden>
+      <p id="quote-text"></p>
+      <footer id="quote-author"></footer>
+    </blockquote>
+  </main>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

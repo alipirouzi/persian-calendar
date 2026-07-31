@@ -1,0 +1,29 @@
+:root {
+  --surface: oklch(97.5% 0.006 85);
+  --surface-raised: oklch(99% 0.004 85);
+  --text: oklch(24% 0.012 260);
+  --text-muted: oklch(48% 0.01 260);
+  --accent: oklch(52% 0.09 245);        /* blued steel */
+  --hairline: oklch(86% 0.008 85);
+  --font-display: 'Cormorant Garamond', 'Vazirmatn', serif;
+  --font-ui: 'Inter Variable', 'Vazirmatn', system-ui, sans-serif;
+  --text-base: clamp(1rem, 0.94rem + 0.3vw, 1.125rem);
+  --text-date: clamp(1.6rem, 1.1rem + 2.2vw, 2.6rem);
+  --space-section: clamp(2.5rem, 1.5rem + 4vw, 5.5rem);
+  --duration: 240ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: oklch(19% 0.01 260);
+    --surface-raised: oklch(23% 0.01 260);
+    --text: oklch(92% 0.006 85);
+    --text-muted: oklch(64% 0.006 85);
+    --accent: oklch(72% 0.1 245);
+    --hairline: oklch(31% 0.01 260);
+  }
+}
+html[lang='fa'] {
+  --font-display: 'Vazirmatn', serif;
+  --font-ui: 'Vazirmatn', system-ui, sans-serif;
+}

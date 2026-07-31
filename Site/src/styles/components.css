@@ -1,0 +1,37 @@
+#lang-toggle {
+  position: fixed; inset-block-start: 1rem; inset-inline-end: 1.25rem;
+  background: none; border: 1px solid var(--hairline); color: var(--text-muted);
+  font-family: var(--font-ui); font-size: 0.85rem; padding: 0.3rem 0.9rem;
+  border-radius: 999px; cursor: pointer;
+  transition: color var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+#lang-toggle:hover { color: var(--accent); border-color: var(--accent); }
+
+#today { text-align: center; display: grid; gap: 0.75rem; justify-items: center; }
+.date-display { font-family: var(--font-display); font-size: var(--text-date); font-weight: 500; letter-spacing: 0.01em; }
+.tehran-line { color: var(--text-muted); font-size: 0.9rem; letter-spacing: 0.06em; text-transform: uppercase; }
+html[lang='fa'] .tehran-line { letter-spacing: 0; text-transform: none; }
+
+#converter-form { display: flex; gap: 1.5rem; align-items: end; flex-wrap: wrap; justify-content: center; }
+fieldset { border: 0; padding: 0; }
+legend { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.6rem; }
+html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
+.fields { display: flex; gap: 0.6rem; }
+.fields label { display: grid; gap: 0.25rem; font-size: 0.75rem; color: var(--text-muted); }
+.fields input {
+  width: 4.5rem; padding: 0.45rem 0.5rem; font: inherit; text-align: center;
+  color: var(--text); background: var(--surface-raised);
+  border: 1px solid var(--hairline); border-radius: 6px;
+  transition: border-color var(--duration) var(--ease);
+}
+.fields input:focus { border-color: var(--accent); outline: none; }
+.fields input#p-y, .fields input#g-y { width: 5.5rem; }
+.exchange { color: var(--text-muted); font-size: 1.2rem; align-self: center; }
+#converter-error { color: var(--accent); font-size: 0.9rem; margin-top: 1rem; text-align: center; }
+
+#quote { max-width: 34rem; text-align: center; display: grid; gap: 0.6rem; }
+#quote-text { font-family: var(--font-display); font-size: 1.25rem; font-style: italic; line-height: 1.7; }
+#quote-text::before { content: '“'; color: var(--accent); }
+#quote-text::after { content: '”'; color: var(--accent); }
+html[lang='fa'] #quote-text { font-style: normal; }
+#quote-author { color: var(--text-muted); font-size: 0.85rem; letter-spacing: 0.06em; }
