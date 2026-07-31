@@ -21,7 +21,9 @@ Spring-Drive-style continuous sweep.
 - Bootstrap CSS ships but styling is custom — dead weight.
 - Converter defaults are hardcoded (1403/10/22, 2025/1/11), not today.
 - Generic visual design, no dark mode.
-- CI deploy job fires the Coolify webhook without verifying the deployment came up.
+- CI deploy is **broken**: it still fires a Coolify webhook, but Coolify has been
+  removed from the Hetzner host (run 30623349923 fails with curl exit 35). The host
+  now runs Caddy + plain docker compose; deploys must go directly over SSH.
 
 ## 3. Decisions (locked)
 
@@ -71,7 +73,10 @@ PersianCalendar/
   self-hosted), `X-Content-Type-Options: nosniff`, `Referrer-Policy:
   strict-origin-when-cross-origin`, `Strict-Transport-Security`.
 - `/health` returns 200 `ok` (nginx location, no file).
-- Coolify deployment flow unchanged (same webhook, same host).
+- **Hosting (Hetzner, 159.69.19.71):** Caddy (`/opt/caddy`, compose) terminates TLS
+  and reverse-proxies `time.automated.ink` → `time-app:8080` over the external
+  `edge` docker network. The app is compose-managed at `/opt/time/docker-compose.yml`
+  running the host-local image `time-app:current`. No registry involved.
 
 ### 4.3 Performance budget
 
@@ -179,9 +184,11 @@ Extend `.github/workflows/ci.yml`:
    `Console --generate-vectors` → upload `vectors.json` artifact. Add NuGet cache.
 2. **site job** (needs dotnet) — download vectors; `npm ci`, typecheck, Vitest
    (incl. parity), build, Playwright E2E. Node modules cached.
-3. **deploy job** (master push only, needs both) — trigger Coolify webhook, then
-   **poll `https://time.automated.ink/health` (up to 3 min)** and fail the run if
-   the site doesn't come up healthy.
+3. **deploy job** (master push only, needs both) — build the Docker image in the
+   runner, ship it directly to the Hetzner host via `docker save | ssh docker load`
+   (dedicated deploy SSH key stored as a GitHub secret), `docker compose up -d` at
+   `/opt/time`, then **poll `https://time.automated.ink/health` (up to 3 min)** and
+   fail the run if the site doesn't come up healthy.
 
 Docker: multi-stage — `node:22-alpine` builds `Site/dist`, final stage
 `nginx:alpine` with config + dist. `curl`-based container HEALTHCHECK retained.
