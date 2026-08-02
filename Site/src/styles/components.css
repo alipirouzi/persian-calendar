@@ -49,9 +49,14 @@ html[lang='fa'] #quote-text { font-style: normal; }
 @media (max-width: 560px) {
   #converter-form { flex-direction: column; align-items: center; gap: 1.1rem; }
   .exchange { transform: rotate(90deg); }
-  /* Scoped to phones to preserve desktop pixel-parity: unconditional min-height
-     would grow desktop inputs from 35.5px to 44px. font: inherit also pulls in
-     the 0.75rem label size, so bump font-size to 16px here too (avoids iOS
-     Safari zoom-on-focus, WCAG 1.4.4-adjacent). */
+}
+
+/* Touch-target sizing applies to phones AND tablets (up to 1024px), distinct
+   from the ≤560px stacking/rotation block above, so desktop (≥1025px) stays
+   pixel-identical: unconditional min-height would grow desktop inputs from
+   35.5px to 44px. font: inherit also pulls in the 0.75rem label size, so
+   bump font-size to 16px here too (comfortable touch input, avoids
+   accidental zoom on focus in mobile browsers). */
+@media (max-width: 1024px) {
   .fields input { min-height: 44px; font-size: 1rem; }
 }

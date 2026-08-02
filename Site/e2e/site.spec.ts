@@ -121,6 +121,20 @@ test('date inputs are comfortable touch targets (≥44px, ≥16px font)', async 
   }
 });
 
+test('date inputs stay comfortable touch targets on tablets (768, 1024)', async ({ page }) => {
+  for (const width of [768, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    for (const id of ['#p-y', '#p-m', '#p-d', '#g-y', '#g-m', '#g-d']) {
+      const box = await page.locator(id).boundingBox();
+      expect(box, `${id} @${width}`).not.toBeNull();
+      expect(box!.height, `${id} @${width}`).toBeGreaterThanOrEqual(44);
+      const fontPx = await page.locator(id).evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      expect(fontPx, `${id} @${width}`).toBeGreaterThanOrEqual(16);
+    }
+  }
+});
+
 test('lang toggle hit area extends beyond the visual pill', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
