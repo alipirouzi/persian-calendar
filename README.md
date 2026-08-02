@@ -51,7 +51,7 @@ PersianCalendar/
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/quotes.json  366 bilingual quotes
 │   ├── tests/              Vitest (46 tests, incl. .NET parity)
-│   └── e2e/                Playwright (14 tests, incl. screenshot matrix)
+│   └── e2e/                Playwright (34 tests, incl. screenshot matrix)
 │
 ├── deploy/
 │   ├── nginx.conf             static serving, caching, /health
@@ -114,7 +114,7 @@ npm test
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 14 tests
+### E2E (Playwright) — 34 tests
 
 ```bash
 cd Site
@@ -126,8 +126,40 @@ Playwright starts `npm run preview` itself and tests the real production build. 
 today prefilled and cross-checked against ICU's Persian calendar, live conversion in both
 directions, month-aware localized validation errors, FA toggle → RTL + Persian digits,
 daily quote, clock hands actually moving, the `prefers-reduced-motion` interval fallback
-still advancing them, and a light/dark × 320/768/1440 screenshot matrix written to
-`Site/test-results/screens/`.
+still advancing them, a light/dark × 320/375/430/768/820/1024/1440 screenshot matrix
+written to `Site/test-results/screens/`, and the PWA/mobile checks described below.
+
+## PWA
+
+The site installs as a Progressive Web App: `site.webmanifest` (name, `display: standalone`,
+theme colors) plus generated icons — `192`, `512`, `512 maskable`, and a `180` apple-touch-icon —
+served from `/icons/`. Regenerate the icons after changing the source artwork with:
+
+```bash
+cd Site
+npm run gen:icons     # node scripts/gen-icons.mjs
+```
+
+Offline support comes from a hand-rolled service worker at `Site/public/sw.js` (no Workbox,
+no build-time injection), registered against a single cache, `time-app-v1`. The strategy
+differs by request type:
+
+| Request | Strategy | Notes |
+|---|---|---|
+| Navigations (`mode: 'navigate'`) | Network-first | Falls back to the cached `/` shell when the network is unreachable; `/` is the only navigation cache key. |
+| `/assets/*` (hashed, immutable) | Cache-first | Fetched once and never revalidated — matches the `immutable` `Cache-Control` these paths already ship with. |
+| Everything else same-origin (e.g. `quotes.json`) | Stale-while-revalidate | The cached copy is served immediately while a background fetch (extended via `event.waitUntil`) refreshes the cache for next time. |
+
+Partial responses (HTTP 206) are never written to the cache by any of the three strategies. To
+invalidate everything that's cached — after a breaking change to a cached asset, for example —
+bump the `CACHE` constant in `sw.js`; the `activate` handler deletes any cache whose name no
+longer matches.
+
+The Playwright suite's viewport and locale matrix was widened alongside this work (34 tests
+total): light/dark screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone
+case (844×390) asserting the clock shrinks so the today panel stays reachable; FA/RTL
+screenshots at 375 and 820; and dedicated tests confirming the manifest and icons resolve and
+that the service worker actually serves the app while offline.
 
 ## Supported conversion range: Persian years 1200–1500 AP
 
@@ -255,11 +287,12 @@ known gaps.
 - `docs/SECURITY.md` — security controls and known gaps
 - `docs/superpowers/specs/2026-07-31-static-rewrite-design.md` — design decisions
 - `docs/superpowers/plans/2026-07-31-static-rewrite.md` — implementation plan
+- `docs/superpowers/specs/2026-08-02-mobile-pwa-and-quotes-design.md` — mobile/PWA polish and quote roster design
+- `docs/superpowers/plans/2026-08-02-mobile-pwa.md` — mobile/PWA implementation plan
+- `docs/superpowers/plans/2026-08-02-quote-roster.md` — 366-thinker quote roster implementation plan
 
 ## Not implemented
 
-- Service worker / offline PWA *(planned)* — repeat visits are already near-instant via
-  immutable caching, so this has not been built.
 - Additional calendars (Hijri lunar, Hebrew) — not planned.
 
 ## License

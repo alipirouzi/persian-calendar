@@ -86,7 +86,7 @@ test('reduced motion still advances the clock via the interval fallback', async 
 });
 
 for (const scheme of ['light', 'dark'] as const) {
-  for (const width of [320, 768, 1440]) {
+  for (const width of [320, 375, 430, 768, 820, 1024, 1440]) {
     test(`screenshot ${scheme} @${width}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ width, height: 900 });
@@ -97,3 +97,121 @@ for (const scheme of ['light', 'dark'] as const) {
     });
   }
 }
+
+for (const width of [375, 820]) {
+  test(`screenshot fa rtl @${width}`, async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('lang', 'fa'));
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.screenshot({ path: `test-results/screens/fa-${width}.png`, fullPage: true });
+  });
+}
+
+test('landscape phone: clock shrinks so today panel is reachable', async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto('/');
+  const clock = await page.locator('.clock').boundingBox();
+  expect(clock!.height).toBeLessThanOrEqual(150);
+  await page.screenshot({ path: 'test-results/screens/landscape-844x390.png', fullPage: true });
+});
+
+test('tablet clock is larger than phone clock', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto('/');
+  const clock = await page.locator('.clock').boundingBox();
+  expect(clock!.height).toBeGreaterThanOrEqual(300);
+});
+
+test('no horizontal overflow at phone widths', async ({ page }) => {
+  for (const width of [320, 375, 430, 768, 820, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto('/');
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `width=${width}`).toBeLessThanOrEqual(0);
+  }
+});
+
+test('date inputs are comfortable touch targets (≥44px, ≥16px font)', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  for (const id of ['#p-y', '#p-m', '#p-d', '#g-y', '#g-m', '#g-d']) {
+    const box = await page.locator(id).boundingBox();
+    expect(box, id).not.toBeNull();
+    expect(box!.height, id).toBeGreaterThanOrEqual(44);
+    const fontPx = await page.locator(id).evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(fontPx, id).toBeGreaterThanOrEqual(16);
+  }
+});
+
+test('date inputs stay comfortable touch targets on tablets (768, 1024)', async ({ page }) => {
+  for (const width of [768, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    for (const id of ['#p-y', '#p-m', '#p-d', '#g-y', '#g-m', '#g-d']) {
+      const box = await page.locator(id).boundingBox();
+      expect(box, `${id} @${width}`).not.toBeNull();
+      expect(box!.height, `${id} @${width}`).toBeGreaterThanOrEqual(44);
+      const fontPx = await page.locator(id).evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+      expect(fontPx, `${id} @${width}`).toBeGreaterThanOrEqual(16);
+    }
+  }
+});
+
+test('desktop stays pixel-identical regardless of short viewport height', async ({ page }) => {
+  // Guards the max-height:480px clock rule and the (pointer: coarse) touch-target
+  // rule from ever regressing onto mouse-driven desktop widths (≥1025px).
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const clock = await page.locator('.clock').boundingBox();
+  expect(clock!.height).toBe(260);
+  const box = await page.locator('#p-y').boundingBox();
+  expect(box!.height).toBeLessThan(44);
+  const fontPx = await page.locator('#p-y').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  expect(fontPx).toBeLessThan(16);
+});
+
+test('lang toggle hit area extends beyond the visual pill', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  const box = await page.locator('#lang-toggle').boundingBox();
+  // Click 8px BELOW the pill's bottom edge — must still toggle via the ::after hit extension.
+  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height + 8);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
+});
+
+test('exchange glyph reads vertically when the converter stacks', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  const transform = await page.locator('.exchange').evaluate((el) => getComputedStyle(el).transform);
+  expect(transform).toBe('matrix(0, 1, -1, 0, 0, 0)'); // rotate(90deg)
+});
+
+test('web manifest and icons are served', async ({ page, request }) => {
+  await page.goto('/');
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/site.webmanifest');
+  const res = await request.get('/site.webmanifest');
+  expect(res.ok()).toBeTruthy();
+  const manifest = await res.json();
+  expect(manifest.display).toBe('standalone');
+  expect(manifest.icons).toHaveLength(3);
+  for (const icon of manifest.icons) {
+    expect((await request.get(icon.src)).ok(), icon.src).toBeTruthy();
+  }
+  expect((await request.get('/icons/icon-180.png')).ok()).toBeTruthy();
+});
+
+test('service worker registers and serves the site offline', async ({ page, context }) => {
+  await page.goto('/');
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  // Second load lets the SW's runtime caching capture CSS/JS/font assets.
+  await page.reload();
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('#today-persian')).not.toBeEmpty();
+  await expect(page.locator('#quote')).toBeVisible();
+  await context.setOffline(false);
+});

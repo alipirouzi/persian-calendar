@@ -93,3 +93,10 @@ void loadQuotes().then((loaded) => {
   quotes = loaded;
   renderQuote();
 });
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Registration failure is silent-degrade: the site works exactly as before.
+    navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+  });
+}

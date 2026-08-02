@@ -1,11 +1,16 @@
 #lang-toggle {
-  position: fixed; inset-block-start: 1rem; inset-inline-end: 1.25rem;
+  position: fixed;
+  inset-block-start: max(1rem, env(safe-area-inset-top));
+  inset-inline-end: max(1.25rem, env(safe-area-inset-right));
   background: none; border: 1px solid var(--hairline); color: var(--text-muted);
   font-family: var(--font-ui); font-size: 0.85rem; padding: 0.3rem 0.9rem;
   border-radius: 999px; cursor: pointer;
   transition: color var(--duration) var(--ease), border-color var(--duration) var(--ease);
 }
 #lang-toggle:hover { color: var(--accent); border-color: var(--accent); }
+/* Invisible hit-area extension: keeps the small pill aesthetic while
+   giving fingers a ≥44px effective target (WCAG 2.5.8). */
+#lang-toggle::after { content: ''; position: absolute; inset: -10px; }
 
 #today { text-align: center; display: grid; gap: 0.75rem; justify-items: center; }
 .date-display { font-family: var(--font-display); font-size: var(--text-date); font-weight: 500; letter-spacing: 0.01em; }
@@ -40,3 +45,27 @@ html[lang='fa'] #quote-text { font-style: normal; }
 .clock .second-hand { stroke: var(--accent); }
 #clock-section { display: grid; justify-items: center; }
 @media (max-width: 480px) { .clock { width: 200px; height: 200px; } }
+/* Tablet portrait: the tall centered column earns a larger dial. Range-capped
+   so desktop (≥1025px) stays exactly as shipped. */
+@media (min-width: 768px) and (max-width: 1024px) { .clock { width: 300px; height: 300px; } }
+/* Landscape phones: keep the today panel visible without scrolling past the dial.
+   Width-capped so a short desktop window (e.g. 1440×450) doesn't also shrink the
+   dial — desktop (≥1025px) must stay pixel-identical regardless of height. */
+@media (max-height: 480px) and (max-width: 1024px) { .clock { width: 150px; height: 150px; } }
+
+@media (max-width: 560px) {
+  #converter-form { flex-direction: column; align-items: center; gap: 1.1rem; }
+  .exchange { transform: rotate(90deg); }
+}
+
+/* Touch-target sizing applies to phones AND tablets (up to 1024px) plus any
+   coarse-pointer device regardless of width (e.g. a 1180px landscape iPad),
+   distinct from the ≤560px stacking/rotation block above, so mouse-driven
+   desktops (≥1025px, fine pointer) stay pixel-identical: unconditional
+   min-height would grow desktop inputs from 35.5px to 44px. font: inherit
+   also pulls in the 0.75rem label size, so bump font-size to 16px here too
+   (comfortable touch input, avoids accidental zoom on focus in mobile
+   browsers). */
+@media (max-width: 1024px), (pointer: coarse) {
+  .fields input { min-height: 44px; font-size: 1rem; }
+}
