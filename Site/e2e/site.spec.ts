@@ -189,3 +189,16 @@ test('web manifest and icons are served', async ({ page, request }) => {
   }
   expect((await request.get('/icons/icon-180.png')).ok()).toBeTruthy();
 });
+
+test('service worker registers and serves the site offline', async ({ page, context }) => {
+  await page.goto('/');
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  // Second load lets the SW's runtime caching capture CSS/JS/font assets.
+  await page.reload();
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator('#today-persian')).not.toBeEmpty();
+  await expect(page.locator('#quote')).toBeVisible();
+  await context.setOffline(false);
+});
