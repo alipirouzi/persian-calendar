@@ -11,7 +11,10 @@ body {
 main {
   max-width: 44rem;
   margin-inline: auto;
-  padding: var(--space-section) 1.25rem;
+  padding: var(--space-section)
+    max(1.25rem, env(safe-area-inset-right))
+    calc(var(--space-section) + env(safe-area-inset-bottom))
+    max(1.25rem, env(safe-area-inset-left));
   display: grid;
   gap: var(--space-section);
   justify-items: center;

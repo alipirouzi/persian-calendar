@@ -97,3 +97,42 @@ for (const scheme of ['light', 'dark'] as const) {
     });
   }
 }
+
+test('no horizontal overflow at phone widths', async ({ page }) => {
+  for (const width of [320, 375, 430]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto('/');
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `width=${width}`).toBeLessThanOrEqual(0);
+  }
+});
+
+test('date inputs are comfortable touch targets (≥44px, ≥16px font)', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  for (const id of ['#p-y', '#p-m', '#p-d', '#g-y', '#g-m', '#g-d']) {
+    const box = await page.locator(id).boundingBox();
+    expect(box, id).not.toBeNull();
+    expect(box!.height, id).toBeGreaterThanOrEqual(44);
+    const fontPx = await page.locator(id).evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(fontPx, id).toBeGreaterThanOrEqual(16);
+  }
+});
+
+test('lang toggle hit area extends beyond the visual pill', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  const box = await page.locator('#lang-toggle').boundingBox();
+  // Click 8px BELOW the pill's bottom edge — must still toggle via the ::after hit extension.
+  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height + 8);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
+});
+
+test('exchange glyph reads vertically when the converter stacks', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  const transform = await page.locator('.exchange').evaluate((el) => getComputedStyle(el).transform);
+  expect(transform).not.toBe('none'); // rotate(90deg) → matrix(0, 1, -1, 0, 0, 0)
+});
