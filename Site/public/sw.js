@@ -29,7 +29,7 @@ self.addEventListener('fetch', (event) => {
   } else if (url.pathname.startsWith('/assets/')) {
     event.respondWith(cacheFirst(request));
   } else {
-    event.respondWith(staleWhileRevalidate(request));
+    event.respondWith(staleWhileRevalidate(event, request));
   }
 });
 
@@ -37,7 +37,8 @@ async function networkFirst(request) {
   const cache = await caches.open(CACHE);
   try {
     const fresh = await fetch(request);
-    if (fresh.ok) cache.put('/', fresh.clone());
+    // '/' is the only navigation cache key — single-route assumption (no per-path nav caching).
+    if (fresh.ok && fresh.status !== 206) await cache.put('/', fresh.clone());
     return fresh;
   } catch {
     const hit = await cache.match('/');
@@ -50,19 +51,25 @@ async function cacheFirst(request) {
   const hit = await cache.match(request);
   if (hit) return hit;
   const fresh = await fetch(request);
-  if (fresh.ok) cache.put(request, fresh.clone());
+  if (fresh.ok && fresh.status !== 206) await cache.put(request, fresh.clone());
   return fresh;
 }
 
-async function staleWhileRevalidate(request) {
+async function staleWhileRevalidate(event, request) {
   const cache = await caches.open(CACHE);
   const hit = await cache.match(request);
   const refresh = fetch(request)
-    .then((fresh) => {
-      if (fresh.ok) cache.put(request, fresh.clone());
+    .then(async (fresh) => {
+      if (fresh.ok && fresh.status !== 206) await cache.put(request, fresh.clone());
       return fresh;
     })
     .catch(() => undefined);
-  if (hit) return hit;
+  if (hit) {
+    // The cache write above can't be awaited before returning the hit, so extend
+    // the fetch event's lifetime instead — otherwise the runtime may tear the
+    // worker down mid-write once respondWith's promise settles.
+    event.waitUntil(refresh);
+    return hit;
+  }
   return (await refresh) ?? Response.error();
 }
