@@ -51,7 +51,7 @@ PersianCalendar/
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/quotes.json  366 bilingual quotes
 │   ├── tests/              Vitest (46 tests, incl. .NET parity)
-│   └── e2e/                Playwright (14 tests, incl. screenshot matrix)
+│   └── e2e/                Playwright (33 tests, incl. screenshot matrix)
 │
 ├── deploy/
 │   ├── nginx.conf             static serving, caching, /health
@@ -114,7 +114,7 @@ npm test
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 14 tests
+### E2E (Playwright) — 33 tests
 
 ```bash
 cd Site
@@ -126,8 +126,8 @@ Playwright starts `npm run preview` itself and tests the real production build. 
 today prefilled and cross-checked against ICU's Persian calendar, live conversion in both
 directions, month-aware localized validation errors, FA toggle → RTL + Persian digits,
 daily quote, clock hands actually moving, the `prefers-reduced-motion` interval fallback
-still advancing them, and a light/dark × 320/768/1440 screenshot matrix written to
-`Site/test-results/screens/`.
+still advancing them, a light/dark × 320/375/430/768/820/1024/1440 screenshot matrix
+written to `Site/test-results/screens/`, and the PWA/mobile checks described below.
 
 ## PWA
 
