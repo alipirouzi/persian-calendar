@@ -45,6 +45,11 @@ html[lang='fa'] #quote-text { font-style: normal; }
 .clock .second-hand { stroke: var(--accent); }
 #clock-section { display: grid; justify-items: center; }
 @media (max-width: 480px) { .clock { width: 200px; height: 200px; } }
+/* Tablet portrait: the tall centered column earns a larger dial. Range-capped
+   so desktop (≥1025px) stays exactly as shipped. */
+@media (min-width: 768px) and (max-width: 1024px) { .clock { width: 300px; height: 300px; } }
+/* Landscape phones: keep the today panel visible without scrolling past the dial. */
+@media (max-height: 480px) { .clock { width: 150px; height: 150px; } }
 
 @media (max-width: 560px) {
   #converter-form { flex-direction: column; align-items: center; gap: 1.1rem; }

@@ -86,7 +86,7 @@ test('reduced motion still advances the clock via the interval fallback', async 
 });
 
 for (const scheme of ['light', 'dark'] as const) {
-  for (const width of [320, 768, 1440]) {
+  for (const width of [320, 375, 430, 768, 820, 1024, 1440]) {
     test(`screenshot ${scheme} @${width}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ width, height: 900 });
@@ -97,6 +97,31 @@ for (const scheme of ['light', 'dark'] as const) {
     });
   }
 }
+
+for (const width of [375, 820]) {
+  test(`screenshot fa rtl @${width}`, async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('lang', 'fa'));
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    await page.screenshot({ path: `test-results/screens/fa-${width}.png`, fullPage: true });
+  });
+}
+
+test('landscape phone: clock shrinks so today panel is reachable', async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto('/');
+  const clock = await page.locator('.clock').boundingBox();
+  expect(clock!.height).toBeLessThanOrEqual(150);
+  await page.screenshot({ path: 'test-results/screens/landscape-844x390.png', fullPage: true });
+});
+
+test('tablet clock is larger than phone clock', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto('/');
+  const clock = await page.locator('.clock').boundingBox();
+  expect(clock!.height).toBeGreaterThanOrEqual(300);
+});
 
 test('no horizontal overflow at phone widths', async ({ page }) => {
   for (const width of [320, 375, 430]) {
