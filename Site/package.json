@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "gen:vectors": "dotnet run --project ../Console -c Release -- --generate-vectors tests/fixtures/vectors.json 1200 1500",
+    "gen:icons": "node scripts/gen-icons.mjs",
     "e2e": "playwright test"
   },
   "devDependencies": {

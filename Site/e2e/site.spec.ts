@@ -175,3 +175,17 @@ test('exchange glyph reads vertically when the converter stacks', async ({ page 
   const transform = await page.locator('.exchange').evaluate((el) => getComputedStyle(el).transform);
   expect(transform).not.toBe('none'); // rotate(90deg) → matrix(0, 1, -1, 0, 0, 0)
 });
+
+test('web manifest and icons are served', async ({ page, request }) => {
+  await page.goto('/');
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/site.webmanifest');
+  const res = await request.get('/site.webmanifest');
+  expect(res.ok()).toBeTruthy();
+  const manifest = await res.json();
+  expect(manifest.display).toBe('standalone');
+  expect(manifest.icons).toHaveLength(3);
+  for (const icon of manifest.icons) {
+    expect((await request.get(icon.src)).ok(), icon.src).toBeTruthy();
+  }
+  expect((await request.get('/icons/icon-180.png')).ok()).toBeTruthy();
+});
