@@ -1,7 +1,7 @@
 # Persian Calendar
 
-Persian (Shamsi / Solar Hijri) ↔ Gregorian date conversion, a live analog clock, and a
-daily Stoic thought — bilingual EN/FA with full RTL.
+Persian (Shamsi / Solar Hijri) ↔ Gregorian date conversion and a live analog clock —
+bilingual EN/FA with full RTL, installable as an offline PWA.
 
 **Live:** <https://time.automated.ink/>
 
@@ -9,8 +9,7 @@ daily Stoic thought — bilingual EN/FA with full RTL.
 
 A **fully static, client-side site**. There is no application server: nginx serves a
 handful of hashed files, and every conversion, clock frame, and language switch happens
-in the visitor's browser. After first paint there are zero network round-trips (the only
-deferred fetch is `quotes.json`).
+in the visitor's browser. After first paint there are zero network round-trips.
 
 ### Why static
 
@@ -21,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **10.3 kB of JavaScript (4.6 kB gzipped)** and **9.9 kB of CSS
-(2.2 kB gzipped)**, with no runtime framework.
+The shipped bundle is **9.9 kB of JavaScript (4.4 kB gzipped)** and **10.1 kB of CSS
+(2.3 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
 
@@ -47,11 +46,9 @@ PersianCalendar/
 │   │   ├── clock/          clock-math.ts (hand angles), clock.ts (SVG + rAF driver)
 │   │   ├── converter/      converter-core.ts (pure), converter.ts (DOM wiring)
 │   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits
-│   │   ├── quotes/         quotes.ts — day-of-year selection
 │   │   └── styles/         tokens.css, base.css, components.css
-│   ├── public/quotes.json  366 bilingual quotes
-│   ├── tests/              Vitest (46 tests, incl. .NET parity)
-│   └── e2e/                Playwright (34 tests, incl. screenshot matrix)
+│   ├── tests/              Vitest (42 tests, incl. .NET parity)
+│   └── e2e/                Playwright (33 tests, incl. screenshot matrix)
 │
 ├── deploy/
 │   ├── nginx.conf             static serving, caching, /health
@@ -100,7 +97,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 46 tests
+### Site unit tests (Vitest) — 42 tests
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -114,7 +111,7 @@ npm test
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 34 tests
+### E2E (Playwright) — 33 tests
 
 ```bash
 cd Site
@@ -125,7 +122,7 @@ npm run e2e
 Playwright starts `npm run preview` itself and tests the real production build. Coverage:
 today prefilled and cross-checked against ICU's Persian calendar, live conversion in both
 directions, month-aware localized validation errors, FA toggle → RTL + Persian digits,
-daily quote, clock hands actually moving, the `prefers-reduced-motion` interval fallback
+clock hands actually moving, the `prefers-reduced-motion` interval fallback
 still advancing them, a light/dark × 320/375/430/768/820/1024/1440 screenshot matrix
 written to `Site/test-results/screens/`, and the PWA/mobile checks described below.
 
@@ -148,14 +145,14 @@ differs by request type:
 |---|---|---|
 | Navigations (`mode: 'navigate'`) | Network-first | Falls back to the cached `/` shell when the network is unreachable; `/` is the only navigation cache key. |
 | `/assets/*` (hashed, immutable) | Cache-first | Fetched once and never revalidated — matches the `immutable` `Cache-Control` these paths already ship with. |
-| Everything else same-origin (e.g. `quotes.json`) | Stale-while-revalidate | The cached copy is served immediately while a background fetch (extended via `event.waitUntil`) refreshes the cache for next time. |
+| Everything else same-origin (e.g. the manifest, icons) | Stale-while-revalidate | The cached copy is served immediately while a background fetch (extended via `event.waitUntil`) refreshes the cache for next time. |
 
 Partial responses (HTTP 206) are never written to the cache by any of the three strategies. To
 invalidate everything that's cached — after a breaking change to a cached asset, for example —
 bump the `CACHE` constant in `sw.js`; the `activate` handler deletes any cache whose name no
 longer matches.
 
-The Playwright suite's viewport and locale matrix was widened alongside this work (34 tests
+The Playwright suite's viewport and locale matrix was widened alongside this work (33 tests
 total): light/dark screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone
 case (844×390) asserting the clock shrinks so the today panel stays reachable; FA/RTL
 screenshots at 375 and 820; and dedicated tests confirming the manifest and icons resolve and
@@ -174,18 +171,7 @@ in both directions, including every leap year and 30 Esfand. At 1502 AP the arit
 the two implementations no longer agree and correctness could not be asserted. Rather than
 ship dates we cannot prove, the range is capped where the proof holds.
 
-## Quotes and licensing
-
-`Site/public/quotes.json` holds 366 entries keyed to Persian day-of-year (1 Farvardin = 1,
-30 Esfand = 366, used only in leap years). Each entry carries EN and FA text, author in
-both languages, and a source citation.
-
-- **English texts** are drawn from **public-domain translations**: Marcus Aurelius
-  (*Meditations*, George Long), Seneca (*Moral Letters*, Richard Gummere), Epictetus
-  (Higginson / Carter). These translations are out of copyright.
-- **Farsi texts** were written for this project as translations of those public-domain
-  English texts. They have **not** been proofread by a native Farsi speaker — treat them
-  as best-effort.
+## Licensing
 
 The project code is MIT licensed (see `LICENSE`). Fonts are self-hosted via npm:
 Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
@@ -252,7 +238,6 @@ than interpolated into shell command lines, and the SSH call uses
 
 - Hashed assets under `/assets/`: `Cache-Control: public, max-age=31536000, immutable`
 - `index.html`: `Cache-Control: no-cache`
-- `quotes.json`: `Cache-Control: public, max-age=86400`
 - `/health` → `200 ok` (an nginx `return`, not a file)
 - Security headers on every response: CSP (`default-src 'self'`, no external origins —
   every asset is self-hosted), `Strict-Transport-Security`, `X-Content-Type-Options`,
@@ -287,9 +272,9 @@ known gaps.
 - `docs/SECURITY.md` — security controls and known gaps
 - `docs/superpowers/specs/2026-07-31-static-rewrite-design.md` — design decisions
 - `docs/superpowers/plans/2026-07-31-static-rewrite.md` — implementation plan
-- `docs/superpowers/specs/2026-08-02-mobile-pwa-and-quotes-design.md` — mobile/PWA polish and quote roster design
+- `docs/superpowers/specs/2026-08-02-mobile-pwa-and-quotes-design.md` — mobile/PWA polish design (its quote-roster section was abandoned; the quote feature was removed)
 - `docs/superpowers/plans/2026-08-02-mobile-pwa.md` — mobile/PWA implementation plan
-- `docs/superpowers/plans/2026-08-02-quote-roster.md` — 366-thinker quote roster implementation plan
+- `docs/superpowers/plans/2026-08-02-quote-roster.md` — quote roster plan (abandoned)
 
 ## Not implemented
 

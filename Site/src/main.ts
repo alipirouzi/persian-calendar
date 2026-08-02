@@ -7,17 +7,14 @@ import './styles/base.css';
 import './styles/components.css';
 
 import { nowSnapshot } from './calendar/now';
-import { persianDayOfYear } from './calendar/persian';
 import { setupConverter } from './converter/converter';
 import {
   GREGORIAN_MONTHS, initialLang, PERSIAN_MONTHS, persistLang, STRINGS,
   toLocaleDigits, type Lang, type StringKey,
 } from './i18n/strings';
-import { loadQuotes, quoteForPersianDay, type Quote } from './quotes/quotes';
 import { createClock } from './clock/clock';
 
 let lang: Lang = initialLang();
-let quotes: readonly Quote[] | null = null;
 
 function text(id: string, value: string): void {
   const el = document.getElementById(id);
@@ -56,21 +53,9 @@ function renderToday(): void {
   }
 }
 
-function renderQuote(): void {
-  const container = document.getElementById('quote');
-  if (!container || quotes === null) return;
-  const day = persianDayOfYear(nowSnapshot().local.p);
-  const quote = quoteForPersianDay(day, quotes);
-  if (!quote) return;
-  text('quote-text', lang === 'fa' ? quote.fa : quote.en);
-  text('quote-author', lang === 'fa' ? `${quote.author_fa} — ${quote.source}` : `${quote.author_en} — ${quote.source}`);
-  container.hidden = false;
-}
-
 function renderAll(converterRerender: () => void): void {
   renderStatic();
   renderToday();
-  renderQuote();
   converterRerender();
 }
 
@@ -87,11 +72,6 @@ document.getElementById('lang-toggle')?.addEventListener('click', () => {
   lang = lang === 'en' ? 'fa' : 'en';
   persistLang(lang);
   renderAll(converter.rerender);
-});
-
-void loadQuotes().then((loaded) => {
-  quotes = loaded;
-  renderQuote();
 });
 
 if ('serviceWorker' in navigator) {

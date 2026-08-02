@@ -1,7 +1,7 @@
 {
   "name": "Persian Calendar",
   "short_name": "Persian Cal",
-  "description": "Persian ↔ Gregorian date conversion, a live clock, and a daily thought — fully offline.",
+  "description": "Persian ↔ Gregorian date conversion and a live clock — fully offline.",
   "id": "/",
   "start_url": "/",
   "display": "standalone",

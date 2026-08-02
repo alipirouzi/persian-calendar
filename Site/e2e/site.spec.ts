@@ -55,12 +55,6 @@ test('language toggle switches to FA with RTL and Persian digits', async ({ page
   await expect(page.locator('#today-persian')).toContainText('۱۴');
 });
 
-test('daily quote appears', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.locator('#quote')).toBeVisible();
-  await expect(page.locator('#quote-text')).not.toBeEmpty();
-});
-
 test('clock hands are driven', async ({ page }) => {
   await page.goto('/');
   const before = await page.locator('#hand-second').getAttribute('transform');
@@ -212,6 +206,5 @@ test('service worker registers and serves the site offline', async ({ page, cont
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('#today-persian')).not.toBeEmpty();
-  await expect(page.locator('#quote')).toBeVisible();
   await context.setOffline(false);
 });
