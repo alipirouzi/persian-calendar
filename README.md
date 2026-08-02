@@ -51,7 +51,7 @@ PersianCalendar/
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/quotes.json  366 bilingual quotes
 │   ├── tests/              Vitest (46 tests, incl. .NET parity)
-│   └── e2e/                Playwright (33 tests, incl. screenshot matrix)
+│   └── e2e/                Playwright (34 tests, incl. screenshot matrix)
 │
 ├── deploy/
 │   ├── nginx.conf             static serving, caching, /health
@@ -114,7 +114,7 @@ npm test
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 33 tests
+### E2E (Playwright) — 34 tests
 
 ```bash
 cd Site
@@ -155,7 +155,7 @@ invalidate everything that's cached — after a breaking change to a cached asse
 bump the `CACHE` constant in `sw.js`; the `activate` handler deletes any cache whose name no
 longer matches.
 
-The Playwright suite's viewport and locale matrix was widened alongside this work (33 tests
+The Playwright suite's viewport and locale matrix was widened alongside this work (34 tests
 total): light/dark screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone
 case (844×390) asserting the clock shrinks so the today panel stays reachable; FA/RTL
 screenshots at 375 and 820; and dedicated tests confirming the manifest and icons resolve and
@@ -287,6 +287,9 @@ known gaps.
 - `docs/SECURITY.md` — security controls and known gaps
 - `docs/superpowers/specs/2026-07-31-static-rewrite-design.md` — design decisions
 - `docs/superpowers/plans/2026-07-31-static-rewrite.md` — implementation plan
+- `docs/superpowers/specs/2026-08-02-mobile-pwa-and-quotes-design.md` — mobile/PWA polish and quote roster design
+- `docs/superpowers/plans/2026-08-02-mobile-pwa.md` — mobile/PWA implementation plan
+- `docs/superpowers/plans/2026-08-02-quote-roster.md` — 366-thinker quote roster implementation plan
 
 ## Not implemented
 

@@ -1,10 +1,11 @@
 // Rasterizes the site's clock mark to PWA icons using Playwright's bundled
 // Chromium — no image-processing dependency needed. Rerun: npm run gen:icons
 import { mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 
 // safe=1 → full-bleed background with the mark inside the 80% maskable safe zone.
-const page_html = (size, safe) => `<!doctype html><body style="margin:0">
+const pageHtml = (size, safe) => `<!doctype html><body style="margin:0">
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
   <rect width="100" height="100" fill="#f7f5f0"/>
   <g transform="${safe ? 'translate(50 50) scale(0.72) translate(-50 -50)' : ''}">
@@ -15,7 +16,7 @@ const page_html = (size, safe) => `<!doctype html><body style="margin:0">
   </g>
 </svg></body>`;
 
-mkdirSync(new URL('../public/icons/', import.meta.url), { recursive: true });
+mkdirSync(fileURLToPath(new URL('../public/icons/', import.meta.url)), { recursive: true });
 const browser = await chromium.launch();
 const targets = [
   { file: 'icon-180.png', size: 180, safe: false },
@@ -25,8 +26,8 @@ const targets = [
 ];
 for (const { file, size, safe } of targets) {
   const page = await browser.newPage({ viewport: { width: size, height: size } });
-  await page.setContent(page_html(size, safe));
-  await page.screenshot({ path: new URL(`../public/icons/${file}`, import.meta.url).pathname });
+  await page.setContent(pageHtml(size, safe));
+  await page.screenshot({ path: fileURLToPath(new URL(`../public/icons/${file}`, import.meta.url)) });
   await page.close();
 }
 await browser.close();

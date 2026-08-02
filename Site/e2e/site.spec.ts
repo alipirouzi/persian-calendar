@@ -124,7 +124,7 @@ test('tablet clock is larger than phone clock', async ({ page }) => {
 });
 
 test('no horizontal overflow at phone widths', async ({ page }) => {
-  for (const width of [320, 375, 430]) {
+  for (const width of [320, 375, 430, 768, 820, 1024, 1440]) {
     await page.setViewportSize({ width, height: 800 });
     await page.goto('/');
     const overflow = await page.evaluate(
@@ -160,6 +160,19 @@ test('date inputs stay comfortable touch targets on tablets (768, 1024)', async 
   }
 });
 
+test('desktop stays pixel-identical regardless of short viewport height', async ({ page }) => {
+  // Guards the max-height:480px clock rule and the (pointer: coarse) touch-target
+  // rule from ever regressing onto mouse-driven desktop widths (≥1025px).
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const clock = await page.locator('.clock').boundingBox();
+  expect(clock!.height).toBe(260);
+  const box = await page.locator('#p-y').boundingBox();
+  expect(box!.height).toBeLessThan(44);
+  const fontPx = await page.locator('#p-y').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  expect(fontPx).toBeLessThan(16);
+});
+
 test('lang toggle hit area extends beyond the visual pill', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
@@ -173,7 +186,7 @@ test('exchange glyph reads vertically when the converter stacks', async ({ page 
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
   const transform = await page.locator('.exchange').evaluate((el) => getComputedStyle(el).transform);
-  expect(transform).not.toBe('none'); // rotate(90deg) → matrix(0, 1, -1, 0, 0, 0)
+  expect(transform).toBe('matrix(0, 1, -1, 0, 0, 0)'); // rotate(90deg)
 });
 
 test('web manifest and icons are served', async ({ page, request }) => {
