@@ -132,22 +132,31 @@ export function setupConverter(getLang: () => Lang): {
     history.replaceState(null, '', window.location.pathname);
   });
 
+  const flashCopyLabel = (key: 'copied' | 'copyFailed'): void => {
+    const lang = getLang();
+    refs.btnCopy.textContent = STRINGS[lang][key];
+    clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => {
+      refs.btnCopy.textContent = STRINGS[getLang()].copy;
+    }, COPIED_RESET_MS);
+  };
+
   refs.btnCopy.addEventListener('click', () => {
     if (lastOk === null) return;
     const lang = getLang();
-    void navigator.clipboard.writeText(copySentence(lastOk.p, lastOk.g, lang)).then(() => {
-      refs.btnCopy.textContent = STRINGS[lang].copied;
-      clearTimeout(copiedTimer);
-      copiedTimer = setTimeout(() => {
-        refs.btnCopy.textContent = STRINGS[getLang()].copy;
-      }, COPIED_RESET_MS);
-    });
+    navigator.clipboard.writeText(copySentence(lastOk.p, lastOk.g, lang))
+      .then(() => flashCopyLabel('copied'))
+      .catch(() => flashCopyLabel('copyFailed'));
   });
 
   return {
     prefill,
     rerender: () => {
       renderMonths();
+      // Own the copy button's label regardless of caller ordering: a pending
+      // "Copied"/"Copy failed" flash must not survive a language toggle.
+      clearTimeout(copiedTimer);
+      refs.btnCopy.textContent = STRINGS[getLang()].copy;
       // Language switch: refresh digits/labels on BOTH sides from the last
       // valid state (the user is not mid-typing during a toggle).
       if (lastOk !== null) {

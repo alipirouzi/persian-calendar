@@ -3,7 +3,7 @@ export type Lang = 'en' | 'fa';
 export type StringKey =
   | 'pageTitle' | 'persianLabel' | 'gregorianLabel'
   | 'year' | 'month' | 'day' | 'tehranLabel' | 'langToggle'
-  | 'today' | 'copy' | 'copied'
+  | 'today' | 'copy' | 'copied' | 'copyFailed'
   | 'errYearRange' | 'errMonth' | 'errDay';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
@@ -19,6 +19,7 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     today: 'Today',
     copy: 'Copy',
     copied: 'Copied',
+    copyFailed: 'Copy failed',
     errYearRange: 'Year must be between {min} and {max}',
     errMonth: 'Month must be between 1 and 12',
     errDay: '{month} has {days} days in {year}',
@@ -35,6 +36,7 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     today: 'امروز',
     copy: 'کپی',
     copied: 'کپی شد',
+    copyFailed: 'کپی نشد',
     errYearRange: 'سال باید بین {min} و {max} باشد',
     errMonth: 'ماه باید بین ۱ و ۱۲ باشد',
     errDay: '{month} در سال {year} {days} روز دارد',
