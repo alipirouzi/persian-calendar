@@ -61,6 +61,8 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
    Width-capped so a short desktop window (e.g. 1440×450) doesn't also shrink the
    dial — desktop (≥1025px) must stay pixel-identical regardless of height. */
 @media (max-height: 480px) and (max-width: 1024px) { .clock { width: 150px; height: 150px; } }
+/* Desktop: smaller dial so the converter fits above the fold (≥700px tall). */
+@media (min-width: 1025px) { .clock { width: 210px; height: 210px; } }
 
 @media (max-width: 560px) {
   #converter-form { flex-direction: column; align-items: center; gap: 1.1rem; }

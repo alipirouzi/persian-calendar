@@ -162,11 +162,22 @@ test('desktop stays pixel-identical regardless of short viewport height', async 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   const clock = await page.locator('.clock').boundingBox();
-  expect(clock!.height).toBe(260);
+  expect(clock!.height).toBe(210);
   const box = await page.locator('#p-y').boundingBox();
   expect(box!.height).toBeLessThan(44);
   const fontPx = await page.locator('#p-y').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
   expect(fontPx).toBeLessThan(16);
+});
+
+test('desktop: converter incl. status row is fully above the fold', async ({ page }) => {
+  for (const [width, height] of [[1440, 700], [1280, 720], [1920, 700]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/');
+    const converter = await page.locator('#converter').boundingBox();
+    expect(converter, `viewport ${width}x${height}`).not.toBeNull();
+    expect(converter!.y + converter!.height, `viewport ${width}x${height}`)
+      .toBeLessThanOrEqual(height);
+  }
 });
 
 test('lang toggle hit area extends beyond the visual pill', async ({ page }) => {

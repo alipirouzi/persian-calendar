@@ -27,3 +27,10 @@ html[lang='fa'] {
   --font-display: 'Vazirmatn', serif;
   --font-ui: 'Vazirmatn', system-ui, sans-serif;
 }
+/* Desktop: the whole product — clock, today, converter — fits one viewport. */
+@media (min-width: 1025px) {
+  :root {
+    --space-section: clamp(1.75rem, 1rem + 1.5vw, 2.75rem);
+    --text-date: clamp(1.5rem, 1rem + 1.6vw, 2.1rem);
+  }
+}
