@@ -850,3 +850,11 @@ Expected: everything green. Record the exact test counts in the README.
 git add README.md
 git commit -m "docs: converter UX features, updated test counts and layout"
 ```
+
+---
+
+## Amendments (2026-08-05, during execution)
+
+- **Task 4 reference code amendments** (from task review findings):
+  1. The copy button's `navigator.clipboard.writeText(...)` must handle rejection: on failure, swap the label to a new `copyFailed` string key (en `'Copy failed'`, fa `'کپی نشد'`, added to `strings.ts` — scope extension) using the same timed-swap pattern as `copied`.
+  2. `rerender()` must itself clear any pending `copiedTimer` and restore the copy label from `STRINGS` — no reliance on `renderStatic()` call order in `main.ts`.
