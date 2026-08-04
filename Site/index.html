@@ -36,11 +36,11 @@
           <legend id="legend-persian"></legend>
           <div class="fields">
             <label><span data-str="year"></span>
-              <input id="p-y" type="number" inputmode="numeric" min="1200" max="1500" /></label>
+              <input id="p-y" type="text" inputmode="numeric" /></label>
             <label><span data-str="month"></span>
-              <input id="p-m" type="number" inputmode="numeric" min="1" max="12" /></label>
+              <select id="p-m"></select></label>
             <label><span data-str="day"></span>
-              <input id="p-d" type="number" inputmode="numeric" min="1" max="31" /></label>
+              <input id="p-d" type="text" inputmode="numeric" /></label>
           </div>
         </fieldset>
         <div class="exchange" aria-hidden="true">⇄</div>
@@ -48,14 +48,19 @@
           <legend id="legend-gregorian"></legend>
           <div class="fields">
             <label><span data-str="year"></span>
-              <input id="g-y" type="number" inputmode="numeric" min="1822" max="2121" /></label>
+              <input id="g-y" type="text" inputmode="numeric" /></label>
             <label><span data-str="month"></span>
-              <input id="g-m" type="number" inputmode="numeric" min="1" max="12" /></label>
+              <select id="g-m"></select></label>
             <label><span data-str="day"></span>
-              <input id="g-d" type="number" inputmode="numeric" min="1" max="31" /></label>
+              <input id="g-d" type="text" inputmode="numeric" /></label>
           </div>
         </fieldset>
       </form>
+      <div id="status-row">
+        <button id="btn-today" type="button" data-str="today"></button>
+        <span id="weekday"></span>
+        <button id="btn-copy" type="button" data-str="copy"></button>
+      </div>
       <p id="converter-error" role="status" hidden></p>
     </section>
 

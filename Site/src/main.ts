@@ -8,10 +8,13 @@ import './styles/components.css';
 
 import { nowSnapshot } from './calendar/now';
 import { setupConverter } from './converter/converter';
+import { convertFrom } from './converter/converter-core';
+import { parseUrlDate } from './converter/url-state';
 import {
-  GREGORIAN_MONTHS, initialLang, PERSIAN_MONTHS, persistLang, STRINGS,
+  initialLang, persistLang, STRINGS,
   toLocaleDigits, type Lang, type StringKey,
 } from './i18n/strings';
+import { formatGregorianDate, formatPersianDate, weekdayName } from './i18n/format';
 import { createClock } from './clock/clock';
 
 let lang: Lang = initialLang();
@@ -42,10 +45,10 @@ function renderToday(): void {
   const snapshot = nowSnapshot();
   const p = snapshot.local.p;
   const g = snapshot.local.g;
-  const pText = `${toLocaleDigits(p.pd, lang)} ${PERSIAN_MONTHS[lang][p.pm - 1]} ${toLocaleDigits(p.py, lang)}`;
-  const gText = `${GREGORIAN_MONTHS[lang][g.gm - 1]} ${toLocaleDigits(g.gd, lang)}, ${toLocaleDigits(g.gy, lang)}`;
-  text('today-persian', pText);
-  text('today-gregorian', gText);
+  const w = weekdayName(g, lang);
+  const sep = lang === 'fa' ? ' ' : ', ';
+  text('today-persian', `${w}${sep}${formatPersianDate(p, lang)}`);
+  text('today-gregorian', `${w}${sep}${formatGregorianDate(g, lang)}`);
   const tehranLine = document.getElementById('tehran-line');
   if (tehranLine) {
     tehranLine.hidden = snapshot.tehranIsLocal;
@@ -60,8 +63,17 @@ function renderAll(converterRerender: () => void): void {
 }
 
 const converter = setupConverter(() => lang);
-const today = nowSnapshot();
-converter.prefill(today.local.p, today.local.g);
+const urlDate = parseUrlDate(window.location.search);
+const urlOutcome = urlDate === null ? null : convertFrom(urlDate.side, {
+  y: String(urlDate.y), m: String(urlDate.m), d: String(urlDate.d),
+});
+if (urlOutcome?.status === 'ok') {
+  converter.prefill(urlOutcome.persian, urlOutcome.gregorian);
+} else {
+  // No param, or an invalid one — ignore silently and show today.
+  const today = nowSnapshot();
+  converter.prefill(today.local.p, today.local.g);
+}
 renderStatic();
 renderToday();
 
