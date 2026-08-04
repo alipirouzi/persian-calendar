@@ -44,11 +44,14 @@ PersianCalendar/
 │   ├── src/
 │   │   ├── calendar/       persian.ts (algorithm port), now.ts (today snapshot)
 │   │   ├── clock/          clock-math.ts (hand angles), clock.ts (SVG + rAF driver)
-│   │   ├── converter/      converter-core.ts (pure), converter.ts (DOM wiring)
-│   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits
+│   │   ├── converter/      converter-core.ts (pure), converter.ts (DOM wiring),
+│   │   │                     url-state.ts (parse/format ?p=/?g= query params)
+│   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits,
+│   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
-│   ├── tests/              Vitest (42 tests, incl. .NET parity)
-│   └── e2e/                Playwright (33 tests, incl. screenshot matrix)
+│   ├── tests/              Vitest (59 tests, incl. .NET parity)
+│   └── e2e/                Playwright (44 tests, incl. converter-ux.spec.ts and
+│                             screenshot matrix)
 │
 ├── deploy/
 │   ├── nginx.conf             static serving, caching, /health
@@ -97,7 +100,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 42 tests
+### Site unit tests (Vitest) — 59 tests
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -111,7 +114,7 @@ npm test
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 33 tests
+### E2E (Playwright) — 44 tests
 
 ```bash
 cd Site
@@ -125,6 +128,10 @@ directions, month-aware localized validation errors, FA toggle → RTL + Persian
 clock hands actually moving, the `prefers-reduced-motion` interval fallback
 still advancing them, a light/dark × 320/375/430/768/820/1024/1440 screenshot matrix
 written to `Site/test-results/screens/`, and the PWA/mobile checks described below.
+`e2e/converter-ux.spec.ts` covers the converter UX work specifically: localized month
+dropdowns surviving the language toggle, Persian-Indic digit input, the weekday and
+Today/Copy status row (including the copy-failed state), `?p=`/`?g=` URL round-tripping
+via `replaceState`, and invalid URL params falling back to today.
 
 ## PWA
 
@@ -152,11 +159,12 @@ invalidate everything that's cached — after a breaking change to a cached asse
 bump the `CACHE` constant in `sw.js`; the `activate` handler deletes any cache whose name no
 longer matches.
 
-The Playwright suite's viewport and locale matrix was widened alongside this work (33 tests
-total): light/dark screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone
-case (844×390) asserting the clock shrinks so the today panel stays reachable; FA/RTL
-screenshots at 375 and 820; and dedicated tests confirming the manifest and icons resolve and
-that the service worker actually serves the app while offline.
+The Playwright suite's viewport and locale matrix was widened alongside this work: light/dark
+screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
+asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
+820; and dedicated tests confirming the manifest and icons resolve and that the service worker
+actually serves the app while offline (44 tests total across the whole E2E suite, including
+the later converter UX additions in `converter-ux.spec.ts`).
 
 ## Supported conversion range: Persian years 1200–1500 AP
 
@@ -183,8 +191,21 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   `prefers-reduced-motion: reduce` steps the hands once per second instead. The rAF loop
   pauses on `visibilitychange`.
 - **Converter** — prefilled with today, no Convert button; editing either side converts on
-  input, last-edited side wins. Validation messages are localized and month-aware
-  ("Esfand has 29 days in 1404").
+  input, last-edited side wins. Both sides use native month-name `<select>` dropdowns
+  (localized labels) alongside numeric year/day fields, and those fields are digit-tolerant:
+  Persian-Indic (`۱۴۰۵`), Arabic-Indic (`١٤٠٥`), and ASCII digits are all accepted
+  interchangeably. Validation messages are localized and month-aware ("Esfand has 29 days
+  in 1404"). On desktop the converter, including the status row below, sits entirely above
+  the fold (the clock is 210px at that breakpoint).
+- **Status row** — shows the weekday for the current date, a «Today» / «امروز» button that
+  resets both sides to today and clears the query string, and a «Copy» / «کپی» button that
+  puts the full shareable sentence (e.g. "Saturday, 22 Dey 1403 — January 11, 2025") on the
+  clipboard, swapping its own label to a localized "Copied" state on success or a "Copy
+  failed" state if the clipboard write is rejected.
+- **Shareable URLs** — a valid conversion updates the address bar via `history.replaceState`
+  (`?p=1403-10-22` or `?g=2025-1-11`, never a full navigation) and loading either query
+  param prefills both sides on load; an invalid or malformed param is ignored and today is
+  shown instead.
 - **Timezones** — visitor's local zone, auto-detected. A quiet secondary line shows Tehran
   time when the visitor is not in `Asia/Tehran`. No dropdowns.
 - **Dark mode** — driven purely by `prefers-color-scheme`; both themes designed
