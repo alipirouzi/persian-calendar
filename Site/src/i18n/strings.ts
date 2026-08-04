@@ -3,6 +3,7 @@ export type Lang = 'en' | 'fa';
 export type StringKey =
   | 'pageTitle' | 'persianLabel' | 'gregorianLabel'
   | 'year' | 'month' | 'day' | 'tehranLabel' | 'langToggle'
+  | 'today' | 'copy' | 'copied'
   | 'errYearRange' | 'errMonth' | 'errDay';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
@@ -15,6 +16,9 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     day: 'Day',
     tehranLabel: 'Tehran',
     langToggle: 'فارسی',
+    today: 'Today',
+    copy: 'Copy',
+    copied: 'Copied',
     errYearRange: 'Year must be between {min} and {max}',
     errMonth: 'Month must be between 1 and 12',
     errDay: '{month} has {days} days in {year}',
@@ -28,6 +32,9 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     day: 'روز',
     tehranLabel: 'تهران',
     langToggle: 'English',
+    today: 'امروز',
+    copy: 'کپی',
+    copied: 'کپی شد',
     errYearRange: 'سال باید بین {min} و {max} باشد',
     errMonth: 'ماه باید بین ۱ و ۱۲ باشد',
     errDay: '{month} در سال {year} {days} روز دارد',
@@ -46,6 +53,12 @@ export const GREGORIAN_MONTHS: Record<Lang, readonly string[]> = {
     'July', 'August', 'September', 'October', 'November', 'December'],
   fa: ['ژانویه', 'فوریه', 'مارس', 'آوریل', 'می', 'ژوئن',
     'ژوئیه', 'اوت', 'سپتامبر', 'اکتبر', 'نوامبر', 'دسامبر'],
+};
+
+/** Indexed by JS Date.getDay(): 0 = Sunday … 6 = Saturday. */
+export const WEEKDAYS: Record<Lang, readonly string[]> = {
+  en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  fa: ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه', 'شنبه'],
 };
 
 const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'] as const;
