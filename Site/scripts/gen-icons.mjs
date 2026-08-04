@@ -10,8 +10,9 @@ const pageHtml = (size, safe) => `<!doctype html><body style="margin:0">
   <rect width="100" height="100" fill="#f7f5f0"/>
   <g transform="${safe ? 'translate(50 50) scale(0.72) translate(-50 -50)' : ''}">
     <circle cx="50" cy="50" r="40" fill="none" stroke="#2b3446" stroke-width="3.5"/>
-    <line x1="50" y1="50" x2="50" y2="27" stroke="#2b3446" stroke-width="5" stroke-linecap="round"/>
-    <line x1="50" y1="50" x2="67" y2="50" stroke="#4a6a99" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Hands at 10:10 — the classic watch-catalog pose: symmetric V framing the dial. -->
+    <line x1="50" y1="50" x2="36.1" y2="40.2" stroke="#2b3446" stroke-width="5" stroke-linecap="round"/>
+    <line x1="50" y1="50" x2="69.9" y2="38.5" stroke="#4a6a99" stroke-width="3.5" stroke-linecap="round"/>
     <circle cx="50" cy="50" r="2.5" fill="#2b3446"/>
   </g>
 </svg></body>`;
