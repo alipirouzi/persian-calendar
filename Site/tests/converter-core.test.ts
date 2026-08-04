@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { convertFrom } from '../src/converter/converter-core';
+import { convertFrom, normalizeDigits } from '../src/converter/converter-core';
 
 describe('convertFrom persian', () => {
   it('converts a valid date', () => {
@@ -43,5 +43,34 @@ describe('convertFrom gregorian', () => {
   it('rejects out-of-range Gregorian years', () => {
     expect(convertFrom('gregorian', { y: '1500', m: '1', d: '1' }))
       .toMatchObject({ status: 'error', errorKey: 'errYearRange', params: { min: 1822, max: 2121 } });
+  });
+});
+
+describe('normalizeDigits', () => {
+  it('maps Persian-Indic digits to ASCII', () => {
+    expect(normalizeDigits('۱۴۰۵')).toBe('1405');
+  });
+  it('maps Arabic-Indic digits to ASCII', () => {
+    expect(normalizeDigits('١٤٠٥')).toBe('1405');
+  });
+  it('handles mixed digits and leaves ASCII/other chars alone', () => {
+    expect(normalizeDigits('1۴0٥')).toBe('1405');
+    expect(normalizeDigits('abc')).toBe('abc');
+    expect(normalizeDigits('')).toBe('');
+  });
+});
+
+describe('convertFrom with non-ASCII digits', () => {
+  it('converts Persian-digit input identically to ASCII', () => {
+    expect(convertFrom('persian', { y: '۱۴۰۳', m: '۱۰', d: '۲۲' }))
+      .toEqual(convertFrom('persian', { y: '1403', m: '10', d: '22' }));
+  });
+  it('converts Arabic-digit Gregorian input', () => {
+    expect(convertFrom('gregorian', { y: '٢٠٢٦', m: '7', d: '31' }))
+      .toMatchObject({ status: 'ok', persian: { py: 1405, pm: 5, pd: 9 } });
+  });
+  it('still rejects out-of-range months (URL-injection path)', () => {
+    expect(convertFrom('persian', { y: '1404', m: '13', d: '1' }))
+      .toMatchObject({ status: 'error', errorKey: 'errMonth' });
   });
 });

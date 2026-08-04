@@ -17,9 +17,21 @@ export type ConversionOutcome =
   | { status: 'error'; errorKey: 'errYearRange' | 'errMonth' | 'errDay';
       params: Record<string, number>; side: Side };
 
+const PERSIAN_ZERO = 0x06f0;
+const ARABIC_ZERO = 0x0660;
+
+/** Map Persian-Indic (۰–۹) and Arabic-Indic (٠–٩) digits to ASCII. */
+export function normalizeDigits(raw: string): string {
+  return raw.replace(/[۰-۹٠-٩]/g, (ch) => {
+    const cp = ch.codePointAt(0) as number;
+    return String(cp >= PERSIAN_ZERO ? cp - PERSIAN_ZERO : cp - ARABIC_ZERO);
+  });
+}
+
 function parseField(raw: string): number | null {
-  if (raw.trim() === '') return null;
-  const n = Number(raw);
+  const cleaned = normalizeDigits(raw.trim());
+  if (cleaned === '') return null;
+  const n = Number(cleaned);
   return Number.isInteger(n) ? n : null;
 }
 
