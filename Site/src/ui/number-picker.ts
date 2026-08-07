@@ -75,6 +75,22 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     toggle.setAttribute('aria-expanded', String(value));
   };
 
+  /**
+   * Open downward by default; flip above the field when the list would not fit
+   * below and there is more room above. visualViewport is what shrinks when a
+   * mobile keypad is showing, so prefer it when available.
+   */
+  const positionList = (): void => {
+    list.classList.remove('above');
+    const field = input.getBoundingClientRect();
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const spaceBelow = viewportHeight - field.bottom;
+    const spaceAbove = field.top;
+    if (list.getBoundingClientRect().height > spaceBelow && spaceAbove > spaceBelow) {
+      list.classList.add('above');
+    }
+  };
+
   const open = (from: HTMLElement, fallback: 'first' | 'last'): void => {
     if (options.length === 0) return;
     invoker = from;
@@ -84,6 +100,7 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
       : (fallback === 'first' ? 0 : options.length - 1);
     setExpanded(true);
     paint();
+    positionList();
   };
 
   const close = (restoreFocus: boolean): void => {
@@ -91,6 +108,7 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     setExpanded(false);
     activeIndex = -1;
     input.removeAttribute('aria-activedescendant');
+    list.classList.remove('above');
     if (restoreFocus) invoker.focus();
   };
 
@@ -108,7 +126,7 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     paint();
   };
 
-  input.addEventListener('keydown', (event) => {
+  const onKeyDown = (event: KeyboardEvent): void => {
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
@@ -136,6 +154,11 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
         event.preventDefault();
         if (activeIndex >= 0) commit(activeIndex); else close(true);
         return;
+      case ' ':
+        if (!isOpen || event.currentTarget !== toggle) return;
+        event.preventDefault();
+        if (activeIndex >= 0) commit(activeIndex);
+        return;
       case 'Escape':
         if (!isOpen) return;
         event.preventDefault();
@@ -147,21 +170,60 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
       default:
         return;
     }
+  };
+
+  // Typed as HTMLElement so the generic addEventListener overload resolves: a
+  // HTMLInputElement | HTMLButtonElement union falls back to EventListener.
+  for (const el of [input, toggle] as readonly HTMLElement[]) {
+    el.addEventListener('keydown', onKeyDown);
+  }
+
+  // Typing is an explicitly supported path while the list is open, so the cursor
+  // and the ARIA state must follow the value the field actually holds. With
+  // activeIndex === -1 the Enter branch falls through to close(true), which keeps
+  // the typed value instead of overwriting it.
+  input.addEventListener('input', () => {
+    if (!isOpen) return;
+    activeIndex = selectedIndex();
+    paint();
   });
+
+  const onFocusOut = (event: FocusEvent): void => {
+    const next = event.relatedTarget as Node | null;
+    if (next !== null
+      && (next === input || toggle.contains(next) || list.contains(next))) return;
+    close(false);
+  };
+  for (const el of [input, toggle] as readonly HTMLElement[]) {
+    el.addEventListener('focusout', onFocusOut);
+  }
+
+  /** Matches the CSS touch-target block exactly — see the shared contract. */
+  const isTouchish = (): boolean =>
+    window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
 
   // Keep the browser from moving focus on press: `click` decides where it belongs.
   toggle.addEventListener('mousedown', (event) => { event.preventDefault(); });
   toggle.addEventListener('click', () => {
     if (isOpen) { close(true); return; }
-    // Opened by keyboard-then-click → focus returns to the input; opened by a
-    // bare tap → focus stays on the toggle, so no OS keyboard covers the list.
-    open(document.activeElement === input ? input : toggle, 'first');
+    if (isTouchish()) {
+      // Blur first so the on-screen keypad is already retracting when the list
+      // is measured and positioned.
+      input.blur();
+      open(toggle, 'first');
+      toggle.focus();
+      return;
+    }
+    open(input, 'first');
+    input.focus();
   });
 
   list.addEventListener('mousedown', (event) => { event.preventDefault(); });
   list.addEventListener('click', (event) => {
     const li = (event.target as HTMLElement).closest('li');
     if (li === null || li.parentElement !== list) return;
+    // Cancel activation behaviour so focus stays where close(true) put it.
+    event.preventDefault();
     const index = [...list.children].indexOf(li);
     if (index >= 0) commit(index);
   });
