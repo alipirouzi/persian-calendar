@@ -23,11 +23,24 @@ interface Parts {
  * options it is handed and reports the value that was chosen.
  */
 export function createNumberPicker({ input, toggle, list, onCommit }: Parts): NumberPicker {
+  /** Vertical gap between field and list — mirrors the CSS `calc(100% + 4px)`. */
+  const GAP = 4;
+
+  /** Matches the CSS touch-target block exactly — see the design spec. */
+  const isTouchish = (): boolean =>
+    window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
+
   let options: readonly FieldOption[] = [];
   let activeIndex = -1;
   let isOpen = false;
   /** Where focus returns when the popup closes: whatever opened it. */
   let invoker: HTMLElement = input;
+  /**
+   * Which element carries `aria-activedescendant`. ARIA requires it on the
+   * element that actually holds DOM focus, and the touch path focuses the
+   * listbox rather than the input (a text field would summon the keypad).
+   */
+  let ariaHost: HTMLElement = input;
 
   /** Index of the option matching the field's current number, or -1. */
   const selectedIndex = (): number => {
@@ -35,6 +48,26 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     if (!/^\d+$/.test(cleaned)) return -1;
     const n = Number(cleaned);
     return options.findIndex((o) => o.value === n);
+  };
+
+  const setActiveDescendant = (id: string | null): void => {
+    for (const el of [input, list]) el.removeAttribute('aria-activedescendant');
+    if (id !== null) ariaHost.setAttribute('aria-activedescendant', id);
+  };
+
+  /**
+   * Bring the active row into view by scrolling the LIST only.
+   * `scrollIntoView({block:'nearest'})` scrolls the nearest scrollable ancestor
+   * too, which lurched the whole page whenever the list overflowed the viewport.
+   */
+  const revealActive = (active: HTMLElement): void => {
+    const listRect = list.getBoundingClientRect();
+    const rect = active.getBoundingClientRect();
+    if (rect.top < listRect.top) {
+      list.scrollTop -= listRect.top - rect.top;
+    } else if (rect.bottom > listRect.bottom) {
+      list.scrollTop += rect.bottom - listRect.bottom;
+    }
   };
 
   const paint = (): void => {
@@ -49,11 +82,11 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
       ? (children[activeIndex] as HTMLElement | undefined)
       : undefined;
     if (active === undefined) {
-      input.removeAttribute('aria-activedescendant');
-    } else {
-      input.setAttribute('aria-activedescendant', active.id);
-      active.scrollIntoView({ block: 'nearest' });
+      setActiveDescendant(null);
+      return;
     }
+    setActiveDescendant(active.id);
+    revealActive(active);
   };
 
   const render = (): void => {
@@ -76,9 +109,14 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
   };
 
   /**
-   * Open downward by default; flip above the field when the list would not fit
-   * below and there is more room above. visualViewport is what shrinks when a
-   * mobile keypad is showing, so prefer it when available.
+   * Open downward by default; flip above only when the list does not fit below
+   * AND genuinely fits above. When it fits neither way it stays below, because
+   * downward overflow grows the document so page scroll can still reach the
+   * rows, while upward overflow is unreachable.
+   *
+   * visualViewport is what shrinks when a mobile keypad is showing, so prefer
+   * it — and re-run on its `resize` so a decision taken while the keypad was
+   * still retracting is corrected once it has gone.
    */
   const positionList = (): void => {
     list.classList.remove('above');
@@ -86,31 +124,46 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const spaceBelow = viewportHeight - field.bottom;
     const spaceAbove = field.top;
-    // Measured while anchored below, so the rect already carries the CSS gap
-    // between field and list. Comparing the bare height against spaceBelow
-    // instead would ignore that gap and let the list hang past the viewport.
-    if (list.getBoundingClientRect().bottom > viewportHeight && spaceAbove > spaceBelow) {
+    const listHeight = list.getBoundingClientRect().height;
+    if (listHeight + GAP > spaceBelow && listHeight + GAP <= spaceAbove) {
       list.classList.add('above');
     }
   };
 
-  const open = (from: HTMLElement, fallback: 'first' | 'last'): void => {
+  window.visualViewport?.addEventListener('resize', () => {
+    if (isOpen) positionList();
+  });
+
+  const open = (
+    opts: { invoker: HTMLElement; focusTarget: HTMLElement; fallback: 'first' | 'last' },
+  ): void => {
     if (options.length === 0) return;
-    invoker = from;
+    invoker = opts.invoker;
+    ariaHost = opts.focusTarget === list ? list : input;
     const selected = selectedIndex();
     activeIndex = selected >= 0
       ? selected
-      : (fallback === 'first' ? 0 : options.length - 1);
+      : (opts.fallback === 'first' ? 0 : options.length - 1);
     setExpanded(true);
-    paint();
+    // Position before painting: paint()'s reveal math needs the list's final
+    // geometry, or it scrolls against a box that is about to move.
     positionList();
+    paint();
+    if (document.activeElement !== opts.focusTarget) opts.focusTarget.focus();
+  };
+
+  /** Open from the keyboard, keeping focus wherever the key was pressed. */
+  const openFromKey = (from: HTMLElement, fallback: 'first' | 'last'): void => {
+    const focusTarget = from === toggle && isTouchish() ? list : input;
+    open({ invoker: from, focusTarget, fallback });
   };
 
   const close = (restoreFocus: boolean): void => {
     if (!isOpen) return;
     setExpanded(false);
     activeIndex = -1;
-    input.removeAttribute('aria-activedescendant');
+    setActiveDescendant(null);
+    ariaHost = input;
     list.classList.remove('above');
     if (restoreFocus) invoker.focus();
   };
@@ -133,11 +186,13 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
-        if (isOpen) move(1); else open(input, 'first');
+        if (isOpen) move(1);
+        else openFromKey(event.currentTarget as HTMLElement, 'first');
         return;
       case 'ArrowUp':
         event.preventDefault();
-        if (isOpen) move(-1); else open(input, 'last');
+        if (isOpen) move(-1);
+        else openFromKey(event.currentTarget as HTMLElement, 'last');
         return;
       case 'Home':
         if (!isOpen) return;
@@ -158,9 +213,11 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
         if (activeIndex >= 0) commit(activeIndex); else close(true);
         return;
       case ' ':
-        if (!isOpen || event.currentTarget !== toggle) return;
+        // Only from the toggle or the listbox: a focused button or listbox
+        // treats Space as activation, but in the text field it is a character.
+        if (!isOpen || event.currentTarget === input) return;
         event.preventDefault();
-        if (activeIndex >= 0) commit(activeIndex);
+        if (activeIndex >= 0) commit(activeIndex); else close(true);
         return;
       case 'Escape':
         if (!isOpen) return;
@@ -175,9 +232,11 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     }
   };
 
-  // Typed as HTMLElement so the generic addEventListener overload resolves: a
-  // HTMLInputElement | HTMLButtonElement union falls back to EventListener.
-  for (const el of [input, toggle] as readonly HTMLElement[]) {
+  // All three can hold focus while the popup is open (the listbox does on the
+  // touch path), so all three need the key bindings. Typed as HTMLElement so
+  // the generic addEventListener overload resolves: a union of element types
+  // falls back to the non-generic EventListener signature.
+  for (const el of [input, toggle, list] as readonly HTMLElement[]) {
     el.addEventListener('keydown', onKeyDown);
   }
 
@@ -197,28 +256,23 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
       && (next === input || toggle.contains(next) || list.contains(next))) return;
     close(false);
   };
-  for (const el of [input, toggle] as readonly HTMLElement[]) {
+  for (const el of [input, toggle, list] as readonly HTMLElement[]) {
     el.addEventListener('focusout', onFocusOut);
   }
-
-  /** Matches the CSS touch-target block exactly — see the shared contract. */
-  const isTouchish = (): boolean =>
-    window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
 
   // Keep the browser from moving focus on press: `click` decides where it belongs.
   toggle.addEventListener('mousedown', (event) => { event.preventDefault(); });
   toggle.addEventListener('click', () => {
     if (isOpen) { close(true); return; }
     if (isTouchish()) {
-      // Blur first so the on-screen keypad is already retracting when the list
-      // is measured and positioned.
+      // Focus the listbox, not the input: a text field would summon the OS
+      // keypad over the very list the user just opened. Focus still returns to
+      // the toggle on close, so the keypad stays down throughout.
       input.blur();
-      open(toggle, 'first');
-      toggle.focus();
+      open({ invoker: toggle, focusTarget: list, fallback: 'first' });
       return;
     }
-    open(input, 'first');
-    input.focus();
+    open({ invoker: input, focusTarget: input, fallback: 'first' });
   });
 
   list.addEventListener('mousedown', (event) => { event.preventDefault(); });

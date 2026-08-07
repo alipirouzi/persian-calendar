@@ -319,3 +319,90 @@ test('Enter with no popup open does not reload the page', async ({ page }) => {
   expect(await page.evaluate(() => (window as unknown as Record<string, boolean>)['kept'])).toBe(true);
   expect(new URL(page.url()).search).toBe('?p=1403-10-22');
 });
+
+// --- Second review round: the four findings that survived adversarial verification.
+
+test('aria-activedescendant sits on the element that actually has focus', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await page.locator('#p-d-toggle').click();
+  // Touch path: focus goes to the listbox, not the text input, so the keypad
+  // stays down — and ARIA requires the cursor on the focused element.
+  expect(await page.evaluate(() => document.activeElement?.id ?? '')).toBe('p-d-list');
+  await expect(page.locator('#p-d-list')).toHaveAttribute('aria-activedescendant', /^p-d-list-o\d+$/);
+  expect(await page.locator('#p-d').getAttribute('aria-activedescendant')).toBeNull();
+  // Arrows must work from there.
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  expect(await page.evaluate(() => document.activeElement?.id ?? '')).toBe('p-d-toggle');
+});
+
+test('desktop keeps the cursor on the input, where focus is', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.locator('#p-m').fill('5');
+  await page.locator('#p-m-toggle').click();
+  expect(await page.evaluate(() => document.activeElement?.id ?? '')).toBe('p-m');
+  await expect(page.locator('#p-m')).toHaveAttribute('aria-activedescendant', 'p-m-list-o5');
+  expect(await page.locator('#p-m-list').getAttribute('aria-activedescendant')).toBeNull();
+});
+
+test('the keyboard cursor is marked by more than a faint background', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-m').fill('5');
+  await page.locator('#p-m').focus();
+  await page.keyboard.press('ArrowDown');
+  const active = page.locator('#p-m-list li.active');
+  await expect(active).toHaveCount(1);
+  const bar = await active.evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { color: s.borderInlineStartColor, width: s.borderInlineStartWidth };
+  });
+  expect(bar.width).toBe('3px');
+  expect(bar.color).not.toBe('rgba(0, 0, 0, 0)'); // not transparent
+  // A non-active row keeps the reserved-but-invisible bar, so nothing shifts.
+  const idle = await page.locator('#p-m-list li:not(.active)').first().evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { color: s.borderInlineStartColor, width: s.borderInlineStartWidth };
+  });
+  expect(idle.width).toBe('3px');
+  expect(idle.color).toBe('rgba(0, 0, 0, 0)');
+});
+
+test('selection is not conveyed by colour alone', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-m').fill('5');
+  // aria-selected is painted when the popup opens, which always precedes it
+  // being visible, so open it before asserting the rendered style.
+  await page.locator('#p-m-toggle').click();
+  const selected = page.locator('#p-m-list li[data-value="5"]');
+  await expect(selected).toHaveAttribute('aria-selected', 'true');
+  const weight = await selected.evaluate((el) => getComputedStyle(el).fontWeight);
+  expect(Number(weight)).toBeGreaterThanOrEqual(600);
+});
+
+test('the list never renders off the top, at any viewport height', async ({ page }) => {
+  for (const height of [360, 420, 560, 700, 812]) {
+    await page.setViewportSize({ width: 375, height });
+    await page.goto('/');
+    await page.locator('#p-d-toggle').click();
+    const box = await page.locator('#p-d-list').boundingBox();
+    expect(box, `height=${height}`).not.toBeNull();
+    // Flipping above is only allowed when the list genuinely fits there; when it
+    // fits neither way it must stay below, where page scroll can reach it.
+    expect(box!.y, `height=${height}`).toBeGreaterThanOrEqual(0);
+  }
+});
+
+test('opening a popup does not scroll the page', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  const before = await page.evaluate(() => window.scrollY);
+  await page.locator('#p-d-toggle').click();
+  await expect(page.locator('#p-d-list')).toBeVisible();
+  expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  // Moving the cursor deep into the list scrolls the list, not the document.
+  await page.keyboard.press('End');
+  expect(await page.evaluate(() => window.scrollY)).toBe(before);
+  expect(await page.locator('#p-d-list').evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+});

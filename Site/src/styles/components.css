@@ -89,13 +89,25 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
   inset-block-start: auto; inset-block-end: calc(100% + 4px);
   box-shadow: 0 -8px 24px rgb(0 0 0 / 0.14);
 }
+/* The transparent bar is reserved on every row so activating one shifts nothing. */
 .picker-list li {
   padding: 0.35rem 0.5rem; border-radius: 4px; cursor: pointer; white-space: nowrap;
+  border-inline-start: 3px solid transparent;
 }
 /* Two distinct signals: `active` is the keyboard cursor, aria-selected is the
-   value the field currently holds. */
-.picker-list li.active { background: var(--hairline); }
-.picker-list li[aria-selected='true'] { color: var(--accent); }
+   value the field currently holds.
+   The cursor needs a 3:1 non-text contrast (WCAG 1.4.11) and a background tint
+   alone measured ~1.4:1 against the popup surface, so the accent bar carries the
+   signal and the tint reinforces it. Selection adds weight as well as colour so
+   it is not conveyed by colour alone (WCAG 1.4.1). */
+.picker-list li.active {
+  background: var(--hairline);
+  border-inline-start-color: var(--accent);
+}
+.picker-list li[aria-selected='true'] { color: var(--accent); font-weight: 600; }
+/* Focus lands on the listbox itself on the touch path; the active row is the
+   activedescendant cursor, and this ring covers the keyboard case. */
+.picker-list:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .clock { color: var(--text); display: block; }
 .clock .second-hand { stroke: var(--accent); }
