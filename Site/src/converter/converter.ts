@@ -40,6 +40,11 @@ export function setupConverter(getLang: () => Lang): {
   const weekdayEl = byId<HTMLElement>('weekday');
   const btnToday = byId<HTMLButtonElement>('btn-today');
   const btnCopy = byId<HTMLButtonElement>('btn-copy');
+  // The form exists for grouping and labelling only — there is nothing to submit,
+  // and the default action reloads the page and discards the user's date.
+  byId<HTMLFormElement>('converter-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+  });
 
   let lastEdited: Side = 'persian';
   let lastOk: { p: PersianDateParts; g: GregorianDateParts } | null = null;
