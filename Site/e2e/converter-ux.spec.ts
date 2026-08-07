@@ -3,24 +3,25 @@ import { expect, test } from '@playwright/test';
 // Fixed vector: 1403-10-22 ↔ 2025-01-11 (Saturday), shared with unit tests.
 async function enterPersianDate(page: import('@playwright/test').Page): Promise<void> {
   await page.locator('#p-y').fill('1403');
-  await page.locator('#p-m').selectOption('10');
+  await page.locator('#p-m').fill('10');
   await page.locator('#p-d').fill('22');
 }
 
-test('month dropdowns carry localized labels and survive the language toggle', async ({ page }) => {
+test('month options carry localized labels and survive the language toggle', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('#p-m option[value="5"]')).toHaveText('Mordad');
-  await expect(page.locator('#g-m option[value="8"]')).toHaveText('August');
-  await page.locator('#p-m').selectOption('5');
+  await page.locator('#p-m-toggle').click();
+  await expect(page.locator('#p-m-list li[data-value="5"]')).toHaveText('5 Mordad');
+  await page.locator('#p-m-list li[data-value="5"]').click();
+  await expect(page.locator('#p-m')).toHaveValue('5');
   await page.locator('#lang-toggle').click();
-  await expect(page.locator('#p-m option[value="5"]')).toHaveText('مرداد');
-  await expect(page.locator('#p-m')).toHaveValue('5'); // selection preserved
+  await expect(page.locator('#p-m-list li[data-value="5"]')).toHaveText('۵ مرداد');
+  await expect(page.locator('#p-m')).toHaveValue('۵'); // value preserved, digits localized
 });
 
 test('persian digits typed into fields convert identically to ASCII', async ({ page }) => {
   await page.goto('/');
   await page.locator('#g-y').fill('۲۰۲۶');
-  await page.locator('#g-m').selectOption('7');
+  await page.locator('#g-m').fill('7');
   await page.locator('#g-d').fill('31');
   await expect(page.locator('#p-y')).toHaveValue('1405');
   await expect(page.locator('#p-d')).toHaveValue('9');
@@ -35,7 +36,7 @@ test('weekday appears for a valid date', async ({ page }) => {
 test('weekday clears and copy disables on invalid date', async ({ page }) => {
   await page.goto('/');
   await page.locator('#p-y').fill('1404');
-  await page.locator('#p-m').selectOption('12');
+  await page.locator('#p-m').fill('12');
   await page.locator('#p-d').fill('30'); // 1404 is not a leap year
   await expect(page.locator('#converter-error')).toBeVisible();
   await expect(page.locator('#weekday')).toHaveText('');

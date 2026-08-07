@@ -21,7 +21,7 @@ test('loads with today prefilled and consistent across calendars', async ({ page
 test('persian → gregorian live conversion', async ({ page }) => {
   await page.goto('/');
   await page.locator('#p-y').fill('1403');
-  await page.locator('#p-m').selectOption('10');
+  await page.locator('#p-m').fill('10');
   await page.locator('#p-d').fill('22');
   await expect(page.locator('#g-y')).toHaveValue('2025');
   await expect(page.locator('#g-m')).toHaveValue('1');
@@ -31,7 +31,7 @@ test('persian → gregorian live conversion', async ({ page }) => {
 test('gregorian → persian live conversion', async ({ page }) => {
   await page.goto('/');
   await page.locator('#g-y').fill('2026');
-  await page.locator('#g-m').selectOption('7');
+  await page.locator('#g-m').fill('7');
   await page.locator('#g-d').fill('31');
   await expect(page.locator('#p-y')).toHaveValue('1405');
   await expect(page.locator('#p-m')).toHaveValue('5');
@@ -41,7 +41,7 @@ test('gregorian → persian live conversion', async ({ page }) => {
 test('invalid day shows localized month-aware error', async ({ page }) => {
   await page.goto('/');
   await page.locator('#p-y').fill('1404');
-  await page.locator('#p-m').selectOption('12');
+  await page.locator('#p-m').fill('12');
   await page.locator('#p-d').fill('30');
   await expect(page.locator('#converter-error')).toBeVisible();
   await expect(page.locator('#converter-error')).toContainText('Esfand');
@@ -131,7 +131,7 @@ test('no horizontal overflow at phone widths', async ({ page }) => {
 test('date inputs are comfortable touch targets (≥44px, ≥16px font)', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
-  const controls = await page.locator('.fields input, .fields select').all();
+  const controls = await page.locator('.fields input').all();
   for (const control of controls) {
     const box = await control.boundingBox();
     expect(box).not.toBeNull();
@@ -139,19 +139,31 @@ test('date inputs are comfortable touch targets (≥44px, ≥16px font)', async 
     const fontPx = await control.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
     expect(fontPx).toBeGreaterThanOrEqual(16);
   }
+  for (const toggle of await page.locator('.picker-toggle').all()) {
+    const box = await toggle.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(24);
+    expect(box!.height).toBeGreaterThanOrEqual(24);
+  }
 });
 
 test('date inputs stay comfortable touch targets on tablets (768, 1024)', async ({ page }) => {
   for (const width of [768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
-    const controls = await page.locator('.fields input, .fields select').all();
+    const controls = await page.locator('.fields input').all();
     for (const control of controls) {
       const box = await control.boundingBox();
       expect(box, `@${width}`).not.toBeNull();
       expect(box!.height, `@${width}`).toBeGreaterThanOrEqual(44);
       const fontPx = await control.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
       expect(fontPx, `@${width}`).toBeGreaterThanOrEqual(16);
+    }
+    for (const toggle of await page.locator('.picker-toggle').all()) {
+      const box = await toggle.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.width).toBeGreaterThanOrEqual(24);
+      expect(box!.height).toBeGreaterThanOrEqual(24);
     }
   }
 });
