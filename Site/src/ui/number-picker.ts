@@ -96,7 +96,23 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
       li.setAttribute('role', 'option');
       li.setAttribute('aria-selected', 'false');
       li.dataset['value'] = String(option.value);
-      li.textContent = option.label;
+
+      const num = document.createElement('span');
+      num.className = 'opt-num';
+      num.textContent = option.num;
+      li.append(num);
+
+      if (option.name !== '') {
+        // A real space keeps textContent reading as "22 Saturday" for assistive
+        // tech and for anything that flattens the row. It costs nothing in the
+        // grid: a whitespace-only text node generates no box, so the row still
+        // has exactly two columns.
+        li.append(document.createTextNode(' '));
+        const name = document.createElement('span');
+        name.className = 'opt-name';
+        name.textContent = option.name;
+        li.append(name);
+      }
       return li;
     }));
   };

@@ -20,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **17.2 kB of JavaScript (7.2 kB gzipped)** and **12.6 kB of CSS
-(2.9 kB gzipped)**, with no runtime framework.
+The shipped bundle is **17.4 kB of JavaScript (7.2 kB gzipped)** and **12.7 kB of CSS
+(3.0 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
 
@@ -52,7 +52,7 @@ PersianCalendar/
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── tests/              Vitest (72 tests, incl. .NET parity)
-│   └── e2e/                Playwright (75 tests, incl. converter-ux.spec.ts,
+│   └── e2e/                Playwright (79 tests, incl. converter-ux.spec.ts,
 │                             picker.spec.ts and the screenshot matrix)
 │
 ├── deploy/
@@ -116,7 +116,7 @@ npm test
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 75 tests
+### E2E (Playwright) — 79 tests
 
 ```bash
 cd Site
@@ -171,7 +171,7 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (75 tests total across the whole E2E suite, including
+actually serves the app while offline (79 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts` and `picker.spec.ts`).
 
 ## Supported conversion range: Persian years 1200–1500 AP
@@ -206,6 +206,11 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   localized name ("5 Mordad"), days labelled with their weekday ("22 Saturday", computed from
   the year and month currently entered, falling back to a plain 1–31 list when either is
   unusable). The resolved month name also appears as a quiet hint under the month field.
+  Year, month and day share one cell geometry — the same width and the same padding reserved
+  on both sides — so every value stays optically centred and the chevron sits in whitespace
+  the cell already had rather than making the picker fields narrower than the year. Popup rows
+  are a two-column grid (a tabular numeral column, then the name), so numerals and names each
+  line up down the list instead of sitting ragged; logical alignment mirrors it under RTL.
   Validation messages are localized and month-aware ("Esfand has 29 days
   in 1404"). On desktop the converter, including the status row below, sits entirely above
   the fold (the clock is 210px at that breakpoint).

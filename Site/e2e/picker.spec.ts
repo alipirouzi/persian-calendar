@@ -406,3 +406,91 @@ test('opening a popup does not scroll the page', async ({ page }) => {
   expect(await page.evaluate(() => window.scrollY)).toBe(before);
   expect(await page.locator('#p-d-list').evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
 });
+
+// --- Design coherence: year, month and day must read as one system.
+
+test('year, month and day are the same cell at every breakpoint', async ({ page }) => {
+  for (const width of [320, 375, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const boxes = await page.locator('.fields input').evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        return {
+          id: el.id,
+          w: Math.round(r.width),
+          h: Math.round(r.height),
+          padStart: s.paddingInlineStart,
+          padEnd: s.paddingInlineEnd,
+        };
+      }));
+    expect(boxes, `@${width}`).toHaveLength(6);
+    const widths = new Set(boxes.map((b) => b.w));
+    const heights = new Set(boxes.map((b) => b.h));
+    expect([...widths], `widths @${width}`).toHaveLength(1);
+    expect([...heights], `heights @${width}`).toHaveLength(1);
+    // Symmetric padding is what keeps every value optically centred: the year has
+    // no chevron but reserves the same space, so it is not wider or off-centre.
+    for (const b of boxes) {
+      expect(b.padStart, `${b.id} @${width}`).toBe(b.padEnd);
+    }
+  }
+});
+
+test('the chevron sits inside the reserved padding, not beside the field', async ({ page }) => {
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const monthInput = await page.locator('#p-m').boundingBox();
+    const yearInput = await page.locator('#p-y').boundingBox();
+    const toggle = await page.locator('#p-m-toggle').boundingBox();
+    expect(monthInput!.width, `@${width}`).toBeCloseTo(yearInput!.width, 0);
+    // Chevron is contained by the month cell rather than adding width to it.
+    expect(toggle!.x, `@${width}`).toBeGreaterThanOrEqual(monthInput!.x - 1);
+    expect(toggle!.x + toggle!.width, `@${width}`)
+      .toBeLessThanOrEqual(monthInput!.x + monthInput!.width + 1);
+    expect(toggle!.width, `@${width}`).toBeGreaterThanOrEqual(24);
+    expect(toggle!.height, `@${width}`).toBeGreaterThanOrEqual(24);
+  }
+});
+
+test('option numerals and names line up in columns', async ({ page }) => {
+  for (const [width, fa] of [[375, false], [375, true], [1440, false], [1440, true]] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    if (fa) await page.locator('#lang-toggle').click();
+    await page.locator('#p-y').fill(fa ? '۱۴۰۳' : '1403');
+    await page.locator('#p-m').fill(fa ? '۱۰' : '10');
+    await page.locator('#p-d-toggle').click();
+    await expect(page.locator('#p-d-list')).toBeVisible();
+    const cols = await page.locator('#p-d-list li').evaluateAll((rows) =>
+      rows.map((row) => {
+        const num = row.querySelector('.opt-num')!.getBoundingClientRect();
+        const name = row.querySelector('.opt-name')!.getBoundingClientRect();
+        return { numRight: Math.round(num.right), nameStart: Math.round(name.left) };
+      }));
+    expect(cols.length, `@${width} fa=${fa}`).toBe(30); // Dey
+    // Numerals share a right edge (1 and 22 do not stagger), and every name
+    // starts at the same x — that is the whole point of the two columns.
+    expect([...new Set(cols.map((c) => c.numRight))], `numerals @${width} fa=${fa}`).toHaveLength(1);
+    expect([...new Set(cols.map((c) => c.nameStart))], `names @${width} fa=${fa}`).toHaveLength(1);
+  }
+});
+
+test('month options align the same way, with the number still readable', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-m-toggle').click();
+  const cols = await page.locator('#p-m-list li').evaluateAll((rows) =>
+    rows.map((row) => ({
+      num: row.querySelector('.opt-num')!.textContent,
+      name: row.querySelector('.opt-name')!.textContent,
+      numRight: Math.round(row.querySelector('.opt-num')!.getBoundingClientRect().right),
+      nameStart: Math.round(row.querySelector('.opt-name')!.getBoundingClientRect().left),
+    })));
+  expect(cols).toHaveLength(12);
+  expect(cols[0]).toMatchObject({ num: '1', name: 'Farvardin' });
+  expect(cols[11]).toMatchObject({ num: '12', name: 'Esfand' });
+  expect([...new Set(cols.map((c) => c.numRight))]).toHaveLength(1);
+  expect([...new Set(cols.map((c) => c.nameStart))]).toHaveLength(1);
+});

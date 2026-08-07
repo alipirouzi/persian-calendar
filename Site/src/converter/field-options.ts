@@ -12,8 +12,15 @@ import {
   GREGORIAN_MONTHS, PERSIAN_MONTHS, toLocaleDigits, type Lang,
 } from '../i18n/strings';
 
-/** One entry in a NumberPicker popup. `value` is always an ASCII integer. */
-export interface FieldOption { value: number; label: string }
+/**
+ * One entry in a NumberPicker popup.
+ *
+ * `num` and `name` are kept apart rather than pre-joined into one string so the
+ * popup can lay them out as two aligned columns — ragged numerals beside ragged
+ * names read as noise at a glance. `name` is empty for the no-context day list.
+ * `value` is always an ASCII integer.
+ */
+export interface FieldOption { value: number; num: string; name: string }
 
 /** Longest month in either calendar — the length of the no-context fallback list. */
 const MAX_DAYS = 31;
@@ -36,7 +43,8 @@ export function monthOptions(side: Side, lang: Lang): readonly FieldOption[] {
   const names = side === 'persian' ? PERSIAN_MONTHS[lang] : GREGORIAN_MONTHS[lang];
   return names.map((name, i) => ({
     value: i + 1,
-    label: `${toLocaleDigits(i + 1, lang)} ${name}`,
+    num: toLocaleDigits(i + 1, lang),
+    name,
   }));
 }
 
@@ -63,13 +71,14 @@ export function dayOptions(
     const g: GregorianDateParts = side === 'persian'
       ? toGregorian({ py: y, pm: m, pd: d })
       : { gy: y, gm: m, gd: d };
-    return { value: d, label: `${toLocaleDigits(d, lang)} ${weekdayName(g, lang)}` };
+    return { value: d, num: toLocaleDigits(d, lang), name: weekdayName(g, lang) };
   });
 }
 
 function plainDays(lang: Lang): readonly FieldOption[] {
   return Array.from({ length: MAX_DAYS }, (_, i) => ({
     value: i + 1,
-    label: toLocaleDigits(i + 1, lang),
+    num: toLocaleDigits(i + 1, lang),
+    name: '',
   }));
 }

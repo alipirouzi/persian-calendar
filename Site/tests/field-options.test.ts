@@ -24,15 +24,15 @@ describe('monthOptions', () => {
   it('labels Persian months with number and name', () => {
     const en = monthOptions('persian', 'en');
     expect(en).toHaveLength(12);
-    expect(en[4]).toEqual({ value: 5, label: '5 Mordad' });
-    expect(en[11]).toEqual({ value: 12, label: '12 Esfand' });
+    expect(en[4]).toEqual({ value: 5, num: '5', name: 'Mordad' });
+    expect(en[11]).toEqual({ value: 12, num: '12', name: 'Esfand' });
   });
   it('localizes digits and names in Persian', () => {
-    expect(monthOptions('persian', 'fa')[4]).toEqual({ value: 5, label: '۵ مرداد' });
+    expect(monthOptions('persian', 'fa')[4]).toEqual({ value: 5, num: '۵', name: 'مرداد' });
   });
   it('labels Gregorian months', () => {
-    expect(monthOptions('gregorian', 'en')[7]).toEqual({ value: 8, label: '8 August' });
-    expect(monthOptions('gregorian', 'fa')[7]).toEqual({ value: 8, label: '۸ اوت' });
+    expect(monthOptions('gregorian', 'en')[7]).toEqual({ value: 8, num: '8', name: 'August' });
+    expect(monthOptions('gregorian', 'fa')[7]).toEqual({ value: 8, num: '۸', name: 'اوت' });
   });
 });
 
@@ -48,17 +48,17 @@ describe('dayOptions — valid year and month', () => {
   it('labels each Persian day with its weekday', () => {
     const options = dayOptions('persian', '1403', '10', 'en');
     // 1403-10-01 → 2024-12-21 (Saturday); 1403-10-22 → 2025-01-11 (Saturday).
-    expect(options[0]).toEqual({ value: 1, label: '1 Saturday' });
-    expect(options[21]).toEqual({ value: 22, label: '22 Saturday' });
-    expect(options[22]).toEqual({ value: 23, label: '23 Sunday' });
+    expect(options[0]).toEqual({ value: 1, num: '1', name: 'Saturday' });
+    expect(options[21]).toEqual({ value: 22, num: '22', name: 'Saturday' });
+    expect(options[22]).toEqual({ value: 23, num: '23', name: 'Sunday' });
   });
   it('labels each Gregorian day with its weekday', () => {
     const options = dayOptions('gregorian', '2025', '1', 'en');
-    expect(options[10]).toEqual({ value: 11, label: '11 Saturday' });
+    expect(options[10]).toEqual({ value: 11, num: '11', name: 'Saturday' });
   });
   it('localizes digits and weekday names in Persian', () => {
     const options = dayOptions('persian', '1403', '10', 'fa');
-    expect(options[21]).toEqual({ value: 22, label: '۲۲ شنبه' });
+    expect(options[21]).toEqual({ value: 22, num: '۲۲', name: 'شنبه' });
   });
   it('treats non-ASCII digit input the same as ASCII', () => {
     expect(dayOptions('persian', '۱۴۰۳', '۱۰', 'en'))
@@ -72,8 +72,8 @@ describe('dayOptions — fallback', () => {
       ['1403', '13'], ['1403', '0'], ['1199', '10'], ['1501', '10']] as const) {
       const options = dayOptions('persian', y, m, 'en');
       expect(options, `year="${y}" month="${m}"`).toHaveLength(31);
-      expect(options[0], `year="${y}" month="${m}"`).toEqual({ value: 1, label: '1' });
-      expect(options[30], `year="${y}" month="${m}"`).toEqual({ value: 31, label: '31' });
+      expect(options[0], `year="${y}" month="${m}"`).toEqual({ value: 1, num: '1', name: '' });
+      expect(options[30], `year="${y}" month="${m}"`).toEqual({ value: 31, num: '31', name: '' });
     }
   });
   it('respects the Gregorian year range in the fallback', () => {
@@ -82,6 +82,6 @@ describe('dayOptions — fallback', () => {
     expect(dayOptions('gregorian', '1822', '2', 'en')).toHaveLength(28);
   });
   it('localizes fallback digits', () => {
-    expect(dayOptions('persian', '', '', 'fa')[21]).toEqual({ value: 22, label: '۲۲' });
+    expect(dayOptions('persian', '', '', 'fa')[21]).toEqual({ value: 22, num: '۲۲', name: '' });
   });
 });
