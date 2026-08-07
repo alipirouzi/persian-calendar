@@ -20,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **9.9 kB of JavaScript (4.4 kB gzipped)** and **10.1 kB of CSS
-(2.3 kB gzipped)**, with no runtime framework.
+The shipped bundle is **15.9 kB of JavaScript (6.7 kB gzipped)** and **12.3 kB of CSS
+(2.8 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
 
@@ -45,13 +45,15 @@ PersianCalendar/
 │   │   ├── calendar/       persian.ts (algorithm port), now.ts (today snapshot)
 │   │   ├── clock/          clock-math.ts (hand angles), clock.ts (SVG + rAF driver)
 │   │   ├── converter/      converter-core.ts (pure), converter.ts (DOM wiring),
+│   │   │                     field-options.ts (pure month/day option lists),
 │   │   │                     url-state.ts (parse/format ?p=/?g= query params)
+│   │   ├── ui/             number-picker.ts — ARIA listbox popup, DOM only
 │   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits,
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
-│   ├── tests/              Vitest (59 tests, incl. .NET parity)
-│   └── e2e/                Playwright (44 tests, incl. converter-ux.spec.ts and
-│                             screenshot matrix)
+│   ├── tests/              Vitest (72 tests, incl. .NET parity)
+│   └── e2e/                Playwright (61 tests, incl. converter-ux.spec.ts,
+│                             picker.spec.ts and the screenshot matrix)
 │
 ├── deploy/
 │   ├── nginx.conf             static serving, caching, /health
@@ -100,7 +102,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 59 tests
+### Site unit tests (Vitest) — 72 tests
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -114,7 +116,7 @@ npm test
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 44 tests
+### E2E (Playwright) — 61 tests
 
 ```bash
 cd Site
@@ -129,9 +131,15 @@ clock hands actually moving, the `prefers-reduced-motion` interval fallback
 still advancing them, a light/dark × 320/375/430/768/820/1024/1440 screenshot matrix
 written to `Site/test-results/screens/`, and the PWA/mobile checks described below.
 `e2e/converter-ux.spec.ts` covers the converter UX work specifically: localized month
-dropdowns surviving the language toggle, Persian-Indic digit input, the weekday and
+options surviving the language toggle, Persian-Indic digit input, the weekday and
 Today/Copy status row (including the copy-failed state), `?p=`/`?g=` URL round-tripping
 via `replaceState`, and invalid URL params falling back to today.
+`e2e/picker.spec.ts` covers the month and day pickers: chevron and keyboard opening,
+arrow/Home/End/Enter/Escape/Tab handling, click-outside dismissal, day lists that follow
+the real month length (including leap Esfand) and fall back to a plain 1–31 list without a
+usable year, weekday-labelled day options, the month-name hint, ARIA state
+(`aria-expanded`, `aria-activedescendant`, `aria-selected`), localized toggle names, and
+touch-target sizes for the options on a phone.
 
 ## PWA
 
@@ -163,8 +171,8 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (44 tests total across the whole E2E suite, including
-the later converter UX additions in `converter-ux.spec.ts`).
+actually serves the app while offline (61 tests total across the whole E2E suite, including
+the later converter UX additions in `converter-ux.spec.ts` and `picker.spec.ts`).
 
 ## Supported conversion range: Persian years 1200–1500 AP
 
@@ -191,10 +199,14 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   `prefers-reduced-motion: reduce` steps the hands once per second instead. The rAF loop
   pauses on `visibilitychange`.
 - **Converter** — prefilled with today, no Convert button; editing either side converts on
-  input, last-edited side wins. Both sides use native month-name `<select>` dropdowns
-  (localized labels) alongside numeric year/day fields, and those fields are digit-tolerant:
-  Persian-Indic (`۱۴۰۵`), Arabic-Indic (`١٤٠٥`), and ASCII digits are all accepted
-  interchangeably. Validation messages are localized and month-aware ("Esfand has 29 days
+  input, last-edited side wins. All six fields are plain text inputs (`inputmode="numeric"`)
+  and digit-tolerant: Persian-Indic (`۱۴۰۵`), Arabic-Indic (`١٤٠٥`), and ASCII digits are all
+  accepted interchangeably. The month and day fields are **type-or-pick**: type the number
+  for speed, or open the chevron for an ARIA listbox of options — months labelled with their
+  localized name ("5 Mordad"), days labelled with their weekday ("22 Saturday", computed from
+  the year and month currently entered, falling back to a plain 1–31 list when either is
+  unusable). The resolved month name also appears as a quiet hint under the month field.
+  Validation messages are localized and month-aware ("Esfand has 29 days
   in 1404"). On desktop the converter, including the status row below, sits entirely above
   the fold (the clock is 210px at that breakpoint).
 - **Status row** — shows the weekday for the current date, a «Today» / «امروز» button that
@@ -212,10 +224,12 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   deliberately. There is no manual toggle, by design.
 - **Language** — EN ⇄ FA toggle persisted in `localStorage`, defaulting to `fa` when
   `navigator.language` starts with `fa`. FA sets `<html lang="fa" dir="rtl">` and switches
-  every numeral in **rendered text** — the two date lines and the Tehran time line — to
-  Persian-Indic digits. The converter's `<input type="number">` fields keep Western digits
-  on purpose: a native numeric input only accepts ASCII digits, so localizing them would
-  break typing, the spinner, `min`/`max` validation, and mobile numeric keypads.
+  every numeral in **rendered text** — the two date lines, the Tehran time line, the
+  converter fields, and the picker option labels — to Persian-Indic digits. The converter
+  fields are `type="text"` rather than `type="number"` precisely so they can hold localized
+  digits: a native numeric input only accepts ASCII digits, so localizing it would break
+  typing and validation. Digits typed in any of the three scripts are normalized before
+  conversion, so nothing is lost either way.
 - **Privacy** — no cookies, no analytics, no third-party requests, no personal data
   processed or stored anywhere. See `docs/SECURITY.md`.
 
@@ -296,6 +310,10 @@ known gaps.
 - `docs/superpowers/specs/2026-08-02-mobile-pwa-and-quotes-design.md` — mobile/PWA polish design (its quote-roster section was abandoned; the quote feature was removed)
 - `docs/superpowers/plans/2026-08-02-mobile-pwa.md` — mobile/PWA implementation plan
 - `docs/superpowers/plans/2026-08-02-quote-roster.md` — quote roster plan (abandoned)
+- `docs/superpowers/specs/2026-08-05-converter-ux-design.md` — converter UX design (status row, URL state)
+- `docs/superpowers/plans/2026-08-05-converter-ux.md` — converter UX implementation plan
+- `docs/superpowers/specs/2026-08-07-converter-pickers-design.md` — type-or-pick month/day picker design
+- `docs/superpowers/plans/2026-08-07-converter-pickers.md` — picker implementation plan
 
 ## Not implemented
 
