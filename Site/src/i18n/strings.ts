@@ -4,6 +4,7 @@ export type StringKey =
   | 'pageTitle' | 'persianLabel' | 'gregorianLabel'
   | 'year' | 'month' | 'day' | 'tehranLabel' | 'langToggle'
   | 'today' | 'copy' | 'copied' | 'copyFailed'
+  | 'chooseMonth' | 'chooseDay'
   | 'errYearRange' | 'errMonth' | 'errDay';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
@@ -20,6 +21,8 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     copy: 'Copy',
     copied: 'Copied',
     copyFailed: 'Copy failed',
+    chooseMonth: 'Choose month',
+    chooseDay: 'Choose day',
     errYearRange: 'Year must be between {min} and {max}',
     errMonth: 'Month must be between 1 and 12',
     errDay: '{month} has {days} days in {year}',
@@ -37,6 +40,8 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     copy: 'کپی',
     copied: 'کپی شد',
     copyFailed: 'کپی نشد',
+    chooseMonth: 'انتخاب ماه',
+    chooseDay: 'انتخاب روز',
     errYearRange: 'سال باید بین {min} و {max} باشد',
     errMonth: 'ماه باید بین ۱ و ۱۲ باشد',
     errDay: '{month} در سال {year} {days} روز دارد',

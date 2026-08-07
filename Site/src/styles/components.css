@@ -23,15 +23,14 @@ legend { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; c
 html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
 .fields { display: flex; gap: 0.6rem; }
 .fields label { display: grid; gap: 0.25rem; font-size: 0.75rem; color: var(--text-muted); }
-.fields input, .fields select {
+.fields input {
   width: 4.5rem; padding: 0.45rem 0.5rem; font: inherit; text-align: center;
   color: var(--text); background: var(--surface-raised);
   border: 1px solid var(--hairline); border-radius: 6px;
   transition: border-color var(--duration) var(--ease);
 }
-.fields input:focus, .fields select:focus { border-color: var(--accent); outline: none; }
+.fields input:focus { border-color: var(--accent); outline: none; }
 .fields input#p-y, .fields input#g-y { width: 5.5rem; }
-.fields select { width: auto; min-width: 7rem; }
 .exchange { color: var(--text-muted); font-size: 1.2rem; align-self: center; }
 #converter-error { color: var(--accent); font-size: 0.9rem; margin-top: 1rem; text-align: center; }
 #status-row {
@@ -49,6 +48,45 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
 #status-row button:disabled { opacity: 0.4; cursor: default; }
 /* Invisible hit-area extension, same pattern as #lang-toggle (WCAG 2.5.8). */
 #status-row button::after { content: ''; position: absolute; inset: -12px; }
+
+/* Reserved height so a month name appearing or clearing never shifts the
+   layout, and so year/month/day labels keep a common baseline. */
+.hint {
+  min-height: 1.1em; font-size: 0.7rem; line-height: 1.1;
+  color: var(--text-muted); text-align: center;
+  white-space: nowrap; overflow: hidden;
+}
+
+.picker { position: relative; width: 4.5rem; }
+.picker input { width: 100%; padding-inline-end: 1.5rem; }
+.picker-toggle {
+  position: absolute; inset-block: 0; inset-inline-end: 0; width: 1.5rem;
+  display: grid; place-items: center;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--text-muted); font-size: 0.7rem; line-height: 1;
+  transition: color var(--duration) var(--ease);
+}
+.picker-toggle:hover { color: var(--accent); }
+.picker input:focus + .picker-toggle { color: var(--accent); }
+/* Anchored to the field's start edge so RTL opens toward the page centre.
+   width:max-content lets "۲۲ چهارشنبه" breathe past the 4.5rem field. */
+.picker-list {
+  position: absolute; z-index: 10;
+  inset-inline-start: 0; inset-block-start: calc(100% + 4px);
+  min-width: 100%; width: max-content; max-width: 60vw;
+  max-height: min(50vh, 20rem); overflow-y: auto; overscroll-behavior: contain;
+  margin: 0; padding: 0.25rem; list-style: none;
+  background: var(--surface-raised); border: 1px solid var(--hairline);
+  border-radius: 6px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+  font-size: 0.85rem; color: var(--text); text-align: start;
+}
+.picker-list li {
+  padding: 0.35rem 0.5rem; border-radius: 4px; cursor: pointer; white-space: nowrap;
+}
+/* Two distinct signals: `active` is the keyboard cursor, aria-selected is the
+   value the field currently holds. */
+.picker-list li.active { background: var(--hairline); }
+.picker-list li[aria-selected='true'] { color: var(--accent); }
 
 .clock { color: var(--text); display: block; }
 .clock .second-hand { stroke: var(--accent); }
@@ -78,5 +116,8 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
    (comfortable touch input, avoids accidental zoom on focus in mobile
    browsers). */
 @media (max-width: 1024px), (pointer: coarse) {
-  .fields input, .fields select { min-height: 44px; font-size: 1rem; }
+  .fields input { min-height: 44px; font-size: 1rem; }
+  .picker-toggle { width: 2rem; }
+  .picker input { padding-inline-end: 2rem; }
+  .picker-list li { min-height: 44px; display: flex; align-items: center; font-size: 1rem; }
 }
