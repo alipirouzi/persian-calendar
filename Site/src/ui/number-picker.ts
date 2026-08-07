@@ -86,7 +86,10 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const spaceBelow = viewportHeight - field.bottom;
     const spaceAbove = field.top;
-    if (list.getBoundingClientRect().height > spaceBelow && spaceAbove > spaceBelow) {
+    // Measured while anchored below, so the rect already carries the CSS gap
+    // between field and list. Comparing the bare height against spaceBelow
+    // instead would ignore that gap and let the list hang past the viewport.
+    if (list.getBoundingClientRect().bottom > viewportHeight && spaceAbove > spaceBelow) {
       list.classList.add('above');
     }
   };

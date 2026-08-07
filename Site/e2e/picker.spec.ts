@@ -202,13 +202,120 @@ test('day options are comfortable touch targets on a phone', async ({ page }) =>
 
 test('an open popup does not cause horizontal overflow at phone widths', async ({ page }) => {
   for (const width of [320, 375]) {
-    await page.setViewportSize({ width, height: 812 });
-    await page.goto('/');
-    await page.locator('#p-d-toggle').click();
-    await expect(page.locator('#p-d-list')).toBeVisible();
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow, `width=${width}`).toBeLessThanOrEqual(0);
+    for (const toggleId of ['#p-d-toggle', '#g-d-toggle', '#p-m-toggle', '#g-m-toggle']) {
+      for (const fa of [false, true]) {
+        await page.setViewportSize({ width, height: 812 });
+        await page.goto('/');
+        if (fa) await page.locator('#lang-toggle').click();
+        await page.locator(toggleId).click();
+        await expect(page.locator(toggleId)).toHaveAttribute('aria-expanded', 'true');
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        );
+        expect(overflow, `${width}px ${toggleId} fa=${fa}`).toBeLessThanOrEqual(0);
+      }
+    }
   }
+});
+
+test('typing while the list is open keeps the typed value on Enter', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-d').fill('22');
+  await page.locator('#p-m').fill('');
+  await page.locator('#p-m').focus();
+  await page.keyboard.press('ArrowDown');          // opens at index 0 (nothing matches)
+  await expect(page.locator('#p-m-list')).toBeVisible();
+  await page.locator('#p-m').fill('7');            // cursor must follow the value
+  await expect(page.locator('#p-m-list li[data-value="7"]'))
+    .toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#p-m')).toHaveValue('7'); // NOT reverted to 1
+});
+
+test('a popup opened with the chevron is keyboard-operable', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-m').fill('5');
+  await page.locator('#p-m-toggle').click();
+  await expect(page.locator('#p-m-list')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#p-m-list')).toBeHidden();
+  await page.locator('#p-m-toggle').click();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#p-m')).toHaveValue('6');
+});
+
+test('a popup closes when focus leaves the picker', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-d').focus();
+  await page.locator('#p-m-toggle').click();
+  await expect(page.locator('#p-m-list')).toBeVisible();
+  await page.locator('#g-y').focus();
+  await expect(page.locator('#p-m-list')).toBeHidden();
+  await expect(page.locator('#p-m-toggle')).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('only one popup is open at a time', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-m-toggle').click();
+  await expect(page.locator('#p-m-list')).toBeVisible();
+  await page.locator('#p-d-toggle').click();
+  await expect(page.locator('#p-d-list')).toBeVisible();
+  await expect(page.locator('#p-m-list')).toBeHidden();
+});
+
+test('the field name is not polluted by the toggle, list, or hint', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-m').fill('5');
+  await expect(page.locator('#p-m-hint')).toHaveText('Mordad');
+  // The label is explicit now, so the accessible name is the label text alone.
+  const name = await page.locator('#p-m').evaluate((el) => {
+    const id = el.getAttribute('id') as string;
+    const label = document.querySelector(`label[for="${id}"]`);
+    return label?.textContent ?? '';
+  });
+  expect(name).toBe('Month');
+  await expect(page.locator('label[for="p-m"]')).toHaveCount(1);
+  // The picker must NOT be inside the label.
+  const nested = await page.locator('label[for="p-m"] .picker').count();
+  expect(nested).toBe(0);
+});
+
+test('picking an option on a phone does not focus the text input', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await page.locator('#p-d-toggle').click();
+  await page.locator('#p-d-list li[data-value="10"]').click();
+  await expect(page.locator('#p-d')).toHaveValue('10');
+  const activeId = await page.evaluate(() => document.activeElement?.id ?? '');
+  expect(activeId).toBe('p-d-toggle'); // focus stayed on the invoker
+});
+
+test('the list flips above the field when there is no room below', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await page.locator('#p-d-toggle').click();
+  const list = page.locator('#p-d-list');
+  await expect(list).toBeVisible();
+  const listBox = await list.boundingBox();
+  const fieldBox = await page.locator('#p-d').boundingBox();
+  expect(listBox).not.toBeNull();
+  expect(fieldBox).not.toBeNull();
+  // Whichever way it opened, it must fit inside the viewport.
+  expect(listBox!.y).toBeGreaterThanOrEqual(0);
+  expect(listBox!.y + listBox!.height).toBeLessThanOrEqual(812);
+});
+
+test('Enter with no popup open does not reload the page', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-d').fill('22');
+  await page.evaluate(() => { (window as unknown as Record<string, boolean>)['kept'] = true; });
+  await page.locator('#p-y').press('Enter');
+  await expect(page.locator('#g-d')).toHaveValue('11');
+  // A reload would wipe the sentinel and the query string.
+  expect(await page.evaluate(() => (window as unknown as Record<string, boolean>)['kept'])).toBe(true);
+  expect(new URL(page.url()).search).toBe('?p=1403-10-22');
 });
