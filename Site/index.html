@@ -35,20 +35,25 @@
         <fieldset id="side-persian">
           <legend id="legend-persian"></legend>
           <div class="fields">
-            <label><span data-str="year"></span>
+            <div class="field">
+              <label for="p-y" data-str="year"></label>
               <input id="p-y" type="text" inputmode="numeric" />
-              <span class="hint"></span></label>
-            <label><span data-str="month"></span>
+              <span class="hint"></span>
+            </div>
+            <div class="field">
+              <label for="p-m" data-str="month"></label>
               <div class="picker">
                 <input id="p-m" type="text" inputmode="numeric" autocomplete="off"
                        role="combobox" aria-expanded="false" aria-controls="p-m-list"
-                       aria-autocomplete="none" />
+                       aria-autocomplete="none" aria-describedby="p-m-hint" />
                 <button id="p-m-toggle" class="picker-toggle" type="button" tabindex="-1"
                         aria-expanded="false" aria-controls="p-m-list">▾</button>
                 <ul id="p-m-list" class="picker-list" role="listbox" hidden></ul>
               </div>
-              <span class="hint" id="p-m-hint"></span></label>
-            <label><span data-str="day"></span>
+              <span class="hint" id="p-m-hint"></span>
+            </div>
+            <div class="field">
+              <label for="p-d" data-str="day"></label>
               <div class="picker">
                 <input id="p-d" type="text" inputmode="numeric" autocomplete="off"
                        role="combobox" aria-expanded="false" aria-controls="p-d-list"
@@ -57,27 +62,33 @@
                         aria-expanded="false" aria-controls="p-d-list">▾</button>
                 <ul id="p-d-list" class="picker-list" role="listbox" hidden></ul>
               </div>
-              <span class="hint"></span></label>
+              <span class="hint"></span>
+            </div>
           </div>
         </fieldset>
         <div class="exchange" aria-hidden="true">⇄</div>
         <fieldset id="side-gregorian">
           <legend id="legend-gregorian"></legend>
           <div class="fields">
-            <label><span data-str="year"></span>
+            <div class="field">
+              <label for="g-y" data-str="year"></label>
               <input id="g-y" type="text" inputmode="numeric" />
-              <span class="hint"></span></label>
-            <label><span data-str="month"></span>
+              <span class="hint"></span>
+            </div>
+            <div class="field">
+              <label for="g-m" data-str="month"></label>
               <div class="picker">
                 <input id="g-m" type="text" inputmode="numeric" autocomplete="off"
                        role="combobox" aria-expanded="false" aria-controls="g-m-list"
-                       aria-autocomplete="none" />
+                       aria-autocomplete="none" aria-describedby="g-m-hint" />
                 <button id="g-m-toggle" class="picker-toggle" type="button" tabindex="-1"
                         aria-expanded="false" aria-controls="g-m-list">▾</button>
                 <ul id="g-m-list" class="picker-list" role="listbox" hidden></ul>
               </div>
-              <span class="hint" id="g-m-hint"></span></label>
-            <label><span data-str="day"></span>
+              <span class="hint" id="g-m-hint"></span>
+            </div>
+            <div class="field">
+              <label for="g-d" data-str="day"></label>
               <div class="picker">
                 <input id="g-d" type="text" inputmode="numeric" autocomplete="off"
                        role="combobox" aria-expanded="false" aria-controls="g-d-list"
@@ -86,7 +97,8 @@
                         aria-expanded="false" aria-controls="g-d-list">▾</button>
                 <ul id="g-d-list" class="picker-list" role="listbox" hidden></ul>
               </div>
-              <span class="hint"></span></label>
+              <span class="hint"></span>
+            </div>
           </div>
         </fieldset>
       </form>

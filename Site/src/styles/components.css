@@ -22,7 +22,8 @@ fieldset { border: 0; padding: 0; }
 legend { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.6rem; }
 html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
 .fields { display: flex; gap: 0.6rem; }
-.fields label { display: grid; gap: 0.25rem; font-size: 0.75rem; color: var(--text-muted); }
+.fields .field { display: grid; gap: 0.25rem; font-size: 0.75rem; color: var(--text-muted); }
+.fields label { font-size: inherit; color: inherit; }
 .fields input {
   width: 4.5rem; padding: 0.45rem 0.5rem; font: inherit; text-align: center;
   color: var(--text); background: var(--surface-raised);
@@ -68,17 +69,25 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
 }
 .picker-toggle:hover { color: var(--accent); }
 .picker input:focus + .picker-toggle { color: var(--accent); }
-/* Anchored to the field's start edge so RTL opens toward the page centre.
+/* Anchored to the field's END edge: in LTR the day field is last in the row and in
+   RTL it is first, so end-anchoring is what actually grows the list toward the page
+   centre in both directions. Start-anchoring overflowed 320px viewports by 33px.
    width:max-content lets "۲۲ چهارشنبه" breathe past the 4.5rem field. */
 .picker-list {
   position: absolute; z-index: 10;
-  inset-inline-start: 0; inset-block-start: calc(100% + 4px);
-  min-width: 100%; width: max-content; max-width: 60vw;
+  inset-inline-end: 0; inset-block-start: calc(100% + 4px);
+  min-width: 100%; width: max-content;
+  max-width: min(60vw, calc(100vw - 1.5rem));
   max-height: min(50vh, 20rem); overflow-y: auto; overscroll-behavior: contain;
   margin: 0; padding: 0.25rem; list-style: none;
   background: var(--surface-raised); border: 1px solid var(--hairline);
   border-radius: 6px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
   font-size: 0.85rem; color: var(--text); text-align: start;
+}
+/* Set by the picker when the list would not fit below the field. */
+.picker-list.above {
+  inset-block-start: auto; inset-block-end: calc(100% + 4px);
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 0.14);
 }
 .picker-list li {
   padding: 0.35rem 0.5rem; border-radius: 4px; cursor: pointer; white-space: nowrap;
@@ -117,7 +126,7 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
    browsers). */
 @media (max-width: 1024px), (pointer: coarse) {
   .fields input { min-height: 44px; font-size: 1rem; }
-  .picker-toggle { width: 2rem; }
-  .picker input { padding-inline-end: 2rem; }
+  .picker-toggle { width: 2.5rem; }
+  .picker input { padding-inline-end: 2.5rem; }
   .picker-list li { min-height: 44px; display: flex; align-items: center; font-size: 1rem; }
 }
