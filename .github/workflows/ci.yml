@@ -17,8 +17,8 @@ jobs:
   dotnet:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
       - run: dotnet restore
@@ -26,7 +26,7 @@ jobs:
       - run: dotnet test --no-build
       - name: Generate parity vectors
         run: dotnet run --project Console -c Release -- --generate-vectors vectors.json 1200 1500
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: vectors
           path: vectors.json
@@ -38,13 +38,13 @@ jobs:
       run:
         working-directory: Site
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: Site/package-lock.json
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: vectors
           path: Site/tests/fixtures
@@ -53,7 +53,7 @@ jobs:
       - run: npm test
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: screenshots
@@ -68,7 +68,7 @@ jobs:
     # reach them even if it requests this job.
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build image
         run: docker build -t time-app:current .
       # Secrets are passed through env: rather than interpolated into the script
