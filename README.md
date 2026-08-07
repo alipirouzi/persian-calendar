@@ -20,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **15.9 kB of JavaScript (6.7 kB gzipped)** and **12.3 kB of CSS
-(2.8 kB gzipped)**, with no runtime framework.
+The shipped bundle is **17.2 kB of JavaScript (7.2 kB gzipped)** and **12.6 kB of CSS
+(2.9 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
 
@@ -52,7 +52,7 @@ PersianCalendar/
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── tests/              Vitest (72 tests, incl. .NET parity)
-│   └── e2e/                Playwright (61 tests, incl. converter-ux.spec.ts,
+│   └── e2e/                Playwright (75 tests, incl. converter-ux.spec.ts,
 │                             picker.spec.ts and the screenshot matrix)
 │
 ├── deploy/
@@ -116,7 +116,7 @@ npm test
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 61 tests
+### E2E (Playwright) — 75 tests
 
 ```bash
 cd Site
@@ -171,7 +171,7 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (61 tests total across the whole E2E suite, including
+actually serves the app while offline (75 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts` and `picker.spec.ts`).
 
 ## Supported conversion range: Persian years 1200–1500 AP
