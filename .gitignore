@@ -24,4 +24,5 @@ Site/dist/
 Site/tests/fixtures/vectors.json
 Site/test-results/
 Site/playwright-report/
+Site/coverage/
 *.DotSettings.user
