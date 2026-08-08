@@ -18,7 +18,9 @@
 html[lang='fa'] .tehran-line { letter-spacing: 0; text-transform: none; }
 
 #converter-form { display: flex; gap: 1.5rem; align-items: end; flex-wrap: wrap; justify-content: center; }
-fieldset { border: 0; padding: 0; }
+/* position: relative so the absolutely positioned .cal-pop anchors to the side
+   it belongs to rather than to the page. */
+fieldset { border: 0; padding: 0; position: relative; }
 legend { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.6rem; }
 html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
 /* One geometry for all three fields. --field-pad is reserved on BOTH sides of
@@ -60,9 +62,12 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
 /* The converter's readout: the same sentence the Copy button writes, so what is
    on screen is what lands on the clipboard. Muted and small so it reads as a
    caption of the form rather than competing with the today panel above. */
+/* The height is reserved so an invalid keystroke only blanks the text: emptying
+   the box used to collapse it and jump the Today/Copy row under the thumb. */
 #full-date {
   margin-top: 1rem; text-align: center;
   font-size: 0.9rem; color: var(--text-muted);
+  min-height: 1.3em;
 }
 
 legend { display: flex; align-items: center; gap: 0.5rem; }
@@ -75,11 +80,23 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 /* Invisible hit-area extension, same pattern as #lang-toggle (WCAG 2.5.8). */
 .cal-btn::after { content: ''; position: absolute; inset: -12px; }
 
+/* Anchored to the fieldset's inline-end edge and clamped, the same treatment
+   .picker-list already needed: end-anchoring is what grows the popup toward the
+   page centre in both writing directions, and the clamp keeps 320px viewports
+   from scrolling sideways. */
 .cal-pop {
-  position: absolute; z-index: 20; margin-top: 0.4rem;
+  position: absolute; z-index: 20;
+  inset-inline-end: 0; inset-block-start: calc(100% + 4px);
+  width: max-content; max-width: calc(100vw - 1.5rem);
+  max-height: min(70vh, 26rem); overflow-y: auto; overscroll-behavior: contain;
   padding: 0.6rem; background: var(--surface-raised);
   border: 1px solid var(--hairline); border-radius: 8px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+}
+/* Set by the component when the popup would not fit below. */
+.cal-pop.above {
+  inset-block-start: auto; inset-block-end: calc(100% + 4px);
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 0.14);
 }
 .cal-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -114,6 +131,9 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 /* Today is an outline, selection is a fill: two marks that can coexist. */
 .cal-cell.today { box-shadow: inset 0 0 0 1px var(--accent); }
 .cal-cell.active { background: var(--accent); color: var(--surface-raised); font-weight: 600; }
+/* The keyboard cursor, distinct from selection (fill) and today (inset ring).
+   An outline reads on top of both. */
+.cal-cell.cursor { outline: 2px solid var(--accent); outline-offset: 1px; }
 .cal-blank { block-size: 2rem; }
 
 /* The picker adds no width of its own: the chevron occupies the end padding the
