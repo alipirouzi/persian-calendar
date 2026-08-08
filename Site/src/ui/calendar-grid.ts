@@ -1,6 +1,11 @@
-import { buildMonthGrid, stepMonth, type MonthGrid } from '../converter/calendar-grid-model';
-import { toLocaleDigits, type Lang } from '../i18n/strings';
+import {
+  CALENDAR_VIEWS,
+  type CalendarMode, type RenderedView, type ViewCell, type ViewState,
+} from '../converter/calendar-views';
+import type { Lang } from '../i18n/strings';
 import type { Side } from '../converter/converter-core';
+import { gridIntent } from './grid-navigation';
+import { createPopup } from './popup';
 
 export interface CalendarGrid {
   /** Re-read language and re-render if open. */
@@ -8,84 +13,77 @@ export interface CalendarGrid {
   close(): void;
 }
 
-interface DateParts {
-  year: number;
-  month: number;
-  day: number;
-}
-
 interface Parts {
   side: Side;
   button: HTMLButtonElement;
   popup: HTMLElement;
+  /** A button: it steps up a view, and is disabled once at the top. */
   title: HTMLElement;
   prev: HTMLButtonElement;
   next: HTMLButtonElement;
   grid: HTMLElement;
   getLang: () => Lang;
   /** The date the converter currently holds for this side, or null. */
-  getCurrent: () => DateParts | null;
+  getCurrent: () => ViewState | null;
   /** Today's date in this side's calendar. */
-  getToday: () => DateParts;
+  getToday: () => ViewState;
   onPick: (year: number, month: number, day: number) => void;
 }
 
-const DAYS_IN_WEEK = 7;
+/** The month, year and year-page views page 12 at a time in three columns. */
+const PAGE_COLUMNS = 3;
 
-/** Gap between the fieldset and the popup — mirrors the CSS `calc(100% + 4px)`. */
-const GAP = 4;
-/** Below this the cap would be worse than overflow, so leave the popup alone. */
-const MIN_POPUP_HEIGHT = 120;
+/** Which data-attribute a view's cells carry, keyed by the view's own key. */
+const DATA_KEY: Readonly<Record<RenderedView['key'], string>> = {
+  d: 'day', m: 'month', y: 'year',
+};
+
+/** Keys that belong to the grid even when they turn out not to move anything. */
+const MOVE_KEYS: ReadonlySet<string> = new Set([
+  'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
+]);
 
 /**
  * The WAI-ARIA grid pattern is visual, not logical: ArrowRight moves to the cell
- * on the right, which under RTL is the *previous* day.
+ * on the right, which under RTL is the previous one.
  */
 const isRtl = (): boolean => document.documentElement.dir === 'rtl';
-const horizontalStep = (key: string): number =>
-  (key === 'ArrowRight' ? 1 : -1) * (isRtl() ? -1 : 1);
 
 /**
- * How many real days a month holds, read back off the model's grid rather than
- * from `daysIn*`: this component stays ignorant of calendars, exactly as the
- * number picker stays ignorant of languages and digits.
- */
-const monthLength = (model: MonthGrid): number =>
-  model.weeks.flat().filter((day) => day !== null).length;
-
-/**
- * A browsable month grid for one calendar, opened from the button in its
- * fieldset legend.
+ * A date picker that drills down through years, months and days, opened from the
+ * button in its fieldset legend.
  *
- * Focus works the way the number picker's does: one element holds DOM focus —
- * here the grid — and `aria-activedescendant` names the cell the keyboard
- * cursor is on, so there is a single focus story in this codebase. Dismissal
- * matches too: a pointerdown outside, or Escape, and nothing else.
+ * This module owns only the current mode, the working date, the keyboard cursor
+ * and the DOM. What each view shows, what a step means and what choosing a cell
+ * does all live in `CALENDAR_VIEWS`; keys live in `gridIntent`; open, close,
+ * dismissal and positioning live in `createPopup`. Adding a fourth view should
+ * not require an edit here.
  */
 export function createCalendarGrid({
-  side, button, popup, title, prev, next, grid,
+  side, button, popup: surface, title, prev, next, grid,
   getLang, getCurrent, getToday, onPick,
 }: Parts): CalendarGrid {
-  let isOpen = false;
-  /** The month on screen. Navigation moves this; the fields do not. */
-  let viewYear = 1;
-  let viewMonth = 1;
-  /** The day under the keyboard cursor, always inside the month on screen. */
-  let focusDay = 1;
-  /** Last rendered month, kept for Home/End's "the displayed week" question. */
-  let view: MonthGrid | null = null;
-  /** Days in the month on screen, so a step knows where the month ends. */
-  let viewLength = 1;
+  const popup = createPopup({ trigger: button, surface });
 
-  const cellId = (day: number): string => `${grid.id}-d${day}`;
+  let mode: CalendarMode = 'days';
+  /** The date being browsed. Only a step or a selection moves it. */
+  let state: ViewState = getToday();
+  /** Index into the flattened cells of the view on screen. */
+  let cursor = 0;
+  /** The last view built. Seeded so every handler has a shape to read. */
+  let view: RenderedView = CALENDAR_VIEWS[mode].render(side, state, getLang());
+  let cells: readonly (ViewCell | null)[] = view.rows.flat();
 
-  /** The day of `date` when it falls in the month on screen, else -1. */
-  const dayInView = (date: DateParts | null): number =>
-    date !== null && date.year === viewYear && date.month === viewMonth ? date.day : -1;
+  const cellId = (value: number): string => `${grid.id}-${view.key}${value}`;
+
+  const indexOfValue = (value: number): number => {
+    const found = cells.findIndex((cell) => cell?.value === value);
+    return found >= 0 ? found : cells.findIndex((cell) => cell !== null);
+  };
 
   /**
-   * Rows carry `role="row"`, but the seven columns are declared on `.cal-grid`,
-   * so a row that generated a box would swallow a whole column and collapse the
+   * Rows carry `role="row"`, but the columns are declared on `.cal-grid`, so a
+   * row that generated a box would swallow a whole column and collapse the
    * layout. `display: contents` hands the cells straight to the parent grid
    * while keeping the row in the accessibility tree.
    */
@@ -97,37 +95,76 @@ export function createCalendarGrid({
   };
 
   /**
-   * Keep the cursor visible inside the popup once positionPopup has capped its
-   * height and it scrolls. Scrolls the POPUP only — `scrollIntoView` would take
-   * the page with it, which is the lurch the picker already had to unlearn.
+   * Keep the cursor visible once the popup has been capped and scrolls. Scrolls
+   * the POPUP only — `scrollIntoView` would take the page with it, which is the
+   * lurch the picker already had to unlearn.
    */
   const revealCursor = (): void => {
-    const cell = document.getElementById(cellId(focusDay));
+    const cell = document.getElementById(grid.getAttribute('aria-activedescendant') ?? '');
     if (cell === null) return;
-    const box = popup.getBoundingClientRect();
+    const box = surface.getBoundingClientRect();
     const rect = cell.getBoundingClientRect();
     if (rect.top < box.top) {
-      popup.scrollTop -= box.top - rect.top;
+      surface.scrollTop -= box.top - rect.top;
     } else if (rect.bottom > box.bottom) {
-      popup.scrollTop += rect.bottom - box.bottom;
+      surface.scrollTop += rect.bottom - box.bottom;
     }
   };
 
-  const render = (): void => {
+  /**
+   * Today, when it falls on the page being shown. Asking the same strategy to
+   * render today's date answers both halves at once — whether this is today's
+   * page, and which of its cells today is — without this module having to know
+   * that a day page is a month and a year page is twelve years.
+   */
+  const todayValue = (lang: Lang): number | null => {
+    const forToday = CALENDAR_VIEWS[mode].render(side, getToday(), lang);
+    return forToday.title === view.title ? forToday.selected : null;
+  };
+
+  const makeCell = (cell: ViewCell | null, index: number, today: number | null): HTMLElement => {
+    const el = document.createElement('div');
+    el.setAttribute('role', 'gridcell');
+    if (cell === null) {
+      el.className = 'cal-blank';
+      return el;
+    }
+    el.className = 'cal-cell';
+    el.id = cellId(cell.value);
+    el.dataset[DATA_KEY[view.key]] = String(cell.value);
+    el.textContent = cell.label;
+    el.setAttribute('aria-selected', String(cell.value === view.selected));
+    // Today is an outline and the selection is a fill, so one cell can wear both
+    // without either mark being lost.
+    el.classList.toggle('active', cell.value === view.selected);
+    el.classList.toggle('today', cell.value === today);
+    // aria-activedescendant alone tells assistive tech where Enter will land but
+    // leaves a sighted keyboard user with nothing on screen, so the cell under
+    // the cursor wears an outline as well.
+    el.classList.toggle('cursor', index === cursor);
+    return el;
+  };
+
+  /**
+   * Re-derive the view from the mode and the date, and rebuild the grid.
+   * `cursorValue` moves the cursor onto that cell first; without it the cursor
+   * index stands, which is what a plain cursor move or a language change want.
+   */
+  const render = (cursorValue?: number): void => {
     const lang = getLang();
-    const model = buildMonthGrid(side, viewYear, viewMonth, lang);
-    view = model;
+    view = CALENDAR_VIEWS[mode].render(side, state, lang);
+    cells = view.rows.flat();
+    if (cursorValue !== undefined) cursor = Math.max(indexOfValue(cursorValue), 0);
 
-    // A month narrower than the one we came from must not strand the cursor
-    // past its end — Esfand 30 → Farvardin 30 is fine, but 31 → Esfand is not.
-    viewLength = monthLength(model);
-    focusDay = Math.min(Math.max(focusDay, 1), viewLength);
-
-    const selectedDay = dayInView(getCurrent());
-    const todayDay = dayInView(getToday());
-
+    const today = todayValue(lang);
+    const rows = view.rows.map((row, rowIndex) => {
+      const el = makeRow();
+      el.append(...row.map(
+        (cell, column) => makeCell(cell, rowIndex * view.columns + column, today)));
+      return el;
+    });
     const header = makeRow();
-    header.append(...model.weekdayHeaders.map((label) => {
+    header.append(...view.headers.map((label) => {
       const cell = document.createElement('div');
       cell.className = 'cal-wd';
       cell.setAttribute('role', 'columnheader');
@@ -135,291 +172,183 @@ export function createCalendarGrid({
       return cell;
     }));
 
-    const rows = model.weeks.map((week) => {
-      const row = makeRow();
-      row.append(...week.map((day) => {
-        const cell = document.createElement('div');
-        cell.setAttribute('role', 'gridcell');
-        if (day === null) {
-          cell.className = 'cal-blank';
-          return cell;
-        }
-        cell.className = 'cal-cell';
-        cell.id = cellId(day);
-        cell.dataset['day'] = String(day);
-        cell.textContent = toLocaleDigits(day, lang);
-        cell.setAttribute('aria-selected', String(day === selectedDay));
-        // Today is an outline and the selection is a fill, so one cell can wear
-        // both without either mark being lost.
-        cell.classList.toggle('active', day === selectedDay);
-        cell.classList.toggle('today', day === todayDay);
-        // The keyboard cursor. aria-activedescendant alone tells assistive tech
-        // where Enter will land but leaves a sighted keyboard user with nothing
-        // on screen, so the cell wears an outline as well.
-        cell.classList.toggle('cursor', day === focusDay);
-        return cell;
-      }));
-      return row;
-    });
-
-    grid.replaceChildren(header, ...rows);
-    grid.setAttribute('aria-activedescendant', cellId(focusDay));
+    grid.classList.toggle('cal-grid--wide', view.columns === PAGE_COLUMNS);
+    grid.replaceChildren(...(view.headers.length > 0 ? [header] : []), ...rows);
+    const active = cells[cursor];
+    if (active === undefined || active === null) {
+      grid.removeAttribute('aria-activedescendant');
+    } else {
+      grid.setAttribute('aria-activedescendant', cellId(active.value));
+    }
     revealCursor();
-    // The month is only in a plain <span>, so month navigation would otherwise be
-    // silent: naming the grid after the visible month makes the change announce.
-    grid.setAttribute('aria-label', model.title);
-    title.textContent = model.title;
-    prev.disabled = !model.canGoPrev;
-    next.disabled = !model.canGoNext;
+    // The title is a plain button, so a step would otherwise be silent: naming
+    // the grid after what is on screen makes the change announce.
+    grid.setAttribute('aria-label', view.title);
+    title.textContent = view.title;
+    // The years view is the top of the drill-down; there is nothing above it.
+    title.toggleAttribute('disabled', !view.titleActionable);
+    prev.disabled = !view.canGoPrev;
+    next.disabled = !view.canGoNext;
+    // The views differ in height, so the cap taken when the popup opened has to
+    // be re-applied to whatever it now holds.
+    popup.reposition();
   };
 
-  const setView = (year: number, month: number, day: number): void => {
-    viewYear = year;
-    viewMonth = month;
-    focusDay = day;
-    render();
+  /** Show `next`, with the cursor on whatever that view considers selected. */
+  const goTo = (next: CalendarMode, to: ViewState): void => {
+    mode = next;
+    state = to;
+    render(CALENDAR_VIEWS[mode].render(side, state, getLang()).selected);
   };
 
-  /**
-   * Move the cursor by whole days, crossing into the neighbouring month when
-   * the step runs off the end of this one. A step past a supported range bound
-   * is a no-op — `stepMonth` returning null is the whole answer.
-   */
-  const shiftFocus = (delta: number): void => {
-    const target = focusDay + delta;
-    if (target >= 1 && target <= viewLength) {
-      setView(viewYear, viewMonth, target);
-      return;
-    }
-    const step = stepMonth(side, viewYear, viewMonth, target < 1 ? -1 : 1);
-    if (step === null) return;
-    const before = viewLength;
-    const after = monthLength(buildMonthGrid(side, step.year, step.month, getLang()));
-    // A day step never spans a whole month: the shortest is 28, the step is 7.
-    setView(step.year, step.month, target < 1 ? after + target : target - before);
-  };
-
-  /** PageUp/PageDown and the header arrows. render() clamps the day. */
-  const shiftMonth = (delta: number): void => {
-    const step = stepMonth(side, viewYear, viewMonth, delta);
-    if (step === null) return;
-    setView(step.year, step.month, focusDay);
-  };
-
-  /**
-   * Home/End land on the first and last day of the row the cursor is in, so a
-   * partial first or last week stops inside the month rather than on a blank.
-   */
-  const weekEdge = (edge: 'first' | 'last'): void => {
-    const week = view?.weeks.find((row) => row.includes(focusDay));
-    if (week === undefined) return;
-    const days = week.filter((day): day is number => day !== null);
-    const day = edge === 'first' ? days[0] : days[days.length - 1];
-    if (day === undefined) return;
-    setView(viewYear, viewMonth, day);
-  };
-
-  const setExpanded = (value: boolean): void => {
-    isOpen = value;
-    popup.hidden = !value;
-    button.setAttribute('aria-expanded', String(value));
-  };
-
-  /**
-   * The box the CSS anchors the popup to: its containing block, the fieldset.
-   * Measuring the button instead would read the space below the legend, which is
-   * a whole fieldset taller than the space below the popup's real top edge.
-   */
-  const anchorRect = (): DOMRect =>
-    ((popup.offsetParent as HTMLElement | null) ?? button).getBoundingClientRect();
-
-  /**
-   * Open downward by default; flip above only when the popup does not fit below
-   * AND genuinely fits above — exactly the picker's rule, and for the same
-   * reason: downward overflow grows the document so page scroll can still reach
-   * the grid, while upward overflow is unreachable.
-   *
-   * visualViewport is what shrinks when a mobile keypad is showing, so prefer it
-   * — and re-run on its `resize` so a decision taken while the keypad was still
-   * retracting is corrected once it has gone.
-   */
-  const positionPopup = (): void => {
-    popup.classList.remove('above');
-    popup.style.removeProperty('max-height');
-    const field = anchorRect();
-    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-    const spaceBelow = viewportHeight - field.bottom;
-    const spaceAbove = field.top;
-    const popupHeight = popup.getBoundingClientRect().height;
-    const fitsBelow = popupHeight + GAP <= spaceBelow;
-    const fitsAbove = popupHeight + GAP <= spaceAbove;
-    // Prefer below; flip when only above fits; and when neither does — a
-    // landscape phone — take whichever side has more room rather than defaulting
-    // downward, which opened the grid most of a screen past the fold.
-    if (!fitsBelow && (fitsAbove || spaceAbove > spaceBelow)) {
-      popup.classList.add('above');
-    }
-    // Then cap to that side so the popup scrolls internally instead of running
-    // off-screen. Below the floor the cap would leave a uselessly short box, so
-    // it is skipped: the popup is in normal flow, so page scroll still reaches it.
-    const available = (popup.classList.contains('above') ? spaceAbove : spaceBelow) - GAP * 2;
-    if (popupHeight > available && available >= MIN_POPUP_HEIGHT) {
-      popup.style.maxHeight = `${Math.floor(available)}px`;
-    }
-  };
-
-  window.visualViewport?.addEventListener('resize', () => {
-    if (isOpen) positionPopup();
-  });
-
-  const open = (): void => {
-    const start = getCurrent() ?? getToday();
-    viewYear = start.year;
-    viewMonth = start.month;
-    focusDay = start.day;
-    setExpanded(true);
-    render();
-    // After the popup is un-hidden and rendered — it has no measurable height
-    // before either — and before focus moves.
-    positionPopup();
-    // preventScroll for the same reason the picker avoids scrollIntoView: the
-    // popup grows the document, so focusing it would scroll the page under the
-    // user — and the snap back when it closes swallows their next click.
-    grid.focus({ preventScroll: true });
+  /** Prev/next and PageUp/PageDown. A step past a range bound is a no-op. */
+  const step = (delta: -1 | 1): void => {
+    const next = CALENDAR_VIEWS[mode].step(side, state, delta);
+    if (next === null) return;
+    goTo(mode, next);
   };
 
   const close = (restoreFocus: boolean): void => {
-    if (!isOpen) return;
-    setExpanded(false);
+    popup.close(restoreFocus);
     grid.removeAttribute('aria-activedescendant');
-    popup.classList.remove('above');
-    popup.style.removeProperty('max-height');
-    if (restoreFocus) button.focus();
   };
 
-  const pick = (day: number): void => {
+  /** Drill down one view, or pick the date when there is nowhere further down. */
+  const choose = (value: number): void => {
+    const outcome = CALENDAR_VIEWS[mode].select(side, state, value);
+    if (outcome.next !== 'pick') {
+      goTo(outcome.next, outcome.state);
+      return;
+    }
+    const { year, month, day } = outcome.state;
     close(true);
-    onPick(viewYear, viewMonth, day);
+    onPick(year, month, day);
+  };
+
+  /**
+   * Blanks pad a month that does not start on the first column, and the cursor
+   * must never land on one. The nearest real cell in the target's own row is the
+   * answer for every key at once: Home on a short first week reaches day 1, End
+   * on a short last week reaches the last day, and an arrow that walks off the
+   * month falls back to where it started.
+   */
+  const resolve = (target: number): number | null => {
+    const rowStart = target - (target % view.columns);
+    const row = cells.slice(rowStart, rowStart + view.columns);
+    const offsets = row
+      .map((cell, i) => (cell === null ? -1 : i))
+      .filter((i) => i >= 0)
+      .sort((a, b) => Math.abs(a - (target - rowStart)) - Math.abs(b - (target - rowStart)));
+    const nearest = offsets[0];
+    return nearest === undefined ? null : rowStart + nearest;
+  };
+
+  const moveCursor = (target: number): void => {
+    const landing = resolve(target);
+    if (landing === null) return;
+    cursor = landing;
+    render();
+  };
+
+  const open = (): void => {
+    // Always from the top of the date the fields hold: a wizard that reopened
+    // three levels deep would be answering a question nobody asked.
+    mode = 'days';
+    state = getCurrent() ?? getToday();
+    render(state.day);
+    popup.open({ invoker: button, focusTarget: grid });
+    // Positioning happened while the grid was still hidden and unmeasurable, so
+    // the reveal only means anything now.
+    revealCursor();
   };
 
   // Bound to the popup, not the grid: Escape must still close if focus has
-  // reached a nav button.
-  popup.addEventListener('keydown', (event) => {
-    // Every handled key is prevented before it is acted on, including the ones
-    // that turn out to be no-ops at a range bound — otherwise the arrow that
-    // cannot move the cursor scrolls the page instead.
-    switch (event.key) {
-      case 'ArrowLeft':
-      case 'ArrowRight':
+  // reached one of the buttons.
+  surface.addEventListener('keydown', (event) => {
+    const shape = { columns: view.columns, count: cells.length, rtl: isRtl() };
+    const intent = gridIntent(event.key, cursor, shape, popup.isOpen);
+    if (intent === null) {
+      // A move that cannot land is still the grid's key: left to the browser,
+      // the arrow that does nothing scrolls the page instead.
+      if (MOVE_KEYS.has(event.key)) event.preventDefault();
+      return;
+    }
+    switch (intent.kind) {
+      case 'move':
         event.preventDefault();
-        shiftFocus(horizontalStep(event.key));
+        moveCursor(intent.index);
         return;
-      case 'ArrowUp':
+      case 'page':
         event.preventDefault();
-        shiftFocus(-DAYS_IN_WEEK);
+        step(intent.delta);
         return;
-      case 'ArrowDown':
-        event.preventDefault();
-        shiftFocus(DAYS_IN_WEEK);
-        return;
-      case 'Home':
-        event.preventDefault();
-        weekEdge('first');
-        return;
-      case 'End':
-        event.preventDefault();
-        weekEdge('last');
-        return;
-      case 'PageUp':
-        event.preventDefault();
-        shiftMonth(-1);
-        return;
-      case 'PageDown':
-        event.preventDefault();
-        shiftMonth(1);
-        return;
-      case 'Enter':
-      case ' ':
-        // Only from the grid itself: now that the handler sits on the popup,
-        // these keys on a nav button are that button's own activation, and
-        // picking a date out from under it would be a surprise.
+      case 'select': {
+        // Only from the grid itself: on a button these keys are that button's
+        // own activation, and choosing a cell out from under it is a surprise.
         if (event.target !== grid) return;
         event.preventDefault();
-        pick(focusDay);
+        const cell = cells[cursor];
+        if (cell !== undefined && cell !== null) choose(cell.value);
         return;
-      case 'Escape':
+      }
+      case 'dismiss':
         event.preventDefault();
         close(true);
         return;
-      default:
+      case 'open':
+        // Unreachable: the surface only sees keys while it is open.
         return;
     }
   });
 
   button.addEventListener('click', () => {
-    if (isOpen) {
-      close(true);
-      return;
-    }
+    if (popup.isOpen) { close(true); return; }
     open();
   });
 
   /**
-   * The grid keeps focus across a month step: left on a nav button, the arrow
-   * keys and Escape would do nothing and there would be no route back.
-   * Focus first, then step — stepping can disable the very button that was
+   * The grid keeps focus across every navigation: left on a button, the arrow
+   * keys and Escape would do nothing and there would be no route back. Focus
+   * first, then navigate — navigating can disable the very button that was
    * pressed, and disabling a focused element blurs it, which reads as focus
-   * leaving the popup.
+   * leaving the popup and dismisses it.
    */
-  const navigate = (delta: number): void => {
+  const fromButton = (act: () => void): void => {
     grid.focus({ preventScroll: true });
-    shiftMonth(delta);
+    act();
   };
 
-  // Keep the browser from moving focus on press, the way the picker's toggle does.
-  for (const nav of [prev, next]) {
-    nav.addEventListener('mousedown', (event) => { event.preventDefault(); });
-  }
-  prev.addEventListener('click', () => { navigate(-1); });
-  next.addEventListener('click', () => { navigate(1); });
-
-  // Focus leaving the popup dismisses it, exactly as it does for the picker:
-  // otherwise tabbing out leaves the calendar floating over whatever received
-  // focus, with Escape no longer able to reach it. No focus restore — focus has
-  // already moved on.
-  popup.addEventListener('focusout', (event) => {
-    const nextFocus = (event as FocusEvent).relatedTarget as Node | null;
-    if (nextFocus !== null && (popup.contains(nextFocus) || nextFocus === button)) return;
-    close(false);
+  prev.addEventListener('click', () => { fromButton(() => { step(-1); }); });
+  next.addEventListener('click', () => { fromButton(() => { step(1); }); });
+  // The title always goes to the top, from any depth.
+  title.addEventListener('click', () => {
+    fromButton(() => { goTo('years', state); });
   });
 
-  // Keep the browser from moving focus on press, the way the picker's list
-  // does: the grid holds focus until close(true) hands it back to the button.
-  // The whole popup, not just the grid: the month title, the header and the
-  // padding are not focusable, so pressing them moved focus to <body> and the
-  // focusout handler read that as leaving and closed the calendar.
-  popup.addEventListener('mousedown', (event) => { event.preventDefault(); });
   grid.addEventListener('click', (event) => {
     const cell = (event.target as HTMLElement).closest<HTMLElement>('.cal-cell');
     if (cell === null || !grid.contains(cell)) return;
+    // Cancel activation behaviour so focus stays where the popup put it.
     event.preventDefault();
-    const day = Number(cell.dataset['day']);
-    if (!Number.isInteger(day)) return;
-    pick(day);
+    const value = Number(cell.dataset[DATA_KEY[view.key]]);
+    if (!Number.isInteger(value)) return;
+    choose(value);
   });
 
-  document.addEventListener('pointerdown', (event) => {
-    if (!isOpen) return;
-    const target = event.target as Node;
-    if (button.contains(target) || popup.contains(target)) return;
-    // No focus restore: the pointer is already on its way somewhere else.
-    close(false);
-  });
+  // The popup dismisses itself on an outside pointerdown or on focus leaving,
+  // and reports no callback, so the grid mirrors those closes — exactly as the
+  // picker does. Registered after createPopup, so its handler has already run
+  // and `popup.isOpen` is settled.
+  const syncAfterDismissal = (): void => {
+    if (!popup.isOpen) grid.removeAttribute('aria-activedescendant');
+  };
+  document.addEventListener('pointerdown', syncAfterDismissal);
+  for (const el of [button, surface]) el.addEventListener('focusout', syncAfterDismissal);
 
   return {
     rerender() {
       // Closed popups need nothing: the next open renders from scratch.
-      if (isOpen) render();
+      if (popup.isOpen) render();
     },
     close() { close(false); },
   };
