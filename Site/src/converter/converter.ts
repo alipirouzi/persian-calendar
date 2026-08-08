@@ -163,7 +163,8 @@ export function setupConverter(getLang: () => Lang): {
 
   const setStatus = (ok: { p: PersianDateParts; g: GregorianDateParts } | null): void => {
     lastOk = ok;
-    fullDate.hidden = ok === null;
+    // The box keeps its height either way: hiding it shifted the Today/Copy row
+    // under the user's thumb on every invalid keystroke.
     fullDate.textContent = ok === null ? '' : copySentence(ok.p, ok.g, getLang());
     btnCopy.disabled = ok === null;
   };
