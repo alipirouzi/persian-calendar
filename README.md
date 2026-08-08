@@ -20,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **24.5 kB of JavaScript (9.6 kB gzipped)** and **14.8 kB of CSS
-(3.3 kB gzipped)**, with no runtime framework.
+The shipped bundle is **27.6 kB of JavaScript (10.7 kB gzipped)** and **15.4 kB of CSS
+(3.4 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
 
@@ -46,16 +46,20 @@ PersianCalendar/
 │   │   ├── clock/          clock-math.ts (hand angles), clock.ts (SVG + rAF driver)
 │   │   ├── converter/      converter-core.ts (pure), converter.ts (DOM wiring),
 │   │   │                     field-options.ts (pure year/month/day option lists),
-│   │   │                     calendar-grid-model.ts (pure month-grid layout),
+│   │   │                     calendar-grid-model.ts (pure day/month/year page layout),
+│   │   │                     calendar-views.ts (pure strategy per calendar view),
 │   │   │                     url-state.ts (parse/format ?p=/?g= query params)
-│   │   ├── ui/             number-picker.ts — ARIA listbox popup, DOM only,
-│   │   │                     calendar-grid.ts — ARIA grid month popup, DOM only,
+│   │   ├── ui/             popup.ts — open/close, ARIA, dismissal, focus, placement,
+│   │   │                     grid-navigation.ts — pure key → intent for any grid,
+│   │   │                     number-picker.ts — ARIA listbox popup, DOM only,
+│   │   │                     calendar-grid.ts — ARIA grid date wizard, DOM only,
 │   │   │                     numeric-input.ts — digit-only field filter (pure + DOM)
 │   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits,
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
-│   ├── tests/              Vitest (92 tests, incl. .NET parity)
-│   └── e2e/                Playwright (106 tests, incl. converter-ux.spec.ts,
+│   ├── tests/              Vitest (287 tests at 100% coverage, incl. .NET parity;
+│   │                         tests/dom/ runs the DOM units under jsdom)
+│   └── e2e/                Playwright (113 tests, incl. converter-ux.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts and the screenshot matrix)
 │
 ├── deploy/
@@ -105,7 +109,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 92 tests
+### Site unit tests (Vitest) — 287 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -114,12 +118,23 @@ committed**. Generate it first (requires the .NET 10 SDK):
 cd Site
 npm run gen:vectors   # dotnet run --project ../Console -- --generate-vectors ... 1200 1500
 npm test
+npm run test:coverage  # the same suite, with v8 coverage and 100% thresholds
 ```
 
 `npm run gen:vectors` only has to be re-run if the vectors file is missing or the range
 changes. Without it the parity test cannot run.
 
-### E2E (Playwright) — 106 tests
+Coverage is enforced, not merely reported: `vite.config.ts` sets a **100% threshold on
+lines, statements, branches and functions**, and the suite currently meets all four
+(1369/1369 lines, 565/565 branches, 129/129 functions). Only `src/main.ts` (the bootstrap)
+and `src/clock/**` (visual, screenshot-tested) are excluded. Tests under `tests/dom/` run
+in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
+`numeric-input.ts` and `converter.ts` are exercised, the last of them against the real
+`index.html` body rather than a hand-copied fixture. Everything else runs in the faster
+node environment. CI runs `npm test`, not `npm run test:coverage`, so the threshold is a
+local gate rather than a pipeline one.
+
+### E2E (Playwright) — 113 tests
 
 ```bash
 cd Site
@@ -144,12 +159,16 @@ usable year, weekday-labelled day options, the year list spanning the whole supp
 and only being built once opened, fields refusing non-numeric characters (typed and pasted),
 `maxlength` caps, ARIA state (`aria-expanded`, `aria-activedescendant`, `aria-selected`),
 localized toggle names, and touch-target sizes for the options on a phone.
-`e2e/calendar.spec.ts` covers the month grid: Persian weeks starting Saturday and Gregorian
+`e2e/calendar.spec.ts` covers the calendar: Persian weeks starting Saturday and Gregorian
 weeks starting Monday, the grid opening on the entered month with today and the selection
 marked, picking a day driving the conversion, month navigation across a year boundary and
 stopping at a range bound, full keyboard operation (arrows, `PageUp`/`PageDown`, `Enter`,
 `Escape` with focus returned to the button), a single popup open at a time across pickers and
-calendars, the grid following the language toggle, and touch-target sizes on a phone.
+calendars, the grid following the language toggle, and touch-target sizes on a phone. It also
+covers the drill-down: the title stepping up to years and back down through months to days,
+a shorter month clamping the day, paging that means a month, a year or twelve years
+depending on the view, the grid hugging its rows instead of reserving a sixth, every view
+fitting a 320 px viewport in both languages, and the popup never switching sides mid-flow.
 
 ## PWA
 
@@ -181,7 +200,7 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (106 tests total across the whole E2E suite, including
+actually serves the app while offline (113 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 `calendar.spec.ts`).
 
@@ -242,6 +261,16 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   month, `Home`/`End` jump to the ends of the displayed week, `Enter`/`Space` picks, `Escape`
   closes and returns focus to the button. Picking a day fills that side and converts. Only one
   popup — picker or calendar — is open at a time.
+  The title is itself a button and the grid is a **three-step wizard**: press it to step up to
+  a page of twelve years, choose a year to get that year's twelve months, choose a month to
+  get its days, and choose a day to pick the date. The title is disabled at the years view,
+  which is the top. Paging means whatever the view means — a month, a year, or twelve years —
+  and coming into a shorter month brings the day back inside it, so Farvardin 31 → Esfand
+  lands on 29 rather than nowhere. The months and years views lay twelve cells out in three
+  columns at the same total width as the seven-column day grid, so the popup never resizes
+  under the pointer.
+  The grid **hugs its rows**: about 79% of months need five, so reserving a sixth left a dead
+  band in the common case to smooth a transition that happens in the other ~21%.
 - **Full date line** — under the form, the converter prints the same sentence the Copy button
   writes (e.g. "Saturday, 22 Dey 1403 — January 11, 2025"), so what is on screen is exactly
   what lands on the clipboard. It hides itself when the current input is not a valid date.
@@ -351,6 +380,8 @@ known gaps.
 - `docs/superpowers/plans/2026-08-07-converter-pickers.md` — picker implementation plan
 - `docs/superpowers/specs/2026-08-08-calendar-and-year-picker-design.md` — calendar grid and year picker design
 - `docs/superpowers/plans/2026-08-08-calendar-and-year-picker.md` — calendar and year picker implementation plan
+- `docs/superpowers/plans/2026-08-08-calendar-hug-content.md` — hug-content decision for the calendar grid
+- `docs/superpowers/plans/2026-08-08-calendar-wizard.md` — calendar wizard, hug-content, and the SOLID refactor (`popup.ts`, `grid-navigation.ts`, `calendar-views.ts`)
 
 ## Not implemented
 

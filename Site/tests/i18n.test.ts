@@ -25,4 +25,9 @@ describe('i18n', () => {
       .toBe('Esfand has 29 days');
     expect(formatTemplate('{days} روز', { days: 29 }, 'fa')).toBe('۲۹ روز');
   });
+  it('leaves a placeholder nobody supplied standing', () => {
+    // Better a visible {days} than a sentence that silently lost its number.
+    expect(formatTemplate('{month} has {days} days', { month: 'Esfand' }, 'en'))
+      .toBe('Esfand has {days} days');
+  });
 });

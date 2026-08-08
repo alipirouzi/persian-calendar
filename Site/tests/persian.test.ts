@@ -35,9 +35,34 @@ describe('toPersian', () => {
     expect(() => toPersian({ gy: 1820, gm: 1, gd: 1 })).toThrow(RangeError);
     expect(() => toPersian({ gy: 2300, gm: 1, gd: 1 })).toThrow(RangeError);
   });
+  it('rejects invalid month and day', () => {
+    expect(() => toPersian({ gy: 2025, gm: 0, gd: 1 })).toThrow(/Invalid Gregorian month/);
+    expect(() => toPersian({ gy: 2025, gm: 13, gd: 1 })).toThrow(/Invalid Gregorian month/);
+    expect(() => toPersian({ gy: 2025, gm: 2, gd: 29 })).toThrow(/Invalid Gregorian day/);
+    expect(() => toPersian({ gy: 2025, gm: 1, gd: 0 })).toThrow(/Invalid Gregorian day/);
+  });
+  it('reports the algorithm range before the supported range', () => {
+    // The break table only spans -61 to 3177; a year past it is a different
+    // failure from "outside 1200–1500" and must not be silently mistaken for it.
+    expect(() => toPersian({ gy: 3900, gm: 1, gd: 1 }))
+      .toThrow(/Persian year out of algorithm range/);
+  });
 });
 
 describe('leap years and month lengths', () => {
+  it('rejects years the break table does not cover', () => {
+    expect(() => isLeapPersianYear(-62)).toThrow(/Persian year out of algorithm range/);
+    expect(() => isLeapPersianYear(3178)).toThrow(/Persian year out of algorithm range/);
+  });
+  it('applies the cycle-boundary correction the algorithm carries', () => {
+    // jalaali-js corrects leapJ when the break segment is 33n+4 long and the
+    // year sits four short of its end. No year in the app's own 1200–1500 range
+    // meets that (both segments there are 29 and 425 long), but 1177 does: it is
+    // the last year the port can be asked about that exercises the correction,
+    // and it must classify exactly as upstream does.
+    expect(isLeapPersianYear(1176)).toBe(true);
+    expect(isLeapPersianYear(1177)).toBe(false);
+  });
   it('knows recent leap years', () => {
     expect(isLeapPersianYear(1403)).toBe(true);
     expect(isLeapPersianYear(1404)).toBe(false);
