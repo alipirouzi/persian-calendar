@@ -113,12 +113,13 @@ test('the calendar follows the language toggle', async ({ page }) => {
   await page.goto('/');
   await openPersianCalendar(page);
   await expect(page.locator('#p-cal-title')).toHaveText('Dey 1403');
-  // Activated from the keyboard on purpose: a pointer press outside the popup
-  // dismisses it, which is the documented dismissal rule, and a closed calendar
-  // renders fresh on its next open — so only the keyboard path can reach the
-  // in-place re-render this test is about.
+  // Reaching the toggle at all dismisses the calendar, by either route: a
+  // pointer press outside the popup is a dismissal, and so is focus leaving it.
   await page.locator('#lang-toggle').focus();
+  await expect(page.locator('#p-cal-pop')).toBeHidden();
   await page.keyboard.press('Enter');
+  // The next open renders fresh, in the language now in force.
+  await page.locator('#p-cal').click();
   await expect(page.locator('#p-cal-pop')).toBeVisible();
   await expect(page.locator('#p-cal-title')).toHaveText('دی ۱۴۰۳');
   const heads = await page.locator('#p-cal-grid .cal-wd').allTextContents();
@@ -132,4 +133,96 @@ test('calendar cells are comfortable touch targets', async ({ page }) => {
   const cell = await page.locator('#p-cal-grid .cal-cell').first().boundingBox();
   expect(cell!.width).toBeGreaterThanOrEqual(24);
   expect(cell!.height).toBeGreaterThanOrEqual(24);
+});
+
+test('Tab out of the calendar closes it', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-cal').click();
+  await expect(page.locator('#p-cal-pop')).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#p-cal-pop')).toBeHidden();
+  await expect(page.locator('#p-cal')).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('the keyboard cursor is visible and moves', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-d').fill('22');
+  await page.locator('#p-cal').click();
+  await expect(page.locator('#p-cal-grid .cal-cell.cursor')).toHaveCount(1);
+  await expect(page.locator('#p-cal-grid .cal-cell.cursor')).toHaveText('22');
+  const outline = await page.locator('#p-cal-grid .cal-cell.cursor')
+    .evaluate((el) => getComputedStyle(el).outlineWidth);
+  expect(outline).toBe('2px');
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#p-cal-grid .cal-cell.cursor')).toHaveText('29');
+});
+
+test('month arrows keep the keyboard working', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-cal').click();
+  await page.locator('#p-cal-next').click();
+  await expect(page.locator('#p-cal-grid')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#p-cal-pop')).toBeHidden();
+});
+
+test('arrow keys follow the visual direction in RTL', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#lang-toggle').click();
+  await page.locator('#p-y').fill('۱۴۰۳');
+  await page.locator('#p-m').fill('۱۰');
+  await page.locator('#p-d').fill('۲۲');
+  await page.locator('#p-cal').click();
+  // RTL: the cell to the right of the 22nd is the 21st.
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d21');
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d22');
+});
+
+test('the calendar popup stays inside the viewport on a phone', async ({ page }) => {
+  for (const fa of [false, true]) {
+    for (const width of [320, 375]) {
+      await page.setViewportSize({ width, height: 812 });
+      await page.goto('/');
+      if (fa) await page.locator('#lang-toggle').click();
+      for (const id of ['#p-cal', '#g-cal']) {
+        await page.locator(id).click();
+        const pop = page.locator(id === '#p-cal' ? '#p-cal-pop' : '#g-cal-pop');
+        await expect(pop).toBeVisible();
+        const box = await pop.boundingBox();
+        expect(box!.x, `${id} @${width} fa=${fa}`).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width, `${id} @${width} fa=${fa}`).toBeLessThanOrEqual(width);
+        expect(box!.y, `${id} @${width} fa=${fa}`).toBeGreaterThanOrEqual(0);
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        expect(overflow, `${id} @${width} fa=${fa}`).toBeLessThanOrEqual(0);
+        await page.keyboard.press('Escape');
+      }
+    }
+  }
+});
+
+test('the grid name carries the visible month', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-cal').click();
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-label', /Dey 1403/);
+  await page.locator('#p-cal-next').click();
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-label', /Bahman 1403/);
+});
+
+test('the status row does not move when a date goes invalid', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-d').fill('22');
+  const before = await page.locator('#status-row').boundingBox();
+  await page.locator('#p-m').fill('13');
+  await expect(page.locator('#converter-error')).toBeVisible();
+  const after = await page.locator('#status-row').boundingBox();
+  expect(after!.y).toBeCloseTo(before!.y, 0);
 });

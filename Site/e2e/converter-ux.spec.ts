@@ -43,7 +43,10 @@ test('the full date line clears and copy disables on invalid date', async ({ pag
   await page.locator('#p-m').fill('12');
   await page.locator('#p-d').fill('30'); // 1404 is not a leap year
   await expect(page.locator('#converter-error')).toBeVisible();
-  await expect(page.locator('#full-date')).toBeHidden();
+  // The line keeps its box and only loses its text: hiding it moved the
+  // Today/Copy row under the user's thumb on every invalid keystroke.
+  await expect(page.locator('#full-date')).toBeVisible();
+  await expect(page.locator('#full-date')).toHaveText('');
   await expect(page.locator('#btn-copy')).toBeDisabled();
 });
 

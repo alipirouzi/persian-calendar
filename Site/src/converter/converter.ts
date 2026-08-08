@@ -1,4 +1,6 @@
-import { convertFrom, type Side } from './converter-core';
+import {
+  convertFrom, GREGORIAN_YEAR_MAX, GREGORIAN_YEAR_MIN, type Side,
+} from './converter-core';
 import { dayOptions, monthOptions, parseInRange, yearOptions } from './field-options';
 import { formatUrlQuery } from './url-state';
 import { createNumberPicker, type NumberPicker } from '../ui/number-picker';
@@ -118,7 +120,12 @@ export function setupConverter(getLang: () => Lang): {
         grid: byId<HTMLElement>(`${p}-cal-grid`),
         getLang,
         getCurrent: () => {
-          const year = parseInRange(y.value, ...(side === 'persian' ? [1200, 1500] : [1822, 2121]) as [number, number]);
+          // Read from the constants, not literals: a copy of the Gregorian bounds
+          // here would silently reject the years the converter itself accepts.
+          const range: [number, number] = side === 'persian'
+            ? [1200, 1500]
+            : [GREGORIAN_YEAR_MIN, GREGORIAN_YEAR_MAX];
+          const year = parseInRange(y.value, ...range);
           const month = parseInRange(m.value, 1, 12);
           const day = parseInRange(d.value, 1, 31);
           return year === null || month === null || day === null

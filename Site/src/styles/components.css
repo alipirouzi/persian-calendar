@@ -63,11 +63,13 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
    on screen is what lands on the clipboard. Muted and small so it reads as a
    caption of the form rather than competing with the today panel above. */
 /* The height is reserved so an invalid keystroke only blanks the text: emptying
-   the box used to collapse it and jump the Today/Copy row under the thumb. */
+   the box used to collapse it and jump the Today/Copy row under the thumb.
+   The reserve is one whole line box — base.css sets line-height: 1.6, and a
+   reserve short of that still let the row move by the difference. */
 #full-date {
   margin-top: 1rem; text-align: center;
-  font-size: 0.9rem; color: var(--text-muted);
-  min-height: 1.3em;
+  font-size: 0.9rem; line-height: 1.6; color: var(--text-muted);
+  min-height: 1.6em;
 }
 
 legend { display: flex; align-items: center; gap: 0.5rem; }

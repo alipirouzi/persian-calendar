@@ -171,10 +171,12 @@ test('the full date line tracks the converter in both languages', async ({ page 
   await page.locator('#lang-toggle').click();
   await expect(page.locator('#full-date'))
     .toHaveText('شنبه ۲۲ دی ۱۴۰۳ — ۱۱ ژانویه ۲۰۲۵');
-  // The line is the caption of a *valid* converter, so an invalid date hides it
-  // and lets the error line speak instead.
+  // The line is the caption of a *valid* converter, so an invalid date blanks
+  // its text and lets the error line speak instead. The box itself stays in
+  // flow, so the Today/Copy row below it cannot move.
   await page.locator('#p-m').fill('۱۳');
-  await expect(page.locator('#full-date')).toBeHidden();
+  await expect(page.locator('#full-date')).toBeVisible();
+  await expect(page.locator('#full-date')).toHaveText('');
 });
 
 test('an out-of-range typed month errors without blocking the keystroke', async ({ page }) => {
@@ -185,7 +187,8 @@ test('an out-of-range typed month errors without blocking the keystroke', async 
   await expect(page.locator('#p-m')).toHaveValue('13'); // not swallowed
   await expect(page.locator('#converter-error')).toBeVisible();
   await expect(page.locator('#converter-error')).toHaveText('Month must be between 1 and 12');
-  await expect(page.locator('#full-date')).toBeHidden();
+  await expect(page.locator('#full-date')).toBeVisible();
+  await expect(page.locator('#full-date')).toHaveText('');
   await expect(page.locator('#btn-copy')).toBeDisabled();
 });
 
