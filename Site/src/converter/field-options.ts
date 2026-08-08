@@ -82,3 +82,18 @@ function plainDays(lang: Lang): readonly FieldOption[] {
     name: '',
   }));
 }
+
+/**
+ * Every supported year for one side. Numerals only: a year has no name, so the
+ * popup renders these as a single column, like the no-context day list.
+ */
+export function yearOptions(side: Side, lang: Lang): readonly FieldOption[] {
+  const [min, max] = side === 'persian'
+    ? [PERSIAN_YEAR_MIN, PERSIAN_YEAR_MAX]
+    : [GREGORIAN_YEAR_MIN, GREGORIAN_YEAR_MAX];
+  return Array.from({ length: max - min + 1 }, (_, i) => ({
+    value: min + i,
+    num: toLocaleDigits(min + i, lang),
+    name: '',
+  }));
+}

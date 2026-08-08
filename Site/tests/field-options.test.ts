@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayOptions, monthOptions, parseInRange } from '../src/converter/field-options';
+import { dayOptions, monthOptions, parseInRange, yearOptions } from '../src/converter/field-options';
 
 describe('parseInRange', () => {
   it('accepts in-range ASCII, Persian, and Arabic digits', () => {
@@ -83,5 +83,25 @@ describe('dayOptions — fallback', () => {
   });
   it('localizes fallback digits', () => {
     expect(dayOptions('persian', '', '', 'fa')[21]).toEqual({ value: 22, num: '۲۲', name: '' });
+  });
+});
+
+describe('yearOptions', () => {
+  it('covers the Persian supported range', () => {
+    const opts = yearOptions('persian', 'en');
+    expect(opts).toHaveLength(301);
+    expect(opts[0]).toEqual({ value: 1200, num: '1200', name: '' });
+    expect(opts[300]).toEqual({ value: 1500, num: '1500', name: '' });
+  });
+  it('covers the Gregorian supported range', () => {
+    const opts = yearOptions('gregorian', 'en');
+    expect(opts).toHaveLength(300);
+    expect(opts[0]).toEqual({ value: 1822, num: '1822', name: '' });
+    expect(opts[299]).toEqual({ value: 2121, num: '2121', name: '' });
+  });
+  it('localizes the numerals and carries no name', () => {
+    const opts = yearOptions('persian', 'fa');
+    expect(opts[205]).toEqual({ value: 1405, num: '۱۴۰۵', name: '' });
+    expect(opts.every((o) => o.name === '')).toBe(true);
   });
 });
