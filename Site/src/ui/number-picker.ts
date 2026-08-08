@@ -1,5 +1,7 @@
 import type { FieldOption } from '../converter/field-options';
 import { normalizeDigits } from '../converter/converter-core';
+import { gridIntent } from './grid-navigation';
+import { createPopup } from './popup';
 
 export interface NumberPicker {
   setOptions(options: readonly FieldOption[]): void;
@@ -23,18 +25,17 @@ interface Parts {
  * options it is handed and reports the value that was chosen.
  */
 export function createNumberPicker({ input, toggle, list, onCommit }: Parts): NumberPicker {
-  /** Vertical gap between field and list — mirrors the CSS `calc(100% + 4px)`. */
-  const GAP = 4;
-
   /** Matches the CSS touch-target block exactly — see the design spec. */
   const isTouchish = (): boolean =>
     window.matchMedia('(max-width: 1024px), (pointer: coarse)').matches;
 
+  // The toggle is the trigger: it is what may swallow a press, whereas the text
+  // field must still accept a click to place the caret, so the field only counts
+  // as "inside" for dismissal.
+  const popup = createPopup({ trigger: toggle, surface: list, within: [input] });
+
   let options: readonly FieldOption[] = [];
   let activeIndex = -1;
-  let isOpen = false;
-  /** Where focus returns when the popup closes: whatever opened it. */
-  let invoker: HTMLElement = input;
   /**
    * Which element carries `aria-activedescendant`. ARIA requires it on the
    * element that actually holds DOM focus, and the touch path focuses the
@@ -123,56 +124,23 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     }));
   };
 
-  const setExpanded = (value: boolean): void => {
-    isOpen = value;
-    list.hidden = !value;
-    input.setAttribute('aria-expanded', String(value));
-    toggle.setAttribute('aria-expanded', String(value));
-  };
-
-  /**
-   * Open downward by default; flip above only when the list does not fit below
-   * AND genuinely fits above. When it fits neither way it stays below, because
-   * downward overflow grows the document so page scroll can still reach the
-   * rows, while upward overflow is unreachable.
-   *
-   * visualViewport is what shrinks when a mobile keypad is showing, so prefer
-   * it — and re-run on its `resize` so a decision taken while the keypad was
-   * still retracting is corrected once it has gone.
-   */
-  const positionList = (): void => {
-    list.classList.remove('above');
-    const field = input.getBoundingClientRect();
-    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-    const spaceBelow = viewportHeight - field.bottom;
-    const spaceAbove = field.top;
-    const listHeight = list.getBoundingClientRect().height;
-    if (listHeight + GAP > spaceBelow && listHeight + GAP <= spaceAbove) {
-      list.classList.add('above');
-    }
-  };
-
-  window.visualViewport?.addEventListener('resize', () => {
-    if (isOpen) positionList();
-  });
-
   const open = (
     opts: { invoker: HTMLElement; focusTarget: HTMLElement; fallback: 'first' | 'last' },
   ): void => {
     if (options.length === 0) return;
     if (needsRender) { render(); needsRender = false; }
-    invoker = opts.invoker;
     ariaHost = opts.focusTarget === list ? list : input;
     const selected = selectedIndex();
     activeIndex = selected >= 0
       ? selected
       : (opts.fallback === 'first' ? 0 : options.length - 1);
-    setExpanded(true);
-    // Position before painting: paint()'s reveal math needs the list's final
-    // geometry, or it scrolls against a box that is about to move.
-    positionList();
+    // The field is a combobox, so its own expanded state is the picker's to keep;
+    // the popup only owns the trigger's.
+    input.setAttribute('aria-expanded', 'true');
+    popup.open({ invoker: opts.invoker, focusTarget: opts.focusTarget });
+    // Paint after opening: paint()'s reveal math needs the list's final geometry,
+    // or it scrolls against a box that is about to move.
     paint();
-    if (document.activeElement !== opts.focusTarget) opts.focusTarget.focus();
   };
 
   /** Open from the keyboard, keeping focus wherever the key was pressed. */
@@ -181,14 +149,17 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     open({ invoker: from, focusTarget, fallback });
   };
 
-  const close = (restoreFocus: boolean): void => {
-    if (!isOpen) return;
-    setExpanded(false);
+  /** The picker-owned state that a closed list must not leave behind. */
+  const syncClosed = (): void => {
     activeIndex = -1;
     setActiveDescendant(null);
     ariaHost = input;
-    list.classList.remove('above');
-    if (restoreFocus) invoker.focus();
+    input.setAttribute('aria-expanded', 'false');
+  };
+
+  const close = (restoreFocus: boolean): void => {
+    popup.close(restoreFocus);
+    syncClosed();
   };
 
   const commit = (index: number): void => {
@@ -198,60 +169,63 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     onCommit(option.value);
   };
 
-  const move = (delta: number): void => {
-    if (options.length === 0) return;
-    const next = activeIndex < 0 ? (delta > 0 ? 0 : options.length - 1) : activeIndex + delta;
-    activeIndex = Math.min(options.length - 1, Math.max(0, next));
-    paint();
-  };
+  /**
+   * gridIntent walks from a real cell. When the typed value matches no option the
+   * cursor sits off the list at -1, and the two arrows must enter it from the
+   * correct end: Down at the first option, Up at the last.
+   */
+  const cursorFor = (key: string): number =>
+    activeIndex >= 0 ? activeIndex : (key === 'ArrowUp' ? options.length : -1);
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    switch (event.key) {
-      case 'ArrowDown':
+    const isOpen = popup.isOpen;
+    const key = event.key;
+
+    // Three keys the shared grid mapping cannot own here, because a listbox in a
+    // text field is not a grid: Home and End address the whole list rather than
+    // the current row, ArrowLeft/ArrowRight belong to the caret, and Tab must let
+    // focus proceed to the next field.
+    if ((key === 'Home' || key === 'End') && isOpen) {
+      event.preventDefault();
+      activeIndex = key === 'Home' ? 0 : options.length - 1;
+      paint();
+      return;
+    }
+    if (key === 'ArrowLeft' || key === 'ArrowRight') return;
+    if (key === 'Tab') { close(false); return; }
+    // Space is activation on the toggle and the listbox — both can hold focus
+    // while the list is open — but in the text field it is a character.
+    if (key === ' ' && event.currentTarget === input) return;
+
+    const shape = { columns: 1, count: options.length, rtl: false };
+    const intent = gridIntent(key, cursorFor(key), shape, isOpen);
+    if (intent === null) {
+      // An arrow at either end of an open list is still the list's: left alone it
+      // would drive the caret or scroll the listbox instead of doing nothing.
+      if (isOpen && (key === 'ArrowDown' || key === 'ArrowUp')) event.preventDefault();
+      return;
+    }
+    switch (intent.kind) {
+      case 'open':
         event.preventDefault();
-        if (isOpen) move(1);
-        else openFromKey(event.currentTarget as HTMLElement, 'first');
+        openFromKey(event.currentTarget as HTMLElement, key === 'ArrowDown' ? 'first' : 'last');
         return;
-      case 'ArrowUp':
+      case 'move':
         event.preventDefault();
-        if (isOpen) move(-1);
-        else openFromKey(event.currentTarget as HTMLElement, 'last');
-        return;
-      case 'Home':
-        if (!isOpen) return;
-        event.preventDefault();
-        activeIndex = 0;
+        activeIndex = intent.index;
         paint();
         return;
-      case 'End':
-        if (!isOpen) return;
-        event.preventDefault();
-        activeIndex = options.length - 1;
-        paint();
-        return;
-      case 'Enter':
-        if (!isOpen) return;
+      case 'select':
         // Suppressed even when nothing is active, so Enter never submits.
         event.preventDefault();
         if (activeIndex >= 0) commit(activeIndex); else close(true);
         return;
-      case ' ':
-        // Only from the toggle or the listbox: a focused button or listbox
-        // treats Space as activation, but in the text field it is a character.
-        if (!isOpen || event.currentTarget === input) return;
-        event.preventDefault();
-        if (activeIndex >= 0) commit(activeIndex); else close(true);
-        return;
-      case 'Escape':
-        if (!isOpen) return;
+      case 'dismiss':
         event.preventDefault();
         close(true); // The typed value stands.
         return;
-      case 'Tab':
-        close(false); // Let focus proceed to the next field.
-        return;
-      default:
-        return;
+      case 'page':
+        return; // A list of one column has no pages; the keys stay the browser's.
     }
   };
 
@@ -268,25 +242,23 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
   // activeIndex === -1 the Enter branch falls through to close(true), which keeps
   // the typed value instead of overwriting it.
   input.addEventListener('input', () => {
-    if (!isOpen) return;
+    if (!popup.isOpen) return;
     activeIndex = selectedIndex();
     paint();
   });
 
-  const onFocusOut = (event: FocusEvent): void => {
-    const next = event.relatedTarget as Node | null;
-    if (next !== null
-      && (next === input || toggle.contains(next) || list.contains(next))) return;
-    close(false);
-  };
+  // The popup dismisses itself on an outside pointerdown or on focus leaving, and
+  // reports no callback, so the picker mirrors those closes. Registered after
+  // createPopup, so on every one of these targets the popup's own handler has
+  // already run and `popup.isOpen` is settled.
+  const syncAfterDismissal = (): void => { if (!popup.isOpen) syncClosed(); };
+  document.addEventListener('pointerdown', syncAfterDismissal);
   for (const el of [input, toggle, list] as readonly HTMLElement[]) {
-    el.addEventListener('focusout', onFocusOut);
+    el.addEventListener('focusout', syncAfterDismissal);
   }
 
-  // Keep the browser from moving focus on press: `click` decides where it belongs.
-  toggle.addEventListener('mousedown', (event) => { event.preventDefault(); });
   toggle.addEventListener('click', () => {
-    if (isOpen) { close(true); return; }
+    if (popup.isOpen) { close(true); return; }
     if (isTouchish()) {
       // Focus the listbox, not the input: a text field would summon the OS
       // keypad over the very list the user just opened. Focus still returns to
@@ -298,7 +270,6 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     open({ invoker: input, focusTarget: input, fallback: 'first' });
   });
 
-  list.addEventListener('mousedown', (event) => { event.preventDefault(); });
   list.addEventListener('click', (event) => {
     const li = (event.target as HTMLElement).closest('li');
     if (li === null || li.parentElement !== list) return;
@@ -308,18 +279,11 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     if (index >= 0) commit(index);
   });
 
-  document.addEventListener('pointerdown', (event) => {
-    if (!isOpen) return;
-    const target = event.target as Node;
-    if (target === input || toggle.contains(target) || list.contains(target)) return;
-    close(false);
-  });
-
   return {
     setOptions(next) {
       options = next;
       needsRender = true;
-      if (!isOpen) return;
+      if (!popup.isOpen) return;
       // Visible right now, so it has to change under the user immediately.
       render();
       needsRender = false;
