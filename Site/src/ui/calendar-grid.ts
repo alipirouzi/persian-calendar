@@ -32,6 +32,17 @@ interface Parts {
 
 const DAYS_IN_WEEK = 7;
 
+/** Gap between the fieldset and the popup — mirrors the CSS `calc(100% + 4px)`. */
+const GAP = 4;
+
+/**
+ * The WAI-ARIA grid pattern is visual, not logical: ArrowRight moves to the cell
+ * on the right, which under RTL is the *previous* day.
+ */
+const isRtl = (): boolean => document.documentElement.dir === 'rtl';
+const horizontalStep = (key: string): number =>
+  (key === 'ArrowRight' ? 1 : -1) * (isRtl() ? -1 : 1);
+
 /**
  * How many real days a month holds, read back off the model's grid rather than
  * from `daysIn*`: this component stays ignorant of calendars, exactly as the
@@ -123,6 +134,10 @@ export function createCalendarGrid({
         // both without either mark being lost.
         cell.classList.toggle('active', day === selectedDay);
         cell.classList.toggle('today', day === todayDay);
+        // The keyboard cursor. aria-activedescendant alone tells assistive tech
+        // where Enter will land but leaves a sighted keyboard user with nothing
+        // on screen, so the cell wears an outline as well.
+        cell.classList.toggle('cursor', day === focusDay);
         return cell;
       }));
       return row;
@@ -130,6 +145,9 @@ export function createCalendarGrid({
 
     grid.replaceChildren(header, ...rows);
     grid.setAttribute('aria-activedescendant', cellId(focusDay));
+    // The month is only in a plain <span>, so month navigation would otherwise be
+    // silent: naming the grid after the visible month makes the change announce.
+    grid.setAttribute('aria-label', model.title);
     title.textContent = model.title;
     prev.disabled = !model.canGoPrev;
     next.disabled = !model.canGoNext;
@@ -187,6 +205,40 @@ export function createCalendarGrid({
     button.setAttribute('aria-expanded', String(value));
   };
 
+  /**
+   * The box the CSS anchors the popup to: its containing block, the fieldset.
+   * Measuring the button instead would read the space below the legend, which is
+   * a whole fieldset taller than the space below the popup's real top edge.
+   */
+  const anchorRect = (): DOMRect =>
+    ((popup.offsetParent as HTMLElement | null) ?? button).getBoundingClientRect();
+
+  /**
+   * Open downward by default; flip above only when the popup does not fit below
+   * AND genuinely fits above — exactly the picker's rule, and for the same
+   * reason: downward overflow grows the document so page scroll can still reach
+   * the grid, while upward overflow is unreachable.
+   *
+   * visualViewport is what shrinks when a mobile keypad is showing, so prefer it
+   * — and re-run on its `resize` so a decision taken while the keypad was still
+   * retracting is corrected once it has gone.
+   */
+  const positionPopup = (): void => {
+    popup.classList.remove('above');
+    const field = anchorRect();
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const spaceBelow = viewportHeight - field.bottom;
+    const spaceAbove = field.top;
+    const popupHeight = popup.getBoundingClientRect().height;
+    if (popupHeight + GAP > spaceBelow && popupHeight + GAP <= spaceAbove) {
+      popup.classList.add('above');
+    }
+  };
+
+  window.visualViewport?.addEventListener('resize', () => {
+    if (isOpen) positionPopup();
+  });
+
   const open = (): void => {
     const start = getCurrent() ?? getToday();
     viewYear = start.year;
@@ -194,6 +246,9 @@ export function createCalendarGrid({
     focusDay = start.day;
     setExpanded(true);
     render();
+    // After the popup is un-hidden and rendered — it has no measurable height
+    // before either — and before focus moves.
+    positionPopup();
     // preventScroll for the same reason the picker avoids scrollIntoView: the
     // popup grows the document, so focusing it would scroll the page under the
     // user — and the snap back when it closes swallows their next click.
@@ -204,6 +259,7 @@ export function createCalendarGrid({
     if (!isOpen) return;
     setExpanded(false);
     grid.removeAttribute('aria-activedescendant');
+    popup.classList.remove('above');
     if (restoreFocus) button.focus();
   };
 
@@ -212,18 +268,17 @@ export function createCalendarGrid({
     onPick(viewYear, viewMonth, day);
   };
 
-  grid.addEventListener('keydown', (event) => {
+  // Bound to the popup, not the grid: Escape must still close if focus has
+  // reached a nav button.
+  popup.addEventListener('keydown', (event) => {
     // Every handled key is prevented before it is acted on, including the ones
     // that turn out to be no-ops at a range bound — otherwise the arrow that
     // cannot move the cursor scrolls the page instead.
     switch (event.key) {
       case 'ArrowLeft':
-        event.preventDefault();
-        shiftFocus(-1);
-        return;
       case 'ArrowRight':
         event.preventDefault();
-        shiftFocus(1);
+        shiftFocus(horizontalStep(event.key));
         return;
       case 'ArrowUp':
         event.preventDefault();
@@ -251,6 +306,10 @@ export function createCalendarGrid({
         return;
       case 'Enter':
       case ' ':
+        // Only from the grid itself: now that the handler sits on the popup,
+        // these keys on a nav button are that button's own activation, and
+        // picking a date out from under it would be a surprise.
+        if (event.target !== grid) return;
         event.preventDefault();
         pick(focusDay);
         return;
@@ -271,8 +330,34 @@ export function createCalendarGrid({
     open();
   });
 
-  prev.addEventListener('click', () => { shiftMonth(-1); });
-  next.addEventListener('click', () => { shiftMonth(1); });
+  /**
+   * The grid keeps focus across a month step: left on a nav button, the arrow
+   * keys and Escape would do nothing and there would be no route back.
+   * Focus first, then step — stepping can disable the very button that was
+   * pressed, and disabling a focused element blurs it, which reads as focus
+   * leaving the popup.
+   */
+  const navigate = (delta: number): void => {
+    grid.focus({ preventScroll: true });
+    shiftMonth(delta);
+  };
+
+  // Keep the browser from moving focus on press, the way the picker's toggle does.
+  for (const nav of [prev, next]) {
+    nav.addEventListener('mousedown', (event) => { event.preventDefault(); });
+  }
+  prev.addEventListener('click', () => { navigate(-1); });
+  next.addEventListener('click', () => { navigate(1); });
+
+  // Focus leaving the popup dismisses it, exactly as it does for the picker:
+  // otherwise tabbing out leaves the calendar floating over whatever received
+  // focus, with Escape no longer able to reach it. No focus restore — focus has
+  // already moved on.
+  popup.addEventListener('focusout', (event) => {
+    const nextFocus = (event as FocusEvent).relatedTarget as Node | null;
+    if (nextFocus !== null && (popup.contains(nextFocus) || nextFocus === button)) return;
+    close(false);
+  });
 
   // Keep the browser from moving focus on press, the way the picker's list
   // does: the grid holds focus until close(true) hands it back to the button.
