@@ -10,6 +10,9 @@ test('chevron opens the month list with localized number-and-name labels', async
   await expect(page.locator('#p-m-list')).toBeVisible();
   await expect(page.locator('#p-m-list li')).toHaveCount(12);
   await expect(page.locator('#p-m-list li[data-value="5"]')).toHaveText('5 Mordad');
+  // Option DOM is built on first open, so the Gregorian list has to be opened
+  // before it holds anything.
+  await page.locator('#g-m-toggle').click();
   await expect(page.locator('#g-m-list li[data-value="8"]')).toHaveText('8 August');
 });
 
@@ -52,9 +55,13 @@ test('day list regenerates when the month or year changes', async ({ page }) => 
   await page.locator('#p-m').fill('1');
   await page.locator('#p-d-toggle').click();
   await expect(page.locator('#p-d-list li')).toHaveCount(31); // Farvardin
+  // Editing another field takes focus, which closes the list; the rebuilt DOM
+  // arrives on the next open, so each count is read from a freshly opened list.
   await page.locator('#p-m').fill('12');
+  await page.locator('#p-d-toggle').click();
   await expect(page.locator('#p-d-list li')).toHaveCount(30); // Esfand, 1403 is leap
   await page.locator('#p-y').fill('1404');
+  await page.locator('#p-d-toggle').click();
   await expect(page.locator('#p-d-list li')).toHaveCount(29); // Esfand, 1404 is common
 });
 
@@ -154,16 +161,20 @@ test('clicking outside closes the popup without changing the value', async ({ pa
   await expect(page.locator('#p-m')).toHaveValue('5');
 });
 
-test('the month hint shows the resolved name and clears when invalid', async ({ page }) => {
+test('the full date line tracks the converter in both languages', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#p-m').fill('5');
-  await expect(page.locator('#p-m-hint')).toHaveText('Mordad');
-  await page.locator('#g-m').fill('8');
-  await expect(page.locator('#g-m-hint')).toHaveText('August');
-  await page.locator('#p-m').fill('13');
-  await expect(page.locator('#p-m-hint')).toHaveText('');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-d').fill('22');
+  await expect(page.locator('#full-date'))
+    .toHaveText('Saturday, 22 Dey 1403 — January 11, 2025');
   await page.locator('#lang-toggle').click();
-  await expect(page.locator('#g-m-hint')).toHaveText('اوت');
+  await expect(page.locator('#full-date'))
+    .toHaveText('شنبه ۲۲ دی ۱۴۰۳ — ۱۱ ژانویه ۲۰۲۵');
+  // The line is the caption of a *valid* converter, so an invalid date hides it
+  // and lets the error line speak instead.
+  await page.locator('#p-m').fill('۱۳');
+  await expect(page.locator('#full-date')).toBeHidden();
 });
 
 test('an out-of-range typed month errors without blocking the keystroke', async ({ page }) => {
@@ -174,7 +185,7 @@ test('an out-of-range typed month errors without blocking the keystroke', async 
   await expect(page.locator('#p-m')).toHaveValue('13'); // not swallowed
   await expect(page.locator('#converter-error')).toBeVisible();
   await expect(page.locator('#converter-error')).toHaveText('Month must be between 1 and 12');
-  await expect(page.locator('#weekday')).toHaveText('');
+  await expect(page.locator('#full-date')).toBeHidden();
   await expect(page.locator('#btn-copy')).toBeDisabled();
 });
 
@@ -265,10 +276,9 @@ test('only one popup is open at a time', async ({ page }) => {
   await expect(page.locator('#p-m-list')).toBeHidden();
 });
 
-test('the field name is not polluted by the toggle, list, or hint', async ({ page }) => {
+test('the field name is not polluted by the toggle or the list', async ({ page }) => {
   await page.goto('/');
   await page.locator('#p-m').fill('5');
-  await expect(page.locator('#p-m-hint')).toHaveText('Mordad');
   // The label is explicit now, so the accessible name is the label text alone.
   const name = await page.locator('#p-m').evaluate((el) => {
     const id = el.getAttribute('id') as string;
@@ -493,4 +503,54 @@ test('month options align the same way, with the number still readable', async (
   expect(cols[11]).toMatchObject({ num: '12', name: 'Esfand' });
   expect([...new Set(cols.map((c) => c.numRight))]).toHaveLength(1);
   expect([...new Set(cols.map((c) => c.nameStart))]).toHaveLength(1);
+});
+
+// --- Numeric-only fields and the year picker.
+
+test('fields refuse non-numeric characters', async ({ page }) => {
+  await page.goto('/');
+  for (const id of ['#p-y', '#p-m', '#p-d', '#g-y', '#g-m', '#g-d']) {
+    await page.locator(id).fill('');
+    await page.locator(id).pressSequentially('a1b2');
+    await expect(page.locator(id), id).toHaveValue('12');
+  }
+});
+
+test('pasted text is filtered to digits', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await page.locator('#p-y').fill('');
+  await page.evaluate(() => navigator.clipboard.writeText('1403-10-22'));
+  await page.locator('#p-y').press('ControlOrMeta+V');
+  await expect(page.locator('#p-y')).toHaveValue('1403'); // maxlength 4 then holds
+  // A paste that fits inside maxlength arrives intact, so this is the case that
+  // proves paste goes through the same digit filter as typing.
+  await page.locator('#p-y').fill('');
+  await page.evaluate(() => navigator.clipboard.writeText('a1b2'));
+  await page.locator('#p-y').press('ControlOrMeta+V');
+  await expect(page.locator('#p-y')).toHaveValue('12');
+});
+
+test('maxlength caps each field', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('');
+  await page.locator('#p-y').pressSequentially('123456');
+  await expect(page.locator('#p-y')).toHaveValue('1234');
+  await page.locator('#p-m').fill('');
+  await page.locator('#p-m').pressSequentially('123');
+  await expect(page.locator('#p-m')).toHaveValue('12');
+});
+
+test('the year picker lists the supported range and commits', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y-toggle').click();
+  await expect(page.locator('#p-y-list')).toBeVisible();
+  await expect(page.locator('#p-y-list li')).toHaveCount(301);
+  await expect(page.locator('#p-y-list li[data-value="1200"]')).toHaveText('1200');
+  await expect(page.locator('#p-y-list li[data-value="1500"]')).toHaveText('1500');
+  await page.locator('#p-y-list li[data-value="1403"]').click();
+  await expect(page.locator('#p-y')).toHaveValue('1403');
+  await expect(page.locator('#g-y-list li')).toHaveCount(0); // not rendered until opened
+  await page.locator('#g-y-toggle').click();
+  await expect(page.locator('#g-y-list li')).toHaveCount(300);
 });

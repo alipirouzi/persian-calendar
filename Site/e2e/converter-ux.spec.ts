@@ -14,6 +14,9 @@ test('month options carry localized labels and survive the language toggle', asy
   await page.locator('#p-m-list li[data-value="5"]').click();
   await expect(page.locator('#p-m')).toHaveValue('5');
   await page.locator('#lang-toggle').click();
+  // Committing an option closed the list, and option DOM is rebuilt on the next
+  // open, so reopen it to read what the language change produced.
+  await page.locator('#p-m-toggle').click();
   await expect(page.locator('#p-m-list li[data-value="5"]')).toHaveText('۵ مرداد');
   await expect(page.locator('#p-m')).toHaveValue('۵'); // value preserved, digits localized
 });
@@ -27,19 +30,20 @@ test('persian digits typed into fields convert identically to ASCII', async ({ p
   await expect(page.locator('#p-d')).toHaveValue('9');
 });
 
-test('weekday appears for a valid date', async ({ page }) => {
+test('the full date line appears for a valid date', async ({ page }) => {
   await page.goto('/');
   await enterPersianDate(page);
-  await expect(page.locator('#weekday')).toHaveText('Saturday');
+  await expect(page.locator('#full-date'))
+    .toHaveText('Saturday, 22 Dey 1403 — January 11, 2025');
 });
 
-test('weekday clears and copy disables on invalid date', async ({ page }) => {
+test('the full date line clears and copy disables on invalid date', async ({ page }) => {
   await page.goto('/');
   await page.locator('#p-y').fill('1404');
   await page.locator('#p-m').fill('12');
   await page.locator('#p-d').fill('30'); // 1404 is not a leap year
   await expect(page.locator('#converter-error')).toBeVisible();
-  await expect(page.locator('#weekday')).toHaveText('');
+  await expect(page.locator('#full-date')).toBeHidden();
   await expect(page.locator('#btn-copy')).toBeDisabled();
 });
 
@@ -54,7 +58,8 @@ test('URL param prefills both sides on load', async ({ page }) => {
   await expect(page.locator('#g-y')).toHaveValue('2025');
   await expect(page.locator('#g-m')).toHaveValue('1');
   await expect(page.locator('#g-d')).toHaveValue('11');
-  await expect(page.locator('#weekday')).toHaveText('Saturday');
+  await expect(page.locator('#full-date'))
+    .toHaveText('Saturday, 22 Dey 1403 — January 11, 2025');
 });
 
 test('invalid URL param is ignored and today is shown', async ({ page }) => {
