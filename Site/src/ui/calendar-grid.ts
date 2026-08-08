@@ -194,7 +194,10 @@ export function createCalendarGrid({
     focusDay = start.day;
     setExpanded(true);
     render();
-    grid.focus();
+    // preventScroll for the same reason the picker avoids scrollIntoView: the
+    // popup grows the document, so focusing it would scroll the page under the
+    // user — and the snap back when it closes swallows their next click.
+    grid.focus({ preventScroll: true });
   };
 
   const close = (restoreFocus: boolean): void => {
