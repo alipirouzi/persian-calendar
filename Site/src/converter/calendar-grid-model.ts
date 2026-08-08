@@ -93,3 +93,69 @@ export function buildMonthGrid(
     canGoNext: stepMonth(side, year, month, 1) !== null,
   };
 }
+
+/** Years and months both page 12 at a time, in 4 rows of 3. */
+const PAGE_SIZE = 12;
+const PAGE_COLUMNS = 3;
+
+export interface GridPage<T> {
+  /** 4 rows x 3 columns; null pads a short final page. */
+  cells: readonly (readonly (T | null)[])[];
+  title: string;
+  canGoPrev: boolean;
+  canGoNext: boolean;
+}
+
+export interface MonthCell { value: number; label: string }
+
+function chunk<T>(items: readonly (T | null)[]): readonly (readonly (T | null)[])[] {
+  return Array.from(
+    { length: items.length / PAGE_COLUMNS },
+    (_, row) => items.slice(row * PAGE_COLUMNS, (row + 1) * PAGE_COLUMNS),
+  );
+}
+
+/** First year of the page `year` sits on, aligned to the range's own start. */
+export function yearPageStart(side: Side, year: number): number {
+  const [min] = yearBounds(side);
+  return min + Math.floor((year - min) / PAGE_SIZE) * PAGE_SIZE;
+}
+
+export function stepYearPage(side: Side, pageStart: number, delta: number): number | null {
+  const [min, max] = yearBounds(side);
+  const next = pageStart + delta * PAGE_SIZE;
+  return next < min || next > max ? null : next;
+}
+
+export function stepYear(side: Side, year: number, delta: number): number | null {
+  const [min, max] = yearBounds(side);
+  const next = year + delta;
+  return next < min || next > max ? null : next;
+}
+
+export function buildYearPage(side: Side, year: number, lang: Lang): GridPage<number> {
+  const [, max] = yearBounds(side);
+  const start = yearPageStart(side, year);
+  const last = Math.min(start + PAGE_SIZE - 1, max);
+  const cells: (number | null)[] = Array.from({ length: PAGE_SIZE }, (_, i) => {
+    const candidate = start + i;
+    return candidate > max ? null : candidate;
+  });
+  return {
+    cells: chunk(cells),
+    title: `${toLocaleDigits(start, lang)} – ${toLocaleDigits(last, lang)}`,
+    canGoPrev: stepYearPage(side, start, -1) !== null,
+    canGoNext: stepYearPage(side, start, 1) !== null,
+  };
+}
+
+export function buildMonthPage(side: Side, year: number, lang: Lang): GridPage<MonthCell> {
+  const names = side === 'persian' ? PERSIAN_MONTHS[lang] : GREGORIAN_MONTHS[lang];
+  const cells: (MonthCell | null)[] = names.map((label, i) => ({ value: i + 1, label }));
+  return {
+    cells: chunk(cells),
+    title: toLocaleDigits(year, lang),
+    canGoPrev: stepYear(side, year, -1) !== null,
+    canGoNext: stepYear(side, year, 1) !== null,
+  };
+}

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildMonthGrid, stepMonth } from '../src/converter/calendar-grid-model';
+import {
+  buildMonthGrid, buildMonthPage, buildYearPage,
+  stepMonth, stepYear, stepYearPage, yearPageStart,
+} from '../src/converter/calendar-grid-model';
 
 describe('weekday headers', () => {
   it('starts Persian weeks on Saturday', () => {
@@ -70,5 +73,60 @@ describe('stepMonth', () => {
     expect(buildMonthGrid('persian', 1200, 1, 'en').canGoPrev).toBe(false);
     expect(buildMonthGrid('persian', 1200, 1, 'en').canGoNext).toBe(true);
     expect(buildMonthGrid('persian', 1500, 12, 'en').canGoNext).toBe(false);
+  });
+});
+
+describe('year pages', () => {
+  it('aligns pages to the start of the supported range', () => {
+    expect(yearPageStart('persian', 1200)).toBe(1200);
+    expect(yearPageStart('persian', 1211)).toBe(1200);
+    expect(yearPageStart('persian', 1212)).toBe(1212);
+    expect(yearPageStart('persian', 1403)).toBe(1392);
+  });
+  it('lays 12 years out in 4 rows of 3', () => {
+    const page = buildYearPage('persian', 1403, 'en');
+    expect(page.cells).toHaveLength(4);
+    for (const row of page.cells) expect(row).toHaveLength(3);
+    expect(page.cells.flat()).toEqual([
+      1392, 1393, 1394, 1395, 1396, 1397, 1398, 1399, 1400, 1401, 1402, 1403,
+    ]);
+    expect(page.title).toBe('1392 – 1403');
+  });
+  it('pads the final short page with nulls', () => {
+    const page = buildYearPage('persian', 1500, 'en');
+    expect(page.cells.flat().filter((y) => y !== null)).toEqual([1500]);
+    expect(page.title).toBe('1500 – 1500');
+    expect(page.canGoNext).toBe(false);
+    expect(page.canGoPrev).toBe(true);
+  });
+  it('localizes the range title', () => {
+    expect(buildYearPage('persian', 1403, 'fa').title).toBe('۱۳۹۲ – ۱۴۰۳');
+  });
+  it('stops paging at the range bounds', () => {
+    expect(stepYearPage('persian', 1200, -1)).toBeNull();
+    expect(stepYearPage('persian', 1200, 1)).toBe(1212);
+    expect(buildYearPage('persian', 1200, 'en').canGoPrev).toBe(false);
+    expect(buildYearPage('gregorian', 1822, 'en').canGoPrev).toBe(false);
+  });
+});
+
+describe('month pages', () => {
+  it('lays 12 months out in 4 rows of 3 with localized names', () => {
+    const page = buildMonthPage('persian', 1403, 'en');
+    expect(page.cells).toHaveLength(4);
+    expect(page.cells.flat()[0]).toEqual({ value: 1, label: 'Farvardin' });
+    expect(page.cells.flat()[11]).toEqual({ value: 12, label: 'Esfand' });
+    expect(page.title).toBe('1403');
+  });
+  it('uses the other calendar and language', () => {
+    const page = buildMonthPage('gregorian', 2026, 'fa');
+    expect(page.cells.flat()[7]).toEqual({ value: 8, label: 'اوت' });
+    expect(page.title).toBe('۲۰۲۶');
+  });
+  it('steps years within the range', () => {
+    expect(stepYear('persian', 1403, 1)).toBe(1404);
+    expect(stepYear('persian', 1500, 1)).toBeNull();
+    expect(stepYear('gregorian', 1822, -1)).toBeNull();
+    expect(buildMonthPage('persian', 1500, 'en').canGoNext).toBe(false);
   });
 });
