@@ -552,5 +552,5 @@ test('the year picker lists the supported range and commits', async ({ page }) =
   await expect(page.locator('#p-y')).toHaveValue('1403');
   await expect(page.locator('#g-y-list li')).toHaveCount(0); // not rendered until opened
   await page.locator('#g-y-toggle').click();
-  await expect(page.locator('#g-y-list li')).toHaveCount(300);
+  await expect(page.locator('#g-y-list li')).toHaveCount(302);
 });

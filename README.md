@@ -187,8 +187,10 @@ the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 
 ## Supported conversion range: Persian years 1200–1500 AP
 
-The UI accepts and the algorithm guarantees **1200–1500 AP** (roughly 1821–2121 CE), and
-nothing outside it.
+The UI accepts and the algorithm guarantees **1200–1500 AP**, and nothing outside it. The
+Gregorian side accepts **1821–2122 CE**: exactly the image of that Persian range
+(1200-01-01 AP is 1821-03-21 CE, 1500-12-30 AP is 2122-03-20 CE), so every date the app
+converts in one direction is a date it also accepts in the other.
 
 This is not an arbitrary limit — it is exactly the range where correctness is *proven*.
 The parity suite asserts the TypeScript port is bit-exact against

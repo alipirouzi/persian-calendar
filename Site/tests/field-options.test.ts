@@ -77,8 +77,8 @@ describe('dayOptions — fallback', () => {
     }
   });
   it('respects the Gregorian year range in the fallback', () => {
-    expect(dayOptions('gregorian', '1821', '1', 'en')).toHaveLength(31);
-    expect(dayOptions('gregorian', '2122', '1', 'en')).toHaveLength(31);
+    expect(dayOptions('gregorian', '1820', '1', 'en')).toHaveLength(31);
+    expect(dayOptions('gregorian', '2123', '1', 'en')).toHaveLength(31);
     expect(dayOptions('gregorian', '1822', '2', 'en')).toHaveLength(28);
   });
   it('localizes fallback digits', () => {
@@ -95,9 +95,9 @@ describe('yearOptions', () => {
   });
   it('covers the Gregorian supported range', () => {
     const opts = yearOptions('gregorian', 'en');
-    expect(opts).toHaveLength(300);
-    expect(opts[0]).toEqual({ value: 1822, num: '1822', name: '' });
-    expect(opts[299]).toEqual({ value: 2121, num: '2121', name: '' });
+    expect(opts).toHaveLength(302);
+    expect(opts[0]).toEqual({ value: 1821, num: '1821', name: '' });
+    expect(opts[301]).toEqual({ value: 2122, num: '2122', name: '' });
   });
   it('localizes the numerals and carries no name', () => {
     const opts = yearOptions('persian', 'fa');

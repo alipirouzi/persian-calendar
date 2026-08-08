@@ -8,8 +8,13 @@ import {
 export type Side = 'persian' | 'gregorian';
 export interface RawFields { y: string; m: string; d: string }
 
-export const GREGORIAN_YEAR_MIN = 1822;
-export const GREGORIAN_YEAR_MAX = 2121;
+/**
+ * The Gregorian image of the supported Persian range, so every Persian date the
+ * app accepts has a Gregorian counterpart it also accepts. 1200-01-01 AP is
+ * 1821-03-21 CE and 1500-12-30 AP is 2122-03-20 CE.
+ */
+export const GREGORIAN_YEAR_MIN = 1821;
+export const GREGORIAN_YEAR_MAX = 2122;
 
 export type ConversionOutcome =
   | { status: 'ok'; persian: PersianDateParts; gregorian: GregorianDateParts }

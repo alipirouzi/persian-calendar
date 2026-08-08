@@ -42,7 +42,7 @@ describe('convertFrom gregorian', () => {
   });
   it('rejects out-of-range Gregorian years', () => {
     expect(convertFrom('gregorian', { y: '1500', m: '1', d: '1' }))
-      .toMatchObject({ status: 'error', errorKey: 'errYearRange', params: { min: 1822, max: 2121 } });
+      .toMatchObject({ status: 'error', errorKey: 'errYearRange', params: { min: 1821, max: 2122 } });
   });
 });
 
