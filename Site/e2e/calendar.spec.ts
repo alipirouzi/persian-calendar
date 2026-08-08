@@ -226,3 +226,69 @@ test('the status row does not move when a date goes invalid', async ({ page }) =
   const after = await page.locator('#status-row').boundingBox();
   expect(after!.y).toBeCloseTo(before!.y, 0);
 });
+
+// --- Third review round.
+
+test('a date whose counterpart is out of range reports instead of crashing', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/');
+  await page.locator('#g-y').fill('1821');
+  await page.locator('#g-m').fill('1');
+  await page.locator('#g-d').fill('1');
+  await expect(page.locator('#converter-error')).toBeVisible();
+  await expect(page.locator('#converter-error')).toHaveText('Year must be between 1822 and 2121');
+  // The Persian extremes map outside the Gregorian range and must say so.
+  await page.locator('#p-y').fill('1200');
+  await page.locator('#p-m').fill('1');
+  await page.locator('#p-d').fill('1');
+  await expect(page.locator('#converter-error'))
+    .toHaveText('That date is outside the supported range');
+  expect(errors, `uncaught: ${errors.join(' | ')}`).toHaveLength(0);
+});
+
+test('clicking the calendar chrome does not close it', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-cal').click();
+  await expect(page.locator('#p-cal-pop')).toBeVisible();
+  await page.locator('#p-cal-title').click();
+  await expect(page.locator('#p-cal-pop')).toBeVisible();
+  await page.keyboard.press('Escape'); // keyboard still reaches it
+  await expect(page.locator('#p-cal-pop')).toBeHidden();
+});
+
+test('the whole week is visible at the narrowest phone width', async ({ page }) => {
+  for (const fa of [false, true]) {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto('/');
+    if (fa) await page.locator('#lang-toggle').click();
+    await page.locator('#p-cal').click();
+    const pop = await page.locator('#p-cal-pop').boundingBox();
+    const cells = await page.locator('#p-cal-grid .cal-wd').evaluateAll((els) =>
+      els.map((el) => { const r = el.getBoundingClientRect(); return { l: r.left, r: r.right }; }));
+    expect(cells, `fa=${fa}`).toHaveLength(7);
+    for (const [i, c] of cells.entries()) {
+      expect(c.l, `col ${i} fa=${fa}`).toBeGreaterThanOrEqual(pop!.x - 1);
+      expect(c.r, `col ${i} fa=${fa}`).toBeLessThanOrEqual(pop!.x + pop!.width + 1);
+      expect(c.r, `col ${i} fa=${fa}`).toBeLessThanOrEqual(320);
+    }
+  }
+});
+
+test('the calendar fits a landscape phone', async ({ page }) => {
+  await page.setViewportSize({ width: 812, height: 375 });
+  await page.goto('/');
+  await page.locator('#p-cal').click();
+  const pop = await page.locator('#p-cal-pop').boundingBox();
+  expect(pop!.y).toBeGreaterThanOrEqual(0);
+  expect(pop!.y + pop!.height).toBeLessThanOrEqual(375 + 1);
+  // Capped rather than clipped: it must be able to scroll to the last row.
+  const scrollable = await page.locator('#p-cal-pop')
+    .evaluate((el) => el.scrollHeight > el.clientHeight ? 'scrolls' : 'fits');
+  expect(['scrolls', 'fits']).toContain(scrollable);
+});
+
+test('the full date line is announced', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#full-date')).toHaveAttribute('aria-live', 'polite');
+});

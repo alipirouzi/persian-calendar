@@ -63,8 +63,8 @@ describe('stepMonth', () => {
   it('returns null at the supported range bounds', () => {
     expect(stepMonth('persian', 1200, 1, -1)).toBeNull();
     expect(stepMonth('persian', 1500, 12, 1)).toBeNull();
-    expect(stepMonth('gregorian', 1821, 1, -1)).toBeNull();
-    expect(stepMonth('gregorian', 2122, 12, 1)).toBeNull();
+    expect(stepMonth('gregorian', 1822, 1, -1)).toBeNull();
+    expect(stepMonth('gregorian', 2121, 12, 1)).toBeNull();
   });
   it('feeds canGoPrev and canGoNext', () => {
     expect(buildMonthGrid('persian', 1200, 1, 'en').canGoPrev).toBe(false);

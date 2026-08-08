@@ -42,7 +42,7 @@ describe('convertFrom gregorian', () => {
   });
   it('rejects out-of-range Gregorian years', () => {
     expect(convertFrom('gregorian', { y: '1500', m: '1', d: '1' }))
-      .toMatchObject({ status: 'error', errorKey: 'errYearRange', params: { min: 1821, max: 2122 } });
+      .toMatchObject({ status: 'error', errorKey: 'errYearRange', params: { min: 1822, max: 2121 } });
   });
 });
 
@@ -72,5 +72,35 @@ describe('convertFrom with non-ASCII digits', () => {
   it('still rejects out-of-range months (URL-injection path)', () => {
     expect(convertFrom('persian', { y: '1404', m: '13', d: '1' }))
       .toMatchObject({ status: 'error', errorKey: 'errMonth' });
+  });
+});
+
+describe('counterpart outside the other calendar range', () => {
+  it('reports rather than throwing when a Persian date maps before 1822', () => {
+    // 1200-01-01 AP is 1821-03-21 CE, below GREGORIAN_YEAR_MIN.
+    expect(convertFrom('persian', { y: '1200', m: '1', d: '1' }))
+      .toMatchObject({ status: 'error', errorKey: 'errUnsupported', side: 'persian' });
+  });
+  it('reports rather than throwing when a Persian date maps past 2121', () => {
+    expect(convertFrom('persian', { y: '1500', m: '12', d: '29' }))
+      .toMatchObject({ status: 'error', errorKey: 'errUnsupported', side: 'persian' });
+  });
+  it('still converts the interior of the range', () => {
+    expect(convertFrom('persian', { y: '1200', m: '11', d: '1' }))
+      .toMatchObject({ status: 'ok' });
+    expect(convertFrom('gregorian', { y: '1822', m: '1', d: '1' }))
+      .toMatchObject({ status: 'ok' });
+    expect(convertFrom('gregorian', { y: '2121', m: '12', d: '31' }))
+      .toMatchObject({ status: 'ok' });
+  });
+  it('never throws anywhere in either declared range', () => {
+    for (let py = 1200; py <= 1500; py += 1) {
+      expect(() => convertFrom('persian', { y: String(py), m: '1', d: '1' })).not.toThrow();
+      expect(() => convertFrom('persian', { y: String(py), m: '12', d: '29' })).not.toThrow();
+    }
+    for (let gy = 1822; gy <= 2121; gy += 1) {
+      expect(() => convertFrom('gregorian', { y: String(gy), m: '1', d: '1' })).not.toThrow();
+      expect(() => convertFrom('gregorian', { y: String(gy), m: '12', d: '31' })).not.toThrow();
+    }
   });
 });

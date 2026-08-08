@@ -34,6 +34,8 @@ const DAYS_IN_WEEK = 7;
 
 /** Gap between the fieldset and the popup — mirrors the CSS `calc(100% + 4px)`. */
 const GAP = 4;
+/** Below this the cap would be worse than overflow, so leave the popup alone. */
+const MIN_POPUP_HEIGHT = 120;
 
 /**
  * The WAI-ARIA grid pattern is visual, not logical: ArrowRight moves to the cell
@@ -94,6 +96,23 @@ export function createCalendarGrid({
     return row;
   };
 
+  /**
+   * Keep the cursor visible inside the popup once positionPopup has capped its
+   * height and it scrolls. Scrolls the POPUP only — `scrollIntoView` would take
+   * the page with it, which is the lurch the picker already had to unlearn.
+   */
+  const revealCursor = (): void => {
+    const cell = document.getElementById(cellId(focusDay));
+    if (cell === null) return;
+    const box = popup.getBoundingClientRect();
+    const rect = cell.getBoundingClientRect();
+    if (rect.top < box.top) {
+      popup.scrollTop -= box.top - rect.top;
+    } else if (rect.bottom > box.bottom) {
+      popup.scrollTop += rect.bottom - box.bottom;
+    }
+  };
+
   const render = (): void => {
     const lang = getLang();
     const model = buildMonthGrid(side, viewYear, viewMonth, lang);
@@ -145,6 +164,7 @@ export function createCalendarGrid({
 
     grid.replaceChildren(header, ...rows);
     grid.setAttribute('aria-activedescendant', cellId(focusDay));
+    revealCursor();
     // The month is only in a plain <span>, so month navigation would otherwise be
     // silent: naming the grid after the visible month makes the change announce.
     grid.setAttribute('aria-label', model.title);
@@ -225,13 +245,26 @@ export function createCalendarGrid({
    */
   const positionPopup = (): void => {
     popup.classList.remove('above');
+    popup.style.removeProperty('max-height');
     const field = anchorRect();
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const spaceBelow = viewportHeight - field.bottom;
     const spaceAbove = field.top;
     const popupHeight = popup.getBoundingClientRect().height;
-    if (popupHeight + GAP > spaceBelow && popupHeight + GAP <= spaceAbove) {
+    const fitsBelow = popupHeight + GAP <= spaceBelow;
+    const fitsAbove = popupHeight + GAP <= spaceAbove;
+    // Prefer below; flip when only above fits; and when neither does — a
+    // landscape phone — take whichever side has more room rather than defaulting
+    // downward, which opened the grid most of a screen past the fold.
+    if (!fitsBelow && (fitsAbove || spaceAbove > spaceBelow)) {
       popup.classList.add('above');
+    }
+    // Then cap to that side so the popup scrolls internally instead of running
+    // off-screen. Below the floor the cap would leave a uselessly short box, so
+    // it is skipped: the popup is in normal flow, so page scroll still reaches it.
+    const available = (popup.classList.contains('above') ? spaceAbove : spaceBelow) - GAP * 2;
+    if (popupHeight > available && available >= MIN_POPUP_HEIGHT) {
+      popup.style.maxHeight = `${Math.floor(available)}px`;
     }
   };
 
@@ -260,6 +293,7 @@ export function createCalendarGrid({
     setExpanded(false);
     grid.removeAttribute('aria-activedescendant');
     popup.classList.remove('above');
+    popup.style.removeProperty('max-height');
     if (restoreFocus) button.focus();
   };
 
@@ -361,7 +395,10 @@ export function createCalendarGrid({
 
   // Keep the browser from moving focus on press, the way the picker's list
   // does: the grid holds focus until close(true) hands it back to the button.
-  grid.addEventListener('mousedown', (event) => { event.preventDefault(); });
+  // The whole popup, not just the grid: the month title, the header and the
+  // padding are not focusable, so pressing them moved focus to <body> and the
+  // focusout handler read that as leaving and closed the calendar.
+  popup.addEventListener('mousedown', (event) => { event.preventDefault(); });
   grid.addEventListener('click', (event) => {
     const cell = (event.target as HTMLElement).closest<HTMLElement>('.cal-cell');
     if (cell === null || !grid.contains(cell)) return;

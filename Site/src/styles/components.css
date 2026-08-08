@@ -232,7 +232,13 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
   .fields input { min-height: 44px; font-size: 1rem; }
   /* Row stays a grid — display:flex here would collapse the aligned columns. */
   .picker-list li { min-height: 44px; font-size: 1rem; }
-  .cal-grid { grid-template-columns: repeat(7, 2.6rem); min-block-size: calc(6 * 2.6rem + 5 * 2px + 1.6rem); }
+  /* Cells cap at 2.6rem but shrink to fit: at 320px a fixed 2.6rem grid is wider
+     than the popup's own max-width, which silently clipped the last weekday
+     column behind an edge with no scrollbar to discover it. */
+  .cal-grid {
+    grid-template-columns: repeat(7, min(2.6rem, calc((100vw - 4rem) / 7)));
+    min-block-size: auto;
+  }
   .cal-cell, .cal-blank { block-size: 2.6rem; }
   .cal-cell { font-size: 0.95rem; }
 }

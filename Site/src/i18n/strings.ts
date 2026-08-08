@@ -6,7 +6,7 @@ export type StringKey =
   | 'today' | 'copy' | 'copied' | 'copyFailed'
   | 'chooseMonth' | 'chooseDay'
   | 'chooseYear' | 'openCalendar' | 'prevMonth' | 'nextMonth'
-  | 'errYearRange' | 'errMonth' | 'errDay';
+  | 'errYearRange' | 'errMonth' | 'errDay' | 'errUnsupported';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -31,6 +31,7 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     errYearRange: 'Year must be between {min} and {max}',
     errMonth: 'Month must be between 1 and 12',
     errDay: '{month} has {days} days in {year}',
+    errUnsupported: 'That date is outside the supported range',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -54,6 +55,7 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     errYearRange: 'سال باید بین {min} و {max} باشد',
     errMonth: 'ماه باید بین ۱ و ۱۲ باشد',
     errDay: '{month} در سال {year} {days} روز دارد',
+    errUnsupported: 'این تاریخ خارج از محدوده پشتیبانی‌شده است',
   },
 };
 
