@@ -41,6 +41,12 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
    * listbox rather than the input (a text field would summon the keypad).
    */
   let ariaHost: HTMLElement = input;
+  /**
+   * Option DOM is built on first open, not on every setOptions. With three
+   * pickers a side and 300 years apiece, eager rendering would put ~1,200 nodes
+   * on the page before the user has opened anything.
+   */
+  let needsRender = true;
 
   /** Index of the option matching the field's current number, or -1. */
   const selectedIndex = (): number => {
@@ -154,6 +160,7 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
     opts: { invoker: HTMLElement; focusTarget: HTMLElement; fallback: 'first' | 'last' },
   ): void => {
     if (options.length === 0) return;
+    if (needsRender) { render(); needsRender = false; }
     invoker = opts.invoker;
     ariaHost = opts.focusTarget === list ? list : input;
     const selected = selectedIndex();
@@ -311,9 +318,11 @@ export function createNumberPicker({ input, toggle, list, onCommit }: Parts): Nu
   return {
     setOptions(next) {
       options = next;
-      render();
+      needsRender = true;
       if (!isOpen) return;
-      // Stay usable across a re-render: clamp the cursor and repaint in place.
+      // Visible right now, so it has to change under the user immediately.
+      render();
+      needsRender = false;
       if (activeIndex >= options.length) activeIndex = options.length - 1;
       paint();
     },
