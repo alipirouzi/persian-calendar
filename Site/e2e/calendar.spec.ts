@@ -292,3 +292,132 @@ test('the full date line is announced', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#full-date')).toHaveAttribute('aria-live', 'polite');
 });
+
+// --- The wizard: year and month drill-down, and the hug-content grid.
+
+test('the title drills down to years, then months, then days', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-d').fill('22');
+  await page.locator('#p-cal').click();
+  await expect(page.locator('#p-cal-title')).toHaveText('Dey 1403');
+
+  await page.locator('#p-cal-title').click();
+  await expect(page.locator('#p-cal-title')).toHaveText('1392 – 1403');
+  await expect(page.locator('#p-cal-title')).toBeDisabled();
+  await expect(page.locator('#p-cal-grid .cal-cell')).toHaveCount(12);
+
+  await page.locator('#p-cal-grid .cal-cell[data-year="1400"]').click();
+  await expect(page.locator('#p-cal-title')).toHaveText('1400');
+  await expect(page.locator('#p-cal-title')).toBeEnabled();
+  await expect(page.locator('#p-cal-grid .cal-cell[data-month="5"]')).toHaveText('Mordad');
+
+  await page.locator('#p-cal-grid .cal-cell[data-month="5"]').click();
+  await expect(page.locator('#p-cal-title')).toHaveText('Mordad 1400');
+  await expect(page.locator('#p-cal-grid .cal-cell')).toHaveCount(31);
+  await page.locator('#p-cal-grid .cal-cell[data-day="3"]').click();
+  await expect(page.locator('#p-cal-pop')).toBeHidden();
+  await expect(page.locator('#p-y')).toHaveValue('1400');
+  await expect(page.locator('#p-m')).toHaveValue('5');
+  await expect(page.locator('#p-d')).toHaveValue('3');
+});
+
+test('switching to a shorter month clamps the day', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1404');
+  await page.locator('#p-m').fill('1');
+  await page.locator('#p-d').fill('31');
+  await page.locator('#p-cal').click();
+  await page.locator('#p-cal-title').click();
+  await page.locator('#p-cal-grid .cal-cell[data-year="1404"]').click();
+  await page.locator('#p-cal-grid .cal-cell[data-month="12"]').click();
+  // Esfand 1404 has 29 days, so the cursor cannot still be on 31.
+  await expect(page.locator('#p-cal-grid .cal-cell')).toHaveCount(29);
+  await expect(page.locator('#p-cal-grid .cal-cell.cursor')).toHaveText('29');
+});
+
+test('the wizard is keyboard operable', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-cal').click();
+  await page.locator('#p-cal-title').click();
+  await expect(page.locator('#p-cal-grid')).toBeFocused();
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-y1403');
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-y1400');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#p-cal-title')).toHaveText('1400');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#p-cal-grid .cal-cell[data-day="1"]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#p-cal-pop')).toBeHidden();
+});
+
+test('paging steps by view: a month, a year, then twelve years', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-cal').click();
+  await page.locator('#p-cal-next').click();
+  await expect(page.locator('#p-cal-title')).toHaveText('Bahman 1403');
+  await page.locator('#p-cal-title').click();
+  await expect(page.locator('#p-cal-title')).toHaveText('1392 – 1403');
+  await page.locator('#p-cal-next').click();
+  await expect(page.locator('#p-cal-title')).toHaveText('1404 – 1415');
+  await page.locator('#p-cal-grid .cal-cell[data-year="1404"]').click();
+  await page.locator('#p-cal-next').click();
+  await expect(page.locator('#p-cal-title')).toHaveText('1405');
+});
+
+test('the grid hugs its rows instead of reserving a sixth', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-d').fill('1');
+  await page.locator('#p-m').fill('10');           // Dey 1403: 5 rows
+  await page.locator('#p-cal').click();
+  const five = await page.locator('#p-cal-grid').boundingBox();
+  const rowsFive = await page.locator('#p-cal-grid [role="row"]').count();
+  await page.keyboard.press('Escape');
+  await page.locator('#p-m').fill('4');            // Tir 1403: 6 rows
+  await page.locator('#p-cal').click();
+  const six = await page.locator('#p-cal-grid').boundingBox();
+  const rowsSix = await page.locator('#p-cal-grid [role="row"]').count();
+  expect(rowsSix).toBeGreaterThan(rowsFive);
+  expect(six!.height).toBeGreaterThan(five!.height);
+  const lastRowDays = await page.locator('#p-cal-grid [role="row"]').last()
+    .locator('.cal-cell').count();
+  expect(lastRowDays).toBeGreaterThan(0);          // no trailing all-blank row
+});
+
+test('every view stays inside a phone viewport', async ({ page }) => {
+  for (const fa of [false, true]) {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto('/');
+    if (fa) await page.locator('#lang-toggle').click();
+    await page.locator('#p-cal').click();
+    for (const step of ['days', 'years', 'months'] as const) {
+      if (step === 'years') await page.locator('#p-cal-title').click();
+      if (step === 'months') await page.locator('#p-cal-grid .cal-cell').first().click();
+      const box = await page.locator('#p-cal-pop').boundingBox();
+      expect(box!.x, `${step} fa=${fa}`).toBeGreaterThanOrEqual(-1);
+      expect(box!.x + box!.width, `${step} fa=${fa}`).toBeLessThanOrEqual(321);
+      expect(box!.y, `${step} fa=${fa}`).toBeGreaterThanOrEqual(-1);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, `${step} fa=${fa}`).toBeLessThanOrEqual(0);
+    }
+  }
+});
+
+test('the popup does not change side while navigating', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await page.locator('#p-cal').click();
+  const side = await page.locator('#p-cal-pop').evaluate((el) => el.classList.contains('above'));
+  await page.locator('#p-cal-title').click();
+  expect(await page.locator('#p-cal-pop').evaluate((el) => el.classList.contains('above'))).toBe(side);
+  await page.locator('#p-cal-grid .cal-cell').first().click();
+  expect(await page.locator('#p-cal-pop').evaluate((el) => el.classList.contains('above'))).toBe(side);
+});
