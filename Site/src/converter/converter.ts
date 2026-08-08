@@ -1,9 +1,11 @@
 import { convertFrom, type Side } from './converter-core';
-import { dayOptions, monthOptions, parseInRange } from './field-options';
+import { dayOptions, monthOptions, parseInRange, yearOptions } from './field-options';
 import { formatUrlQuery } from './url-state';
 import { createNumberPicker, type NumberPicker } from '../ui/number-picker';
+import { createCalendarGrid, type CalendarGrid } from '../ui/calendar-grid';
+import { restrictToDigits } from '../ui/numeric-input';
 import { nowSnapshot } from '../calendar/now';
-import { copySentence, weekdayName } from '../i18n/format';
+import { copySentence } from '../i18n/format';
 import {
   formatTemplate, GREGORIAN_MONTHS, PERSIAN_MONTHS, STRINGS, toLocaleDigits, type Lang,
 } from '../i18n/strings';
@@ -17,13 +19,19 @@ interface SideRefs {
   y: HTMLInputElement;
   m: HTMLInputElement;
   d: HTMLInputElement;
+  yearToggle: HTMLButtonElement;
   monthToggle: HTMLButtonElement;
   dayToggle: HTMLButtonElement;
+  yearList: HTMLElement;
   monthList: HTMLElement;
   dayList: HTMLElement;
-  monthHint: HTMLElement;
+  calButton: HTMLButtonElement;
+  calPrev: HTMLButtonElement;
+  calNext: HTMLButtonElement;
+  yearPicker: NumberPicker;
   monthPicker: NumberPicker;
   dayPicker: NumberPicker;
+  calendar: CalendarGrid;
 }
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -37,7 +45,7 @@ export function setupConverter(getLang: () => Lang): {
   rerender: () => void;
 } {
   const error = byId<HTMLElement>('converter-error');
-  const weekdayEl = byId<HTMLElement>('weekday');
+  const fullDate = byId<HTMLElement>('full-date');
   const btnToday = byId<HTMLButtonElement>('btn-today');
   const btnCopy = byId<HTMLButtonElement>('btn-copy');
   // The form exists for grouping and labelling only — there is nothing to submit,
@@ -57,16 +65,35 @@ export function setupConverter(getLang: () => Lang): {
   // function declarations hoist, and nothing can fire before setup returns.
   const refs = Object.fromEntries(SIDES.map((side) => {
     const p = ID_PREFIX[side];
+    const y = byId<HTMLInputElement>(`${p}-y`);
     const m = byId<HTMLInputElement>(`${p}-m`);
     const d = byId<HTMLInputElement>(`${p}-d`);
+    // Register the digit filter FIRST, before the pickers and before the
+    // conversion listener below: listeners on one element fire in registration
+    // order, so every later reader sees an already-cleaned value.
+    for (const field of [y, m, d]) restrictToDigits(field);
+
+    const yearToggle = byId<HTMLButtonElement>(`${p}-y-toggle`);
     const monthToggle = byId<HTMLButtonElement>(`${p}-m-toggle`);
     const dayToggle = byId<HTMLButtonElement>(`${p}-d-toggle`);
+    const yearList = byId<HTMLElement>(`${p}-y-list`);
     const monthList = byId<HTMLElement>(`${p}-m-list`);
     const dayList = byId<HTMLElement>(`${p}-d-list`);
+    const calButton = byId<HTMLButtonElement>(`${p}-cal`);
+    const calPrev = byId<HTMLButtonElement>(`${p}-cal-prev`);
+    const calNext = byId<HTMLButtonElement>(`${p}-cal-next`);
     const entry: SideRefs = {
-      y: byId<HTMLInputElement>(`${p}-y`), m, d,
-      monthToggle, dayToggle, monthList, dayList,
-      monthHint: byId<HTMLElement>(`${p}-m-hint`),
+      y, m, d,
+      yearToggle, monthToggle, dayToggle,
+      yearList, monthList, dayList,
+      calButton, calPrev, calNext,
+      yearPicker: createNumberPicker({
+        input: y, toggle: yearToggle, list: yearList,
+        onCommit: (value) => {
+          y.value = toLocaleDigits(value, getLang());
+          run(side, true);
+        },
+      }),
       monthPicker: createNumberPicker({
         input: m, toggle: monthToggle, list: monthList,
         onCommit: (value) => {
@@ -78,6 +105,36 @@ export function setupConverter(getLang: () => Lang): {
         input: d, toggle: dayToggle, list: dayList,
         onCommit: (value) => {
           d.value = toLocaleDigits(value, getLang());
+          run(side, true);
+        },
+      }),
+      calendar: createCalendarGrid({
+        side,
+        button: calButton,
+        popup: byId<HTMLElement>(`${p}-cal-pop`),
+        title: byId<HTMLElement>(`${p}-cal-title`),
+        prev: calPrev,
+        next: calNext,
+        grid: byId<HTMLElement>(`${p}-cal-grid`),
+        getLang,
+        getCurrent: () => {
+          const year = parseInRange(y.value, ...(side === 'persian' ? [1200, 1500] : [1822, 2121]) as [number, number]);
+          const month = parseInRange(m.value, 1, 12);
+          const day = parseInRange(d.value, 1, 31);
+          return year === null || month === null || day === null
+            ? null : { year, month, day };
+        },
+        getToday: () => {
+          const snap = nowSnapshot().local;
+          return side === 'persian'
+            ? { year: snap.p.py, month: snap.p.pm, day: snap.p.pd }
+            : { year: snap.g.gy, month: snap.g.gm, day: snap.g.gd };
+        },
+        onPick: (year, month, day) => {
+          const lang = getLang();
+          y.value = toLocaleDigits(year, lang);
+          m.value = toLocaleDigits(month, lang);
+          d.value = toLocaleDigits(day, lang);
           run(side, true);
         },
       }),
@@ -106,21 +163,16 @@ export function setupConverter(getLang: () => Lang): {
 
   const setStatus = (ok: { p: PersianDateParts; g: GregorianDateParts } | null): void => {
     lastOk = ok;
-    weekdayEl.textContent = ok ? weekdayName(ok.g, getLang()) : '';
+    fullDate.hidden = ok === null;
+    fullDate.textContent = ok === null ? '' : copySentence(ok.p, ok.g, getLang());
     btnCopy.disabled = ok === null;
   };
 
-  /** Month hint text and day options for both sides, after any field changes. */
+  /** Day options for both sides, after any field changes. */
   const refreshOptions = (): void => {
     const lang = getLang();
     for (const side of SIDES) {
       const r = refs[side];
-      const monthNumber = parseInRange(r.m.value, 1, 12);
-      const names = side === 'persian' ? PERSIAN_MONTHS[lang] : GREGORIAN_MONTHS[lang];
-      r.monthHint.textContent = monthNumber === null
-        ? ''
-        : (names[monthNumber - 1] as string);
-
       const key = `${lang}|${r.y.value}|${r.m.value}`;
       if (key === dayKey[side]) continue;
       dayKey[side] = key;
@@ -128,18 +180,24 @@ export function setupConverter(getLang: () => Lang): {
     }
   };
 
-  /** Month option lists and the pickers' accessible names. */
+  /** Option lists and accessible names that depend only on the language. */
   const renderLabels = (): void => {
     const lang = getLang();
     for (const side of SIDES) {
       const r = refs[side];
+      r.yearPicker.setOptions(yearOptions(side, lang));
       r.monthPicker.setOptions(monthOptions(side, lang));
       for (const [el, key] of [
+        [r.yearToggle, 'chooseYear'], [r.yearList, 'chooseYear'],
         [r.monthToggle, 'chooseMonth'], [r.monthList, 'chooseMonth'],
         [r.dayToggle, 'chooseDay'], [r.dayList, 'chooseDay'],
       ] as const) {
         el.setAttribute('aria-label', STRINGS[lang][key]);
       }
+      r.calButton.setAttribute('aria-label', STRINGS[lang].openCalendar);
+      r.calPrev.setAttribute('aria-label', STRINGS[lang].prevMonth);
+      r.calNext.setAttribute('aria-label', STRINGS[lang].nextMonth);
+      r.calendar.rerender();
     }
     // Every day label carries digits and a weekday name, so a language change
     // invalidates all of them.
@@ -202,8 +260,10 @@ export function setupConverter(getLang: () => Lang): {
 
   btnToday.addEventListener('click', () => {
     for (const side of SIDES) {
+      refs[side].yearPicker.close();
       refs[side].monthPicker.close();
       refs[side].dayPicker.close();
+      refs[side].calendar.close();
     }
     const snap = nowSnapshot();
     prefill(snap.local.p, snap.local.g);
