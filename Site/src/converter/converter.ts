@@ -114,7 +114,7 @@ export function setupConverter(getLang: () => Lang): {
         side,
         button: calButton,
         popup: byId<HTMLElement>(`${p}-cal-pop`),
-        title: byId<HTMLElement>(`${p}-cal-title`),
+        title: byId<HTMLButtonElement>(`${p}-cal-title`),
         prev: calPrev,
         next: calNext,
         grid: byId<HTMLElement>(`${p}-cal-grid`),
@@ -203,8 +203,8 @@ export function setupConverter(getLang: () => Lang): {
         el.setAttribute('aria-label', STRINGS[lang][key]);
       }
       r.calButton.setAttribute('aria-label', STRINGS[lang].openCalendar);
-      r.calPrev.setAttribute('aria-label', STRINGS[lang].prevMonth);
-      r.calNext.setAttribute('aria-label', STRINGS[lang].nextMonth);
+      // The step buttons name their own view, so the calendar labels them as it
+      // renders — which this rerender, and every language change, triggers.
       r.calendar.rerender();
     }
     // Every day label carries digits and a weekday name, so a language change

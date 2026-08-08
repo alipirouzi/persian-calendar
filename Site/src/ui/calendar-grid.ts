@@ -2,7 +2,7 @@ import {
   CALENDAR_VIEWS,
   type CalendarMode, type RenderedView, type ViewCell, type ViewState,
 } from '../converter/calendar-views';
-import type { Lang } from '../i18n/strings';
+import { STRINGS, type Lang } from '../i18n/strings';
 import type { Side } from '../converter/converter-core';
 import { gridIntent } from './grid-navigation';
 import { createPopup } from './popup';
@@ -17,8 +17,8 @@ interface Parts {
   side: Side;
   button: HTMLButtonElement;
   popup: HTMLElement;
-  /** A button: it steps up a view, and is disabled once at the top. */
-  title: HTMLElement;
+  /** It steps up a view, and is disabled once at the top. */
+  title: HTMLButtonElement;
   prev: HTMLButtonElement;
   next: HTMLButtonElement;
   grid: HTMLElement;
@@ -29,14 +29,6 @@ interface Parts {
   getToday: () => ViewState;
   onPick: (year: number, month: number, day: number) => void;
 }
-
-/** The month, year and year-page views page 12 at a time in three columns. */
-const PAGE_COLUMNS = 3;
-
-/** Which data-attribute a view's cells carry, keyed by the view's own key. */
-const DATA_KEY: Readonly<Record<RenderedView['key'], string>> = {
-  d: 'day', m: 'month', y: 'year',
-};
 
 /** Keys that belong to the grid even when they turn out not to move anything. */
 const MOVE_KEYS: ReadonlySet<string> = new Set([
@@ -71,14 +63,22 @@ export function createCalendarGrid({
   /** Index into the flattened cells of the view on screen. */
   let cursor = 0;
   /** The last view built. Seeded so every handler has a shape to read. */
-  let view: RenderedView = CALENDAR_VIEWS[mode].render(side, state, getLang());
+  let view: RenderedView = CALENDAR_VIEWS[mode].render(side, state, getLang(), getCurrent());
   let cells: readonly (ViewCell | null)[] = view.rows.flat();
 
   const cellId = (value: number): string => `${grid.id}-${view.key}${value}`;
 
-  const indexOfValue = (value: number): number => {
+  /**
+   * Where `value` sits on the page now on screen. A page that has not got it —
+   * day 31 after a step into a 30-day month — falls back to the edge `missing`
+   * names: the far end for a step, which is the shorter month's last day, and
+   * the near end for an arrival, which is where reading starts.
+   */
+  const indexOfValue = (value: number, missing: 'first' | 'last'): number => {
     const found = cells.findIndex((cell) => cell?.value === value);
-    return found >= 0 ? found : cells.findIndex((cell) => cell !== null);
+    if (found >= 0) return found;
+    const real = cells.flatMap((cell, index) => (cell === null ? [] : [index]));
+    return (missing === 'first' ? real[0] : real.at(-1)) ?? -1;
   };
 
   /**
@@ -118,8 +118,9 @@ export function createCalendarGrid({
    * that a day page is a month and a year page is twelve years.
    */
   const todayValue = (lang: Lang): number | null => {
-    const forToday = CALENDAR_VIEWS[mode].render(side, getToday(), lang);
-    return forToday.title === view.title ? forToday.selected : null;
+    const today = getToday();
+    const forToday = CALENDAR_VIEWS[mode].render(side, today, lang, null);
+    return forToday.title === view.title ? CALENDAR_VIEWS[mode].cursorValue(today) : null;
   };
 
   const makeCell = (cell: ViewCell | null, index: number, today: number | null): HTMLElement => {
@@ -131,8 +132,10 @@ export function createCalendarGrid({
     }
     el.className = 'cal-cell';
     el.id = cellId(cell.value);
-    el.dataset[DATA_KEY[view.key]] = String(cell.value);
+    el.dataset[view.unit] = String(cell.value);
     el.textContent = cell.label;
+    // A page without the committed date reports a null selection, and null is
+    // equal to no cell's value, so nothing on it is marked.
     el.setAttribute('aria-selected', String(cell.value === view.selected));
     // Today is an outline and the selection is a fill, so one cell can wear both
     // without either mark being lost.
@@ -150,11 +153,13 @@ export function createCalendarGrid({
    * `cursorValue` moves the cursor onto that cell first; without it the cursor
    * index stands, which is what a plain cursor move or a language change want.
    */
-  const render = (cursorValue?: number): void => {
+  const render = (cursorValue?: number, missing: 'first' | 'last' = 'first'): void => {
     const lang = getLang();
-    view = CALENDAR_VIEWS[mode].render(side, state, lang);
+    // The mark belongs to the committed date, so it is re-read every render: a
+    // date picked, cleared or typed while the popup is open moves it.
+    view = CALENDAR_VIEWS[mode].render(side, state, lang, getCurrent());
     cells = view.rows.flat();
-    if (cursorValue !== undefined) cursor = Math.max(indexOfValue(cursorValue), 0);
+    if (cursorValue !== undefined) cursor = Math.max(indexOfValue(cursorValue, missing), 0);
 
     const today = todayValue(lang);
     const rows = view.rows.map((row, rowIndex) => {
@@ -172,7 +177,10 @@ export function createCalendarGrid({
       return cell;
     }));
 
-    grid.classList.toggle('cal-grid--wide', view.columns === PAGE_COLUMNS);
+    grid.classList.toggle('cal-grid--wide', view.layout === 'page');
+    // The CSS lays the track out from the data rather than from a second copy of
+    // the column count kept here.
+    grid.style.setProperty('--cal-cols', String(view.columns));
     grid.replaceChildren(...(view.headers.length > 0 ? [header] : []), ...rows);
     const active = cells[cursor];
     if (active === undefined || active === null) {
@@ -185,27 +193,34 @@ export function createCalendarGrid({
     // the grid after what is on screen makes the change announce.
     grid.setAttribute('aria-label', view.title);
     title.textContent = view.title;
-    // The years view is the top of the drill-down; there is nothing above it.
-    title.toggleAttribute('disabled', !view.titleActionable);
+    title.disabled = view.titleTarget === null;
     prev.disabled = !view.canGoPrev;
     next.disabled = !view.canGoNext;
+    // ‹ and › carry no text, so the label is the whole accessible name, and a
+    // step means something different in each view.
+    prev.setAttribute('aria-label', STRINGS[lang][view.prevLabel]);
+    next.setAttribute('aria-label', STRINGS[lang][view.nextLabel]);
     // The views differ in height, so the cap taken when the popup opened has to
     // be re-applied to whatever it now holds.
     popup.reposition();
   };
 
-  /** Show `next`, with the cursor on whatever that view considers selected. */
+  /** Show `next`, with the cursor on the cell the arriving date occupies. */
   const goTo = (next: CalendarMode, to: ViewState): void => {
     mode = next;
     state = to;
-    render(CALENDAR_VIEWS[mode].render(side, state, getLang()).selected);
+    render(CALENDAR_VIEWS[mode].cursorValue(state));
   };
 
   /** Prev/next and PageUp/PageDown. A step past a range bound is a no-op. */
   const step = (delta: -1 | 1): void => {
     const next = CALENDAR_VIEWS[mode].step(side, state, delta);
     if (next === null) return;
-    goTo(mode, next);
+    // Paging is browsing, not arriving: the cursor keeps the value the arrows
+    // gave it instead of snapping back to the date the state carries.
+    const carried = cells[cursor]?.value;
+    state = next;
+    render(carried, 'last');
   };
 
   const close = (restoreFocus: boolean): void => {
@@ -255,7 +270,7 @@ export function createCalendarGrid({
     // three levels deep would be answering a question nobody asked.
     mode = 'days';
     state = getCurrent() ?? getToday();
-    render(state.day);
+    render(CALENDAR_VIEWS[mode].cursorValue(state));
     popup.open({ invoker: button, focusTarget: grid });
     // Positioning happened while the grid was still hidden and unmeasurable, so
     // the reveal only means anything now.
@@ -307,22 +322,28 @@ export function createCalendarGrid({
   });
 
   /**
-   * The grid keeps focus across every navigation: left on a button, the arrow
-   * keys and Escape would do nothing and there would be no route back. Focus
-   * first, then navigate — navigating can disable the very button that was
+   * Focus first, then navigate — navigating can disable the very button that was
    * pressed, and disabling a focused element blurs it, which reads as focus
-   * leaving the popup and dismisses it.
+   * leaving the popup and dismisses it. Then focus goes back where the user
+   * actually is, or a keyboard press would silently leave them on the grid,
+   * where the next Enter picks a cell.
    */
-  const fromButton = (act: () => void): void => {
+  const fromButton = (btn: HTMLButtonElement, act: () => void): void => {
     grid.focus({ preventScroll: true });
     act();
+    // Unless the action disabled it: then the grid is the right place to be, and
+    // Escape still closes from there.
+    if (!btn.disabled) btn.focus({ preventScroll: true });
   };
 
-  prev.addEventListener('click', () => { fromButton(() => { step(-1); }); });
-  next.addEventListener('click', () => { fromButton(() => { step(1); }); });
-  // The title always goes to the top, from any depth.
+  prev.addEventListener('click', () => { fromButton(prev, () => { step(-1); }); });
+  next.addEventListener('click', () => { fromButton(next, () => { step(1); }); });
+  // The title drills up to wherever this view says it leads.
   title.addEventListener('click', () => {
-    fromButton(() => { goTo('years', state); });
+    fromButton(title, () => {
+      const target = view.titleTarget;
+      if (target !== null) goTo(target, state);
+    });
   });
 
   grid.addEventListener('click', (event) => {
@@ -330,7 +351,7 @@ export function createCalendarGrid({
     if (cell === null || !grid.contains(cell)) return;
     // Cancel activation behaviour so focus stays where the popup put it.
     event.preventDefault();
-    const value = Number(cell.dataset[DATA_KEY[view.key]]);
+    const value = Number(cell.dataset[view.unit]);
     if (!Number.isInteger(value)) return;
     choose(value);
   });

@@ -325,12 +325,42 @@ describe('paging', () => {
     expect(dom.title.textContent).toBe('1404');
   });
 
-  it('keeps focus on the grid so the arrows still work', () => {
+  it('hands focus back to the button that was pressed', () => {
     clickOn(dom.button);
 
     clickOn(dom.next);
 
+    // The grid is focused first so that disabling the button cannot blur into a
+    // dismissal, but a keyboard user has to stay where they were.
+    expect(document.activeElement).toBe(dom.next);
+  });
+
+  it('leaves focus on the grid when the step disabled the button', () => {
+    dom = mount({ current: { year: 1500, month: 11, day: 1 } });
+    clickOn(dom.button);
+
+    clickOn(dom.next); // Esfand 1500 is the last month of the range
+
+    expect(dom.next.disabled).toBe(true);
     expect(document.activeElement).toBe(dom.grid);
+  });
+
+  it('names each view\'s step buttons after what they step', () => {
+    clickOn(dom.button);
+    expect(dom.prev.getAttribute('aria-label')).toBe('Previous month');
+    expect(dom.next.getAttribute('aria-label')).toBe('Next month');
+
+    clickOn(dom.title);
+    expect(dom.prev.getAttribute('aria-label')).toBe('Previous 12 years');
+    expect(dom.next.getAttribute('aria-label')).toBe('Next 12 years');
+
+    clickOn(cellFor('year', 1400));
+    expect(dom.prev.getAttribute('aria-label')).toBe('Previous year');
+    expect(dom.next.getAttribute('aria-label')).toBe('Next year');
+
+    dom.setLang('fa');
+    dom.calendar.rerender();
+    expect(dom.next.getAttribute('aria-label')).toBe('سال بعد');
   });
 
   it('refuses to step past the end of the range', () => {
@@ -341,6 +371,66 @@ describe('paging', () => {
     press(dom.grid, 'PageDown');
 
     expect(dom.title.textContent).toBe('Esfand 1500');
+  });
+});
+
+describe('the committed date', () => {
+  it('marks it only on the page that holds it', () => {
+    clickOn(dom.button);
+    expect(cellFor('day', 22).classList.contains('active')).toBe(true);
+
+    clickOn(dom.next); // Bahman: the converter still holds 22 Dey
+
+    expect(dom.grid.querySelectorAll('.active')).toHaveLength(0);
+    expect(dom.grid.querySelectorAll('[aria-selected="true"]')).toHaveLength(0);
+
+    clickOn(dom.prev);
+
+    expect(cellFor('day', 22).classList.contains('active')).toBe(true);
+  });
+
+  it('follows the fields rather than the browsing, on every render', () => {
+    clickOn(dom.button);
+
+    dom.setCurrent({ year: 1403, month: 10, day: 5 });
+    dom.calendar.rerender();
+
+    expect(cellFor('day', 5).classList.contains('active')).toBe(true);
+    expect(cellFor('day', 22).classList.contains('active')).toBe(false);
+  });
+
+  it('marks nothing at all when the fields hold no date', () => {
+    dom = mount({ current: null, today: { year: 1403, month: 10, day: 1 } });
+
+    clickOn(dom.button);
+
+    expect(dom.grid.querySelectorAll('.active')).toHaveLength(0);
+    // Today is still marked: the two are different marks.
+    expect(cellFor('day', 1).classList.contains('today')).toBe(true);
+  });
+});
+
+describe('the column count', () => {
+  it('hands the grid its own width, so the CSS needs no second copy', () => {
+    clickOn(dom.button);
+    expect(dom.grid.style.getPropertyValue('--cal-cols')).toBe('7');
+
+    clickOn(dom.title);
+
+    expect(dom.grid.style.getPropertyValue('--cal-cols')).toBe('3');
+  });
+});
+
+describe('the title', () => {
+  it('does nothing at the top of the drill-down', () => {
+    clickOn(dom.button);
+    clickOn(dom.title); // years: nowhere further up
+
+    clickOn(dom.title);
+
+    expect(dom.title.textContent).toBe('1392 – 1403');
+    expect(dom.pop.hidden).toBe(false);
+    expect(dom.onPick).not.toHaveBeenCalled();
   });
 });
 
@@ -423,6 +513,43 @@ describe('the keyboard', () => {
     expect(dom.title.textContent).toBe('Bahman 1403');
     press(dom.grid, 'PageUp');
     expect(dom.title.textContent).toBe('Dey 1403');
+  });
+
+  it('carries the cursor across a page step', () => {
+    clickOn(dom.button);
+    press(dom.grid, 'ArrowDown');
+    expect(activeId()).toBe('p-cal-grid-d29');
+
+    press(dom.grid, 'PageDown');
+
+    // Where the arrows left it, not where the state's own day sits.
+    expect(dom.title.textContent).toBe('Bahman 1403');
+    expect(activeId()).toBe('p-cal-grid-d29');
+    press(dom.grid, 'Enter');
+    expect(dom.onPick).toHaveBeenCalledWith(1403, 11, 29);
+  });
+
+  it('clamps a carried cursor the shorter page cannot hold', () => {
+    // Shahrivar has 31 days and Mehr 30, so day 31 has nowhere to land.
+    dom = mount({ current: { year: 1403, month: 6, day: 31 } });
+    clickOn(dom.button);
+    expect(activeId()).toBe('p-cal-grid-d31');
+
+    press(dom.grid, 'PageDown');
+
+    expect(dom.title.textContent).toBe('Mehr 1403');
+    expect(activeId()).toBe('p-cal-grid-d30');
+  });
+
+  it('carries nothing when the page it steps off has no cells', () => {
+    dom = mount({ side: 'gregorian', current: { year: 2000, month: 13, day: 1 } });
+    clickOn(dom.button);
+    expect(activeId()).toBeNull();
+
+    press(dom.grid, 'PageDown');
+
+    expect(dom.title.textContent).toBe('February 2001');
+    expect(activeId()).toBeNull();
   });
 
   it('picks with Enter and with Space', () => {

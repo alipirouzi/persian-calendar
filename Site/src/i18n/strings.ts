@@ -5,7 +5,10 @@ export type StringKey =
   | 'year' | 'month' | 'day' | 'tehranLabel' | 'langToggle'
   | 'today' | 'copy' | 'copied' | 'copyFailed'
   | 'chooseMonth' | 'chooseDay'
-  | 'chooseYear' | 'openCalendar' | 'prevMonth' | 'nextMonth'
+  | 'chooseYear' | 'openCalendar'
+  // One pair per calendar view: the step buttons show only ‹ and ›, so their
+  // label is the whole accessible name and has to say what a step moves.
+  | 'prevMonth' | 'nextMonth' | 'prevYear' | 'nextYear' | 'prevYears' | 'nextYears'
   | 'errYearRange' | 'errMonth' | 'errDay' | 'errUnsupported';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
@@ -28,6 +31,10 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     openCalendar: 'Open calendar',
     prevMonth: 'Previous month',
     nextMonth: 'Next month',
+    prevYear: 'Previous year',
+    nextYear: 'Next year',
+    prevYears: 'Previous 12 years',
+    nextYears: 'Next 12 years',
     errYearRange: 'Year must be between {min} and {max}',
     errMonth: 'Month must be between 1 and 12',
     errDay: '{month} has {days} days in {year}',
@@ -52,6 +59,10 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     openCalendar: 'تقویم',
     prevMonth: 'ماه قبل',
     nextMonth: 'ماه بعد',
+    prevYear: 'سال قبل',
+    nextYear: 'سال بعد',
+    prevYears: '۱۲ سال قبل',
+    nextYears: '۱۲ سال بعد',
     errYearRange: 'سال باید بین {min} و {max} باشد',
     errMonth: 'ماه باید بین ۱ و ۱۲ باشد',
     errDay: '{month} در سال {year} {days} روز دارد',

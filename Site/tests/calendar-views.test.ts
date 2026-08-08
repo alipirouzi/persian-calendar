@@ -18,12 +18,16 @@ describe('the view registry', () => {
 
 describe('the days view', () => {
   it('renders a seven-column month with weekday headers', () => {
-    const view = days.render('persian', at(1403, 10, 22), 'en');
+    const view = days.render('persian', at(1403, 10, 22), 'en', at(1403, 10, 22));
     expect(view.columns).toBe(7);
+    expect(view.layout).toBe('week');
     expect(view.headers).toEqual(['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
     expect(view.title).toBe('Dey 1403');
-    expect(view.titleActionable).toBe(true);
+    expect(view.titleTarget).toBe('years');
     expect(view.key).toBe('d');
+    expect(view.unit).toBe('day');
+    expect(view.prevLabel).toBe('prevMonth');
+    expect(view.nextLabel).toBe('nextMonth');
     expect(view.selected).toBe(22);
     expect(view.canGoPrev).toBe(true);
     expect(view.canGoNext).toBe(true);
@@ -32,10 +36,28 @@ describe('the days view', () => {
     expect(view.rows.flat().filter((cell) => cell !== null)).toHaveLength(30);
   });
   it('keeps the model\'s blank slots and localizes the numerals', () => {
-    const view = days.render('gregorian', at(2025, 1, 1), 'fa');
+    const view = days.render('gregorian', at(2025, 1, 1), 'fa', null);
     // 2025-01-01 is a Wednesday: two blanks lead a Monday-first week.
     expect(view.rows[0]?.slice(0, 3)).toEqual([null, null, { value: 1, label: '۱' }]);
     expect(view.title).toBe('ژانویه ۲۰۲۵');
+  });
+  it('marks nothing when the committed date is elsewhere or absent', () => {
+    const browsing = at(1403, 10, 1);
+    expect(days.render('persian', browsing, 'en', null).selected).toBeNull();
+    expect(days.render('persian', browsing, 'en', at(1402, 10, 22)).selected).toBeNull();
+    expect(days.render('persian', browsing, 'en', at(1403, 11, 22)).selected).toBeNull();
+    // Same month: the browsed day is irrelevant, the committed one is the mark.
+    expect(days.render('persian', browsing, 'en', at(1403, 10, 22)).selected).toBe(22);
+  });
+  it('reports no columns for a month that has no days', () => {
+    // Nothing the converter parses produces a thirteenth month, but the column
+    // count comes from the rows, and a view with no rows has none.
+    const view = days.render('gregorian', at(2000, 13, 1), 'en', null);
+    expect(view.rows).toEqual([]);
+    expect(view.columns).toBe(0);
+  });
+  it('locates the state on its own page', () => {
+    expect(days.cursorValue(at(1403, 10, 22))).toBe(22);
   });
   it('steps by a whole month', () => {
     expect(days.step('persian', at(1403, 10, 5), 1)).toEqual(at(1403, 11, 5));
@@ -61,22 +83,35 @@ describe('the days view', () => {
 
 describe('the months view', () => {
   it('renders twelve named months in three columns', () => {
-    const view = months.render('persian', at(1403, 10, 22), 'en');
+    const view = months.render('persian', at(1403, 10, 22), 'en', at(1403, 10, 22));
     expect(view.columns).toBe(3);
+    expect(view.layout).toBe('page');
     expect(view.headers).toEqual([]);
     expect(view.rows).toHaveLength(4);
     for (const row of view.rows) expect(row).toHaveLength(3);
     expect(view.rows[0]?.[0]).toEqual({ value: 1, label: 'Farvardin' });
     expect(view.rows[3]?.[2]).toEqual({ value: 12, label: 'Esfand' });
     expect(view.title).toBe('1403');
-    expect(view.titleActionable).toBe(true);
+    expect(view.titleTarget).toBe('years');
     expect(view.key).toBe('m');
+    expect(view.unit).toBe('month');
+    expect(view.prevLabel).toBe('prevYear');
+    expect(view.nextLabel).toBe('nextYear');
     expect(view.selected).toBe(10);
   });
   it('uses the other calendar and language', () => {
-    const view = months.render('gregorian', at(2026, 8, 1), 'fa');
+    const view = months.render('gregorian', at(2026, 8, 1), 'fa', null);
     expect(view.rows[2]?.[1]).toEqual({ value: 8, label: 'اوت' });
     expect(view.title).toBe('۲۰۲۶');
+  });
+  it('marks nothing when the committed date is in another year or absent', () => {
+    const browsing = at(1400, 1, 1);
+    expect(months.render('persian', browsing, 'en', null).selected).toBeNull();
+    expect(months.render('persian', browsing, 'en', at(1403, 10, 22)).selected).toBeNull();
+    expect(months.render('persian', browsing, 'en', at(1400, 10, 22)).selected).toBe(10);
+  });
+  it('locates the state on its own page', () => {
+    expect(months.cursorValue(at(1403, 10, 22))).toBe(10);
   });
   it('steps by a whole year, keeping the month and day', () => {
     expect(months.step('persian', at(1403, 10, 22), 1)).toEqual(at(1404, 10, 22));
@@ -100,8 +135,9 @@ describe('the months view', () => {
 
 describe('the years view', () => {
   it('renders a twelve-year page in three columns', () => {
-    const view = years.render('persian', at(1403, 10, 22), 'en');
+    const view = years.render('persian', at(1403, 10, 22), 'en', at(1403, 10, 22));
     expect(view.columns).toBe(3);
+    expect(view.layout).toBe('page');
     expect(view.headers).toEqual([]);
     expect(view.rows).toHaveLength(4);
     expect(view.rows.flat()).toEqual(
@@ -110,14 +146,27 @@ describe('the years view', () => {
     );
     expect(view.title).toBe('1392 – 1403');
     // There is nothing above the years, so the title has nowhere left to go.
-    expect(view.titleActionable).toBe(false);
+    expect(view.titleTarget).toBeNull();
     expect(view.key).toBe('y');
+    expect(view.unit).toBe('year');
+    expect(view.prevLabel).toBe('prevYears');
+    expect(view.nextLabel).toBe('nextYears');
     expect(view.selected).toBe(1403);
     expect(view.canGoPrev).toBe(true);
     expect(view.canGoNext).toBe(true);
   });
+  it('marks nothing when the committed year is on another page or absent', () => {
+    const browsing = at(1380, 1, 1);
+    expect(years.render('persian', browsing, 'en', null).selected).toBeNull();
+    // 1403 sits on the 1392 page, 1380 on the 1380 one.
+    expect(years.render('persian', browsing, 'en', at(1403, 10, 22)).selected).toBeNull();
+    expect(years.render('persian', browsing, 'en', at(1385, 10, 22)).selected).toBe(1385);
+  });
+  it('locates the state on its own page', () => {
+    expect(years.cursorValue(at(1403, 10, 22))).toBe(1403);
+  });
   it('pads the last short page and localizes its labels', () => {
-    const view = years.render('persian', at(1500, 1, 1), 'fa');
+    const view = years.render('persian', at(1500, 1, 1), 'fa', null);
     expect(view.rows[0]?.[0]).toEqual({ value: 1500, label: '۱۵۰۰' });
     expect(view.rows[0]?.[1]).toBeNull();
     expect(view.title).toBe('۱۵۰۰ – ۱۵۰۰');

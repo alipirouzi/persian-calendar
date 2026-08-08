@@ -61,7 +61,8 @@ describe('setup', () => {
   it('names every control in the current language', () => {
     expect(byId('p-y-toggle').getAttribute('aria-label')).toBe('Choose year');
     expect(byId('p-cal').getAttribute('aria-label')).toBe('Open calendar');
-    expect(byId('g-cal-prev').getAttribute('aria-label')).toBe('Previous month');
+    // The step buttons are named by the calendar itself, per view: see
+    // tests/dom/calendar-grid.test.ts.
   });
 
   it('swallows the form submit that would reload the page', () => {
