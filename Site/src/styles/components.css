@@ -46,7 +46,6 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
   display: flex; gap: 1.75rem; justify-content: center; align-items: baseline;
   margin-top: 1.25rem;
 }
-#weekday { color: var(--accent); min-width: 5.5rem; text-align: center; }
 #status-row button {
   position: relative; background: none; border: 0; padding: 0;
   font-family: var(--font-ui); font-size: 0.85rem; color: var(--text-muted);
@@ -58,13 +57,64 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
 /* Invisible hit-area extension, same pattern as #lang-toggle (WCAG 2.5.8). */
 #status-row button::after { content: ''; position: absolute; inset: -12px; }
 
-/* Reserved height so a month name appearing or clearing never shifts the
-   layout, and so year/month/day labels keep a common baseline. */
-.hint {
-  min-height: 1.1em; font-size: 0.7rem; line-height: 1.1;
-  color: var(--text-muted); text-align: center;
-  white-space: nowrap; overflow: hidden;
+/* The converter's readout: the same sentence the Copy button writes, so what is
+   on screen is what lands on the clipboard. Muted and small so it reads as a
+   caption of the form rather than competing with the today panel above. */
+#full-date {
+  margin-top: 1rem; text-align: center;
+  font-size: 0.9rem; color: var(--text-muted);
 }
+
+legend { display: flex; align-items: center; gap: 0.5rem; }
+.cal-btn {
+  position: relative; background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--text-muted); font-size: 0.9rem; line-height: 1;
+  transition: color var(--duration) var(--ease);
+}
+.cal-btn:hover, .cal-btn[aria-expanded='true'] { color: var(--accent); }
+/* Invisible hit-area extension, same pattern as #lang-toggle (WCAG 2.5.8). */
+.cal-btn::after { content: ''; position: absolute; inset: -12px; }
+
+.cal-pop {
+  position: absolute; z-index: 20; margin-top: 0.4rem;
+  padding: 0.6rem; background: var(--surface-raised);
+  border: 1px solid var(--hairline); border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+}
+.cal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem; margin-bottom: 0.5rem;
+  font-size: 0.85rem; color: var(--text);
+}
+.cal-nav {
+  background: none; border: 0; cursor: pointer; padding: 0.2rem 0.5rem;
+  color: var(--text-muted); font-size: 1rem; line-height: 1;
+  transition: color var(--duration) var(--ease);
+}
+.cal-nav:hover:not(:disabled) { color: var(--accent); }
+.cal-nav:disabled { opacity: 0.3; cursor: default; }
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 2rem); gap: 2px;
+  /* Six rows' worth of height so the popup does not jump between months. */
+  min-block-size: calc(6 * 2rem + 5 * 2px + 1.6rem);
+  align-content: start;
+}
+.cal-grid:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.cal-wd {
+  block-size: 1.6rem; display: grid; place-items: center;
+  font-size: 0.7rem; color: var(--text-muted);
+}
+.cal-cell {
+  block-size: 2rem; display: grid; place-items: center;
+  border-radius: 4px; cursor: pointer;
+  font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--text);
+  transition: background var(--duration) var(--ease);
+}
+.cal-cell:hover { background: var(--hairline); }
+/* Today is an outline, selection is a fill: two marks that can coexist. */
+.cal-cell.today { box-shadow: inset 0 0 0 1px var(--accent); }
+.cal-cell.active { background: var(--accent); color: var(--surface-raised); font-weight: 600; }
+.cal-blank { block-size: 2rem; }
 
 /* The picker adds no width of its own: the chevron occupies the end padding the
    field already reserves, so a month cell and a year cell are the same size. */
@@ -160,4 +210,7 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
   .fields input { min-height: 44px; font-size: 1rem; }
   /* Row stays a grid — display:flex here would collapse the aligned columns. */
   .picker-list li { min-height: 44px; font-size: 1rem; }
+  .cal-grid { grid-template-columns: repeat(7, 2.6rem); min-block-size: calc(6 * 2.6rem + 5 * 2px + 1.6rem); }
+  .cal-cell, .cal-blank { block-size: 2.6rem; }
+  .cal-cell { font-size: 0.95rem; }
 }

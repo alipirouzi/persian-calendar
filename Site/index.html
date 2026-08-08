@@ -33,78 +33,106 @@
     <section id="converter" aria-label="Date converter">
       <form id="converter-form" autocomplete="off">
         <fieldset id="side-persian">
-          <legend id="legend-persian"></legend>
+          <legend><span id="legend-persian"></span>
+            <button id="p-cal" class="cal-btn" type="button" aria-expanded="false"
+                    aria-controls="p-cal-pop">▦</button></legend>
           <div class="fields">
             <div class="field">
               <label for="p-y" data-str="year"></label>
-              <input id="p-y" type="text" inputmode="numeric" />
-              <span class="hint"></span>
+              <div class="picker">
+                <input id="p-y" type="text" inputmode="numeric" autocomplete="off"
+                       maxlength="4" role="combobox" aria-expanded="false"
+                       aria-controls="p-y-list" aria-autocomplete="none" />
+                <button id="p-y-toggle" class="picker-toggle" type="button" tabindex="-1"
+                        aria-expanded="false" aria-controls="p-y-list">▾</button>
+                <ul id="p-y-list" class="picker-list" role="listbox" tabindex="-1" hidden></ul>
+              </div>
             </div>
             <div class="field">
               <label for="p-m" data-str="month"></label>
               <div class="picker">
                 <input id="p-m" type="text" inputmode="numeric" autocomplete="off"
-                       role="combobox" aria-expanded="false" aria-controls="p-m-list"
-                       aria-autocomplete="none" aria-describedby="p-m-hint" />
+                       maxlength="2" role="combobox" aria-expanded="false"
+                       aria-controls="p-m-list" aria-autocomplete="none" />
                 <button id="p-m-toggle" class="picker-toggle" type="button" tabindex="-1"
                         aria-expanded="false" aria-controls="p-m-list">▾</button>
                 <ul id="p-m-list" class="picker-list" role="listbox" tabindex="-1" hidden></ul>
               </div>
-              <span class="hint" id="p-m-hint"></span>
             </div>
             <div class="field">
               <label for="p-d" data-str="day"></label>
               <div class="picker">
                 <input id="p-d" type="text" inputmode="numeric" autocomplete="off"
-                       role="combobox" aria-expanded="false" aria-controls="p-d-list"
-                       aria-autocomplete="none" />
+                       maxlength="2" role="combobox" aria-expanded="false"
+                       aria-controls="p-d-list" aria-autocomplete="none" />
                 <button id="p-d-toggle" class="picker-toggle" type="button" tabindex="-1"
                         aria-expanded="false" aria-controls="p-d-list">▾</button>
                 <ul id="p-d-list" class="picker-list" role="listbox" tabindex="-1" hidden></ul>
               </div>
-              <span class="hint"></span>
             </div>
+          </div>
+          <div id="p-cal-pop" class="cal-pop" hidden>
+            <div class="cal-head">
+              <button id="p-cal-prev" class="cal-nav" type="button">‹</button>
+              <span id="p-cal-title"></span>
+              <button id="p-cal-next" class="cal-nav" type="button">›</button>
+            </div>
+            <div id="p-cal-grid" class="cal-grid" role="grid" tabindex="-1"></div>
           </div>
         </fieldset>
         <div class="exchange" aria-hidden="true">⇄</div>
         <fieldset id="side-gregorian">
-          <legend id="legend-gregorian"></legend>
+          <legend><span id="legend-gregorian"></span>
+            <button id="g-cal" class="cal-btn" type="button" aria-expanded="false"
+                    aria-controls="g-cal-pop">▦</button></legend>
           <div class="fields">
             <div class="field">
               <label for="g-y" data-str="year"></label>
-              <input id="g-y" type="text" inputmode="numeric" />
-              <span class="hint"></span>
+              <div class="picker">
+                <input id="g-y" type="text" inputmode="numeric" autocomplete="off"
+                       maxlength="4" role="combobox" aria-expanded="false"
+                       aria-controls="g-y-list" aria-autocomplete="none" />
+                <button id="g-y-toggle" class="picker-toggle" type="button" tabindex="-1"
+                        aria-expanded="false" aria-controls="g-y-list">▾</button>
+                <ul id="g-y-list" class="picker-list" role="listbox" tabindex="-1" hidden></ul>
+              </div>
             </div>
             <div class="field">
               <label for="g-m" data-str="month"></label>
               <div class="picker">
                 <input id="g-m" type="text" inputmode="numeric" autocomplete="off"
-                       role="combobox" aria-expanded="false" aria-controls="g-m-list"
-                       aria-autocomplete="none" aria-describedby="g-m-hint" />
+                       maxlength="2" role="combobox" aria-expanded="false"
+                       aria-controls="g-m-list" aria-autocomplete="none" />
                 <button id="g-m-toggle" class="picker-toggle" type="button" tabindex="-1"
                         aria-expanded="false" aria-controls="g-m-list">▾</button>
                 <ul id="g-m-list" class="picker-list" role="listbox" tabindex="-1" hidden></ul>
               </div>
-              <span class="hint" id="g-m-hint"></span>
             </div>
             <div class="field">
               <label for="g-d" data-str="day"></label>
               <div class="picker">
                 <input id="g-d" type="text" inputmode="numeric" autocomplete="off"
-                       role="combobox" aria-expanded="false" aria-controls="g-d-list"
-                       aria-autocomplete="none" />
+                       maxlength="2" role="combobox" aria-expanded="false"
+                       aria-controls="g-d-list" aria-autocomplete="none" />
                 <button id="g-d-toggle" class="picker-toggle" type="button" tabindex="-1"
                         aria-expanded="false" aria-controls="g-d-list">▾</button>
                 <ul id="g-d-list" class="picker-list" role="listbox" tabindex="-1" hidden></ul>
               </div>
-              <span class="hint"></span>
             </div>
+          </div>
+          <div id="g-cal-pop" class="cal-pop" hidden>
+            <div class="cal-head">
+              <button id="g-cal-prev" class="cal-nav" type="button">‹</button>
+              <span id="g-cal-title"></span>
+              <button id="g-cal-next" class="cal-nav" type="button">›</button>
+            </div>
+            <div id="g-cal-grid" class="cal-grid" role="grid" tabindex="-1"></div>
           </div>
         </fieldset>
       </form>
+      <p id="full-date" hidden></p>
       <div id="status-row">
         <button id="btn-today" type="button" data-str="today"></button>
-        <span id="weekday"></span>
         <button id="btn-copy" type="button" data-str="copy"></button>
       </div>
       <p id="converter-error" role="status" hidden></p>

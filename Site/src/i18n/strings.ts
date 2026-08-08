@@ -5,6 +5,7 @@ export type StringKey =
   | 'year' | 'month' | 'day' | 'tehranLabel' | 'langToggle'
   | 'today' | 'copy' | 'copied' | 'copyFailed'
   | 'chooseMonth' | 'chooseDay'
+  | 'chooseYear' | 'openCalendar' | 'prevMonth' | 'nextMonth'
   | 'errYearRange' | 'errMonth' | 'errDay';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
@@ -23,6 +24,10 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     copyFailed: 'Copy failed',
     chooseMonth: 'Choose month',
     chooseDay: 'Choose day',
+    chooseYear: 'Choose year',
+    openCalendar: 'Open calendar',
+    prevMonth: 'Previous month',
+    nextMonth: 'Next month',
     errYearRange: 'Year must be between {min} and {max}',
     errMonth: 'Month must be between 1 and 12',
     errDay: '{month} has {days} days in {year}',
@@ -42,6 +47,10 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     copyFailed: 'کپی نشد',
     chooseMonth: 'انتخاب ماه',
     chooseDay: 'انتخاب روز',
+    chooseYear: 'انتخاب سال',
+    openCalendar: 'تقویم',
+    prevMonth: 'ماه قبل',
+    nextMonth: 'ماه بعد',
     errYearRange: 'سال باید بین {min} و {max} باشد',
     errMonth: 'ماه باید بین ۱ و ۱۲ باشد',
     errDay: '{month} در سال {year} {days} روز دارد',
@@ -66,6 +75,12 @@ export const GREGORIAN_MONTHS: Record<Lang, readonly string[]> = {
 export const WEEKDAYS: Record<Lang, readonly string[]> = {
   en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
   fa: ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه', 'شنبه'],
+};
+
+/** Short weekday labels for the calendar header, indexed like WEEKDAYS. */
+export const WEEKDAYS_SHORT: Record<Lang, readonly string[]> = {
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  fa: ['ی', 'د', 'س', 'چ', 'پ', 'ج', 'ش'],
 };
 
 const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'] as const;
