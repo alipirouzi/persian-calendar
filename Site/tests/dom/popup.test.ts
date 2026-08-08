@@ -155,19 +155,22 @@ describe('open and close', () => {
     expect(focus).not.toHaveBeenCalled();
   });
 
-  it('clears the side and the cap on close', () => {
+  it('clears the side, the cap and the held top on close', () => {
     setViewportHeight(400);
     stubRect(dom.trigger, { top: 300, bottom: 340, height: 40 });
     stubRect(dom.surface, { top: 0, bottom: 500, height: 500 });
     const popup = track(createPopup({ trigger: dom.trigger, surface: dom.surface }));
 
     popup.open({ invoker: dom.trigger, focusTarget: dom.surface });
+    popup.reposition();
     expect(dom.surface.classList.contains('above')).toBe(true);
     expect(dom.surface.style.maxHeight).not.toBe('');
+    expect(dom.surface.style.insetBlockEnd).not.toBe('');
 
     popup.close(false);
     expect(dom.surface.classList.contains('above')).toBe(false);
     expect(dom.surface.style.maxHeight).toBe('');
+    expect(dom.surface.style.insetBlockEnd).toBe('');
   });
 });
 
@@ -338,6 +341,54 @@ describe('reposition', () => {
     stubRect(dom.surface, { top: 134, bottom: 234, height: 100 });
     popup.reposition();
     expect(dom.surface.style.maxHeight).toBe('');
+    // Anchored below, the base rule pins the top: nothing to re-assert.
+    expect(dom.surface.style.insetBlockEnd).toBe('');
+  });
+
+  /**
+   * The `above` rule anchors by the bottom edge, so without this the head — the
+   * calendar's title button, under the user's finger — jumps by the whole
+   * difference in height every time the wizard swaps one view for another.
+   */
+  it('holds the top edge while anchored above, whichever way the content resizes', () => {
+    setViewportHeight(400);
+    stubRect(dom.trigger, { top: 300, bottom: 340, height: 40 });
+    // Where the `above` rule puts a 200px surface: its bottom one gap over the
+    // trigger's top, so its top edge lands at 96.
+    stubRect(dom.surface, { top: 96, bottom: 296, height: 200 });
+    const popup = track(createPopup({ trigger: dom.trigger, surface: dom.surface }));
+    popup.open({ invoker: dom.trigger, focusTarget: dom.surface });
+    expect(dom.surface.classList.contains('above')).toBe(true);
+    expect(dom.surface.style.insetBlockEnd).toBe('');
+
+    // A shorter view: the near edge rises to meet it, the top stays at 96.
+    stubRect(dom.surface, { top: 96, bottom: 216, height: 120 });
+    popup.reposition();
+    expect(dom.surface.style.insetBlockEnd).toBe('124px'); // 340 - 124 - 120 = 96
+
+    // A taller one: the near edge drops instead of the head.
+    stubRect(dom.surface, { top: 96, bottom: 326, height: 230 });
+    popup.reposition();
+    expect(dom.surface.style.insetBlockEnd).toBe('14px'); // 340 - 14 - 230 = 96
+  });
+
+  it('drops a held top when a re-open lands the surface below', () => {
+    setViewportHeight(400);
+    stubRect(dom.trigger, { top: 300, bottom: 340, height: 40 });
+    stubRect(dom.surface, { top: 96, bottom: 296, height: 200 });
+    const popup = track(createPopup({ trigger: dom.trigger, surface: dom.surface }));
+    popup.open({ invoker: dom.trigger, focusTarget: dom.surface });
+    popup.reposition();
+    expect(dom.surface.style.insetBlockEnd).not.toBe('');
+
+    popup.close(false);
+    setViewportHeight(768);
+    stubRect(dom.surface, { top: 344, bottom: 544, height: 200 });
+    popup.open({ invoker: dom.trigger, focusTarget: dom.surface });
+    popup.reposition();
+
+    expect(dom.surface.classList.contains('above')).toBe(false);
+    expect(dom.surface.style.insetBlockEnd).toBe('');
   });
 
   it('does nothing while the popup is closed', () => {

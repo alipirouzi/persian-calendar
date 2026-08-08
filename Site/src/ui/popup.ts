@@ -35,6 +35,16 @@ export function createPopup({ trigger, surface, anchor, within = [] }: Parts): P
   let isOpen = false;
   /** Where focus returns when the popup closes: whatever opened it. */
   let invoker: HTMLElement = trigger;
+  /**
+   * Distance from the anchor's bottom edge to the surface's top edge, taken when
+   * the side is chosen; null while anchored below.
+   *
+   * The `above` rule anchors the surface by its bottom, so a content change of h
+   * pixels drags the head — and the title button under the user's finger — by the
+   * same h. Measured against the anchor rather than the viewport so page scroll
+   * between renders cannot smear it.
+   */
+  let aboveTopOffset: number | null = null;
 
   const isInside = (node: Node): boolean =>
     trigger.contains(node) || surface.contains(node) || within.some((el) => el.contains(node));
@@ -68,13 +78,19 @@ export function createPopup({ trigger, surface, anchor, within = [] }: Parts): P
    * instead of running off-screen. Below the floor the cap is skipped: a box that
    * short is worse than the overflow, and the surface is in normal flow, so page
    * scroll still reaches it.
+   *
+   * Returns the height the surface will actually occupy, which is what the
+   * above-anchored top hold has to measure its bottom inset from.
    */
-  const applyCap = (height: number): void => {
+  const applyCap = (height: number): number => {
     const room = roomAround();
     const available = (surface.classList.contains('above') ? room.above : room.below) - GAP * 2;
     if (height > available && available >= MIN_SURFACE_HEIGHT) {
-      surface.style.maxHeight = `${Math.floor(available)}px`;
+      const capped = Math.floor(available);
+      surface.style.maxHeight = `${capped}px`;
+      return capped;
     }
+    return height;
   };
 
   /**
@@ -84,10 +100,16 @@ export function createPopup({ trigger, surface, anchor, within = [] }: Parts): P
    * the surface most of a screen past the fold.
    *
    * Taken once per open, so a render that changes the content's size cannot make
-   * the popup jump sides under the user; `reposition()` only re-caps.
+   * the popup jump sides under the user; `reposition()` only re-caps and, above,
+   * re-asserts the top.
    */
   const position = (): void => {
     surface.classList.remove('above');
+    // Before measuring, not after: a held bottom inset left over from the last
+    // side, against the block-start inset the base rule has just come back to,
+    // stretches the box between the two and reports that instead of the content.
+    surface.style.removeProperty('inset-block-end');
+    aboveTopOffset = null;
     const height = measureUncapped();
     const room = roomAround();
     const fitsBelow = height + GAP <= room.below;
@@ -96,6 +118,11 @@ export function createPopup({ trigger, surface, anchor, within = [] }: Parts): P
       surface.classList.add('above');
     }
     applyCap(height);
+    // Read back rather than derive: the top the CSS actually landed on is the one
+    // worth holding, whatever the rule's own gap turns out to be.
+    if (surface.classList.contains('above')) {
+      aboveTopOffset = anchorRect().bottom - surface.getBoundingClientRect().top;
+    }
   };
 
   const setExpanded = (value: boolean): void => {
@@ -122,6 +149,7 @@ export function createPopup({ trigger, surface, anchor, within = [] }: Parts): P
     setExpanded(false);
     surface.classList.remove('above');
     surface.style.removeProperty('max-height');
+    surface.style.removeProperty('inset-block-end');
     if (restoreFocus) invoker.focus();
   };
 
@@ -161,7 +189,13 @@ export function createPopup({ trigger, surface, anchor, within = [] }: Parts): P
 
     reposition() {
       if (!isOpen) return;
-      applyCap(measureUncapped());
+      const shown = applyCap(measureUncapped());
+      // Anchored above, re-derive the bottom inset from the height the surface
+      // now occupies, so it grows and shrinks away from the head instead of
+      // dragging it. Anchored below the top is already pinned by the base rule.
+      if (aboveTopOffset !== null) {
+        surface.style.insetBlockEnd = `${aboveTopOffset - shown}px`;
+      }
     },
   };
 }
