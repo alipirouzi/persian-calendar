@@ -163,7 +163,10 @@ test('month arrows keep the keyboard working', async ({ page }) => {
   await page.goto('/');
   await page.locator('#p-cal').click();
   await page.locator('#p-cal-next').click();
-  await expect(page.locator('#p-cal-grid')).toBeFocused();
+  // Focus goes back to the button that was pressed, not to the grid: a step is
+  // not an arrival, and a keyboard user who steps twice must not have the second
+  // press land somewhere else. Escape still closes — the handler is on the popup.
+  await expect(page.locator('#p-cal-next')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.locator('#p-cal-pop')).toBeHidden();
 });
@@ -420,4 +423,88 @@ test('the popup does not change side while navigating', async ({ page }) => {
   expect(await page.locator('#p-cal-pop').evaluate((el) => el.classList.contains('above'))).toBe(side);
   await page.locator('#p-cal-grid .cal-cell').first().click();
   expect(await page.locator('#p-cal-pop').evaluate((el) => el.classList.contains('above'))).toBe(side);
+});
+
+// --- Fourth review round: the mark, the cursor, the labels and the head.
+
+test('the selected mark stays on the committed date while browsing', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-d').fill('22');
+  await page.locator('#p-cal').click();
+  await expect(page.locator('#p-cal-grid .cal-cell.active')).toHaveText('22');
+  await page.locator('#p-cal-next').click();          // Bahman
+  await expect(page.locator('#p-cal-grid .cal-cell.active')).toHaveCount(0);
+  await page.locator('#p-cal-prev').click();          // back to Dey
+  await expect(page.locator('#p-cal-grid .cal-cell.active')).toHaveText('22');
+});
+
+test('paging keeps the keyboard cursor where the arrows left it', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-d').fill('22');
+  await page.locator('#p-cal').click();
+  await page.keyboard.press('ArrowDown');             // 22 -> 29
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d29');
+  await page.keyboard.press('PageDown');              // Bahman, cursor must stay on 29
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d29');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#p-m')).toHaveValue('11');
+  await expect(page.locator('#p-d')).toHaveValue('29');
+});
+
+test('Enter on the title does not cascade into picking a date', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-d').fill('22');
+  await page.locator('#p-cal').click();
+  await page.locator('#p-cal-title').focus();
+  await page.keyboard.press('Enter');                 // -> years, title now disabled
+  await expect(page.locator('#p-cal-title')).toHaveText('1392 – 1403');
+  // The title is disabled at the top, so focus stays on the grid. A deliberate
+  // second press is then a selection and drills exactly one level — it must not
+  // run the rest of the cascade and commit a date.
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#p-cal-title')).toHaveText('1403');
+  await expect(page.locator('#p-cal-pop')).toBeVisible();
+  await expect(page.locator('#p-d')).toHaveValue('22');
+});
+
+test('the step buttons say what they step', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-cal').click();
+  await expect(page.locator('#p-cal-next')).toHaveAttribute('aria-label', 'Next month');
+  await page.locator('#p-cal-title').click();
+  await expect(page.locator('#p-cal-next')).toHaveAttribute('aria-label', 'Next 12 years');
+  await page.locator('#p-cal-grid .cal-cell').first().click();
+  await expect(page.locator('#p-cal-next')).toHaveAttribute('aria-label', 'Next year');
+});
+
+test('a long month name stays inside its cell', async ({ page }) => {
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await page.locator('#p-cal').click();
+    await page.locator('#p-cal-title').click();
+    await page.locator('#p-cal-grid .cal-cell').first().click();
+    const cell = page.locator('#p-cal-grid .cal-cell[data-month="2"]');
+    await expect(cell).toHaveText('Ordibehesht');
+    const fits = await cell.evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
+    expect(fits, `@${width}`).toBe(true);
+  }
+});
+
+test('an above-anchored popup keeps its head still between views', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await page.locator('#g-cal').click();
+  const pop = page.locator('#g-cal-pop');
+  if (!(await pop.evaluate((el) => el.classList.contains('above')))) test.skip();
+  const before = (await page.locator('#g-cal-title').boundingBox())!.y;
+  await page.locator('#g-cal-title').click();
+  const after = (await page.locator('#g-cal-title').boundingBox())!.y;
+  expect(Math.abs(after - before)).toBeLessThanOrEqual(2);
 });

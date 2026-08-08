@@ -20,7 +20,7 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **27.6 kB of JavaScript (10.7 kB gzipped)** and **15.4 kB of CSS
+The shipped bundle is **28.8 kB of JavaScript (11.0 kB gzipped)** and **15.6 kB of CSS
 (3.4 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
@@ -57,9 +57,9 @@ PersianCalendar/
 │   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits,
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
-│   ├── tests/              Vitest (287 tests at 100% coverage, incl. .NET parity;
+│   ├── tests/              Vitest (306 tests at 100% coverage, incl. .NET parity;
 │   │                         tests/dom/ runs the DOM units under jsdom)
-│   └── e2e/                Playwright (113 tests, incl. converter-ux.spec.ts,
+│   └── e2e/                Playwright (119 tests, incl. converter-ux.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts and the screenshot matrix)
 │
 ├── deploy/
@@ -109,7 +109,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 287 tests, 100% coverage
+### Site unit tests (Vitest) — 306 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -126,7 +126,8 @@ changes. Without it the parity test cannot run.
 
 Coverage is enforced, not merely reported: `vite.config.ts` sets a **100% threshold on
 lines, statements, branches and functions**, and the suite currently meets all four
-(1369/1369 lines, 565/565 branches, 129/129 functions). Only `src/main.ts` (the bootstrap)
+(1427/1427 lines, 1427/1427 statements, 593/593 branches, 133/133 functions). Only
+`src/main.ts` (the bootstrap)
 and `src/clock/**` (visual, screenshot-tested) are excluded. Tests under `tests/dom/` run
 in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 `numeric-input.ts` and `converter.ts` are exercised, the last of them against the real
@@ -134,7 +135,7 @@ in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 node environment. CI runs `npm test`, not `npm run test:coverage`, so the threshold is a
 local gate rather than a pipeline one.
 
-### E2E (Playwright) — 113 tests
+### E2E (Playwright) — 119 tests
 
 ```bash
 cd Site
@@ -200,7 +201,7 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (113 tests total across the whole E2E suite, including
+actually serves the app while offline (119 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 `calendar.spec.ts`).
 
