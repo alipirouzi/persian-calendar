@@ -1,7 +1,7 @@
 import { daysInGregorianMonth, daysInPersianMonth } from '../calendar/persian';
 import { toLocaleDigits, type Lang, type StringKey } from '../i18n/strings';
 import {
-  buildMonthGrid, buildMonthPage, buildYearPage,
+  buildMonthGrid, buildMonthPage, buildYearPage, PAGE_SIZE,
   stepMonth, stepYear, stepYearPage, yearPageStart,
 } from './calendar-grid-model';
 import type { Side } from './converter-core';
@@ -29,9 +29,10 @@ export interface RenderedView {
   nextLabel: StringKey;
   /** A week of days, or a page of twelve. The consumer maps it to a class. */
   layout: 'week' | 'page';
-  /** 'd' | 'm' | 'y' — the cell id discriminator. */
-  key: 'd' | 'm' | 'y';
-  /** The `data-*` attribute a cell carries its value in. */
+  /**
+   * The `data-*` attribute a cell carries its value in, and the discriminator
+   * in its id. One field, so a new view cannot make the two disagree.
+   */
   unit: 'day' | 'month' | 'year';
   /**
    * The committed date's cell, or null when this page does not hold it. Null
@@ -49,6 +50,15 @@ export interface CalendarView {
   render(side: Side, state: ViewState, lang: Lang, committed: ViewState | null): RenderedView;
   /** Which cell `state` itself occupies — where a cursor arriving here lands. */
   cursorValue(state: ViewState): number;
+  /**
+   * What a page step does with the cursor. `value` keeps the number the arrows
+   * gave it, which is right where values recur across pages (day 22 exists in
+   * most months, month 5 in every year). `index` keeps the slot instead, which
+   * is the only sensible answer where pages are disjoint: a year page never
+   * contains the year you came from, so carrying the value would clamp every
+   * single step to the page's last cell.
+   */
+  readonly carry: 'value' | 'index';
   /** Prev/next: a month, a year, or twelve years. Null at a range bound. */
   step(side: Side, state: ViewState, delta: -1 | 1): ViewState | null;
   /** What choosing `value` does: move to another view, or pick the date. */
@@ -57,8 +67,6 @@ export interface CalendarView {
   ): { state: ViewState; next: CalendarMode | 'pick' };
 }
 
-/** Years page twelve at a time, so a year step and a page step differ by this. */
-const PAGE_SIZE = 12;
 const NO_HEADERS: readonly string[] = [];
 
 function monthLength(side: Side, year: number, month: number): number {
@@ -102,7 +110,6 @@ const daysView: CalendarView = {
       prevLabel: 'prevMonth',
       nextLabel: 'nextMonth',
       layout: 'week',
-      key: 'd',
       unit: 'day',
       selected: committed !== null
         && committed.year === state.year
@@ -110,6 +117,7 @@ const daysView: CalendarView = {
         ? committed.day : null,
     };
   },
+  carry: 'value',
   cursorValue(state) {
     return state.day;
   },
@@ -145,11 +153,11 @@ const monthsView: CalendarView = {
       prevLabel: 'prevYear',
       nextLabel: 'nextYear',
       layout: 'page',
-      key: 'm',
       unit: 'month',
       selected: committed !== null && committed.year === state.year ? committed.month : null,
     };
   },
+  carry: 'value',
   cursorValue(state) {
     return state.month;
   },
@@ -184,7 +192,6 @@ const yearsView: CalendarView = {
       prevLabel: 'prevYears',
       nextLabel: 'nextYears',
       layout: 'page',
-      key: 'y',
       unit: 'year',
       // Pages are aligned to the range's start, so sharing a start is sharing a page.
       selected: committed !== null
@@ -192,6 +199,7 @@ const yearsView: CalendarView = {
         ? committed.year : null,
     };
   },
+  carry: 'index',
   cursorValue(state) {
     return state.year;
   },

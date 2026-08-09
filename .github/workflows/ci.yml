@@ -50,7 +50,9 @@ jobs:
           path: Site/tests/fixtures
       - run: npm ci
       - run: npm run build
-      - run: npm test
+      # Coverage, not plain vitest: the 100% thresholds in vite.config.ts are
+      # only a gate if something actually runs them.
+      - run: npm run test:coverage
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
       - uses: actions/upload-artifact@v7

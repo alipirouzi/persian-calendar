@@ -3,7 +3,7 @@ import type { ViewState } from '../../src/converter/calendar-views';
 import type { Side } from '../../src/converter/converter-core';
 import type { Lang } from '../../src/i18n/strings';
 import { createCalendarGrid, type CalendarGrid } from '../../src/ui/calendar-grid';
-import { clickOn, focusOutOf, pointerDownOn, press, trackScroll } from './dom-helpers';
+import { clickOn, focusOutOf, pointerDownOn, press, pressRepeat, trackScroll } from './dom-helpers';
 
 /** Dey 1403 starts on a Saturday and runs 30 days: five full rows, no lead. */
 const DEY_1403: ViewState = { year: 1403, month: 10, day: 22 };
@@ -112,7 +112,7 @@ describe('the days view', () => {
     expect(dom.grid.getAttribute('aria-label')).toBe('Dey 1403');
     expect(cells()).toHaveLength(30);
     expect(cursorCell()?.textContent).toBe('22');
-    expect(activeId()).toBe('p-cal-grid-d22');
+    expect(activeId()).toBe('p-cal-grid-day22');
     expect(dom.grid.classList.contains('cal-grid--wide')).toBe(false);
   });
 
@@ -307,6 +307,35 @@ describe('drilling down', () => {
 });
 
 describe('paging', () => {
+  it('keeps the year cursor in its slot, since year pages share no values', () => {
+    clickOn(dom.button);
+    clickOn(dom.title); // years: 1392 – 1403, cursor on 1403 (last slot)
+    press(dom.grid, 'ArrowUp'); // -> 1400, row 2 column 2
+    expect(activeId()).toBe('p-cal-grid-year1400');
+
+    clickOn(dom.next); // -> 1404 – 1415
+
+    // 1400 cannot exist on the next page, so carrying the value would clamp to
+    // the page's last cell every time. The slot is what survives.
+    expect(dom.title.textContent).toBe('1404 – 1415');
+    expect(activeId()).toBe('p-cal-grid-year1412');
+
+    clickOn(dom.prev); // and it is reciprocal
+    expect(activeId()).toBe('p-cal-grid-year1400');
+  });
+
+  it('falls back to the first cell when the slot is blank on a short page', () => {
+    const short = mount({ current: { year: 1499, month: 1, day: 1 } });
+    clickOn(short.button);
+    clickOn(short.title); // years: 1488 – 1499, cursor on 1499 (last slot, row 3)
+    expect(short.grid.getAttribute('aria-activedescendant')).toBe('p-cal-grid-year1499');
+
+    clickOn(short.next); // -> 1500 – 1500: one cell, and row 3 is entirely blank
+
+    expect(short.title.textContent).toBe('1500 – 1500');
+    expect(short.grid.getAttribute('aria-activedescendant')).toBe('p-cal-grid-year1500');
+  });
+
   it('steps a month, then a year, then twelve years', () => {
     clickOn(dom.button);
 
@@ -450,6 +479,33 @@ describe('the title', () => {
     expect(dom.onPick).not.toHaveBeenCalled();
   });
 
+  it('ignores a held key: auto-repeat is one press, not a run of choices', () => {
+    clickOn(dom.button);
+    clickOn(dom.title); // -> years, title disables itself, focus on the grid
+    // What a browser sends while Enter stays down. Each of these was drilling a
+    // level and the fourth committed a date nobody chose.
+    pressRepeat(dom.grid, 'Enter');
+    pressRepeat(dom.grid, 'Enter');
+    pressRepeat(dom.grid, 'Enter');
+
+    expect(dom.title.textContent).toBe('1392 – 1403');
+    expect(dom.onPick).not.toHaveBeenCalled();
+  });
+
+  it('leaves the grid cursor alone while a nav button holds focus', () => {
+    clickOn(dom.button);
+    const before = dom.grid.getAttribute('aria-activedescendant');
+    clickOn(dom.next); // focus returns to the button, which owns Enter itself
+
+    press(dom.next, 'ArrowDown');
+
+    // The month stepped, so the id changes with it — but not because the arrow
+    // moved a cursor the user could not then act on.
+    expect(dom.grid.getAttribute('aria-activedescendant')).toBe(
+      before?.replace('day22', 'day22') ?? null);
+    expect(dom.onPick).not.toHaveBeenCalled();
+  });
+
   it('re-arms selection as soon as the user moves the cursor', () => {
     clickOn(dom.button);
     dom.title.focus();
@@ -468,13 +524,13 @@ describe('the keyboard', () => {
     clickOn(dom.button);
 
     expect(press(dom.grid, 'ArrowRight').defaultPrevented).toBe(true);
-    expect(activeId()).toBe('p-cal-grid-d23');
+    expect(activeId()).toBe('p-cal-grid-day23');
     press(dom.grid, 'ArrowLeft');
-    expect(activeId()).toBe('p-cal-grid-d22');
+    expect(activeId()).toBe('p-cal-grid-day22');
     press(dom.grid, 'ArrowDown');
-    expect(activeId()).toBe('p-cal-grid-d29');
+    expect(activeId()).toBe('p-cal-grid-day29');
     press(dom.grid, 'ArrowUp');
-    expect(activeId()).toBe('p-cal-grid-d22');
+    expect(activeId()).toBe('p-cal-grid-day22');
   });
 
   it('mirrors the arrows when the page is right-to-left', () => {
@@ -483,16 +539,16 @@ describe('the keyboard', () => {
 
     press(dom.grid, 'ArrowRight');
 
-    expect(activeId()).toBe('p-cal-grid-d21');
+    expect(activeId()).toBe('p-cal-grid-day21');
   });
 
   it('reaches the ends of the week with Home and End', () => {
     clickOn(dom.button);
 
     press(dom.grid, 'Home');
-    expect(activeId()).toBe('p-cal-grid-d22');
+    expect(activeId()).toBe('p-cal-grid-day22');
     press(dom.grid, 'End');
-    expect(activeId()).toBe('p-cal-grid-d28');
+    expect(activeId()).toBe('p-cal-grid-day28');
   });
 
   it('lands on the nearest real day when the row is short', () => {
@@ -503,7 +559,7 @@ describe('the keyboard', () => {
     // on the last day the month does have.
     press(dom.grid, 'End');
 
-    expect(activeId()).toBe('p-cal-grid-d31');
+    expect(activeId()).toBe('p-cal-grid-day31');
   });
 
   it('keeps an arrow that cannot land from scrolling the page', () => {
@@ -515,7 +571,7 @@ describe('the keyboard', () => {
     const event = press(dom.grid, 'ArrowLeft');
 
     expect(event.defaultPrevented).toBe(true);
-    expect(activeId()).toBe('p-cal-grid-d1');
+    expect(activeId()).toBe('p-cal-grid-day1');
   });
 
   it('refuses to move into a row that is all padding', () => {
@@ -525,7 +581,7 @@ describe('the keyboard', () => {
 
     press(dom.grid, 'ArrowDown');
 
-    expect(activeId()).toBe('p-cal-grid-y1500');
+    expect(activeId()).toBe('p-cal-grid-year1500');
   });
 
   it('leaves keys it has no use for to the browser', () => {
@@ -547,13 +603,13 @@ describe('the keyboard', () => {
   it('carries the cursor across a page step', () => {
     clickOn(dom.button);
     press(dom.grid, 'ArrowDown');
-    expect(activeId()).toBe('p-cal-grid-d29');
+    expect(activeId()).toBe('p-cal-grid-day29');
 
     press(dom.grid, 'PageDown');
 
     // Where the arrows left it, not where the state's own day sits.
     expect(dom.title.textContent).toBe('Bahman 1403');
-    expect(activeId()).toBe('p-cal-grid-d29');
+    expect(activeId()).toBe('p-cal-grid-day29');
     press(dom.grid, 'Enter');
     expect(dom.onPick).toHaveBeenCalledWith(1403, 11, 29);
   });
@@ -562,12 +618,12 @@ describe('the keyboard', () => {
     // Shahrivar has 31 days and Mehr 30, so day 31 has nowhere to land.
     dom = mount({ current: { year: 1403, month: 6, day: 31 } });
     clickOn(dom.button);
-    expect(activeId()).toBe('p-cal-grid-d31');
+    expect(activeId()).toBe('p-cal-grid-day31');
 
     press(dom.grid, 'PageDown');
 
     expect(dom.title.textContent).toBe('Mehr 1403');
-    expect(activeId()).toBe('p-cal-grid-d30');
+    expect(activeId()).toBe('p-cal-grid-day30');
   });
 
   it('carries nothing when the page it steps off has no cells', () => {
@@ -622,10 +678,10 @@ describe('the keyboard', () => {
   it('drills down from the years view with Enter', () => {
     clickOn(dom.button);
     clickOn(dom.title);
-    expect(activeId()).toBe('p-cal-grid-y1403');
+    expect(activeId()).toBe('p-cal-grid-year1403');
 
     press(dom.grid, 'ArrowUp');
-    expect(activeId()).toBe('p-cal-grid-y1400');
+    expect(activeId()).toBe('p-cal-grid-year1400');
 
     press(dom.grid, 'Enter');
     expect(dom.title.textContent).toBe('1400');
@@ -650,7 +706,7 @@ describe('dismissal', () => {
     pointerDownOn(dom.grid);
 
     expect(dom.pop.hidden).toBe(false);
-    expect(activeId()).toBe('p-cal-grid-d22');
+    expect(activeId()).toBe('p-cal-grid-day22');
   });
 
   it('closes when focus leaves the popup', () => {
@@ -668,7 +724,7 @@ describe('dismissal', () => {
     focusOutOf(dom.grid, dom.next);
 
     expect(dom.pop.hidden).toBe(false);
-    expect(activeId()).toBe('p-cal-grid-d22');
+    expect(activeId()).toBe('p-cal-grid-day22');
   });
 
   it('closes from the outside without returning focus', () => {

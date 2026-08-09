@@ -95,7 +95,7 @@ export function buildMonthGrid(
 }
 
 /** Years and months both page 12 at a time, in 4 rows of 3. */
-const PAGE_SIZE = 12;
+export const PAGE_SIZE = 12;
 const PAGE_COLUMNS = 3;
 
 export interface GridPage<T> {

@@ -62,9 +62,9 @@ test('the calendar is keyboard operable', async ({ page }) => {
   await openPersianCalendar(page);
   await expect(page.locator('#p-cal-grid')).toBeFocused();
   await page.keyboard.press('ArrowRight');
-  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d23');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-day23');
   await page.keyboard.press('ArrowDown');
-  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d30');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-day30');
   await page.keyboard.press('PageUp');
   await expect(page.locator('#p-cal-title')).toHaveText('Azar 1403');
   await page.keyboard.press('Escape');
@@ -180,9 +180,9 @@ test('arrow keys follow the visual direction in RTL', async ({ page }) => {
   await page.locator('#p-cal').click();
   // RTL: the cell to the right of the 22nd is the 21st.
   await page.keyboard.press('ArrowRight');
-  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d21');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-day21');
   await page.keyboard.press('ArrowLeft');
-  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d22');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-day22');
 });
 
 test('the calendar popup stays inside the viewport on a phone', async ({ page }) => {
@@ -347,9 +347,9 @@ test('the wizard is keyboard operable', async ({ page }) => {
   await page.locator('#p-cal').click();
   await page.locator('#p-cal-title').click();
   await expect(page.locator('#p-cal-grid')).toBeFocused();
-  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-y1403');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-year1403');
   await page.keyboard.press('ArrowUp');
-  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-y1400');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-year1400');
   await page.keyboard.press('Enter');
   await expect(page.locator('#p-cal-title')).toHaveText('1400');
   await page.keyboard.press('Enter');
@@ -447,9 +447,9 @@ test('paging keeps the keyboard cursor where the arrows left it', async ({ page 
   await page.locator('#p-d').fill('22');
   await page.locator('#p-cal').click();
   await page.keyboard.press('ArrowDown');             // 22 -> 29
-  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d29');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-day29');
   await page.keyboard.press('PageDown');              // Bahman, cursor must stay on 29
-  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-d29');
+  await expect(page.locator('#p-cal-grid')).toHaveAttribute('aria-activedescendant', 'p-cal-grid-day29');
   await page.keyboard.press('Enter');
   await expect(page.locator('#p-m')).toHaveValue('11');
   await expect(page.locator('#p-d')).toHaveValue('29');
@@ -495,6 +495,42 @@ test.describe('the today panel across time zones', () => {
     await expect(page.locator('#today-persian')).toHaveText('Sunday, 18 Mordad 1405');
     await expect(page.locator('#today-gregorian')).toHaveText('Saturday, August 8, 2026');
   });
+});
+
+test('arrows do not drive the grid while a nav button holds focus', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-m').fill('10');
+  await page.locator('#p-d').fill('22');
+  await page.locator('#p-cal').click();
+  await page.locator('#p-cal-next').click();          // focus is now on ›
+  await expect(page.locator('#p-cal-next')).toBeFocused();
+  const before = await page.locator('#p-cal-grid').getAttribute('aria-activedescendant');
+
+  await page.keyboard.press('ArrowDown');
+
+  // The button owns Enter, so an arrow must not move a cursor the user cannot
+  // then act on — that mismatch made Enter re-step the month instead of picking.
+  expect(await page.locator('#p-cal-grid').getAttribute('aria-activedescendant')).toBe(before);
+  await page.keyboard.press('Enter');                 // still the button's key
+  await expect(page.locator('#p-cal-title')).toHaveText('Esfand 1403');
+  await expect(page.locator('#p-cal-pop')).toBeVisible();
+});
+
+test('the year cursor keeps its slot across a page step', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#p-y').fill('1403');
+  await page.locator('#p-cal').click();
+  await page.locator('#p-cal-title').click();         // years: 1392 – 1403
+  await page.keyboard.press('ArrowUp');               // -> 1400
+  await expect(page.locator('#p-cal-grid'))
+    .toHaveAttribute('aria-activedescendant', 'p-cal-grid-year1400');
+  await page.keyboard.press('PageDown');
+  await expect(page.locator('#p-cal-title')).toHaveText('1404 – 1415');
+  // Year pages share no values, so the slot is what carries — not the value,
+  // which would clamp to the page's last cell on every single step.
+  await expect(page.locator('#p-cal-grid'))
+    .toHaveAttribute('aria-activedescendant', 'p-cal-grid-year1412');
 });
 
 test('the step buttons say what they step', async ({ page }) => {

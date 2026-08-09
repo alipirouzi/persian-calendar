@@ -115,7 +115,13 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 .cal-grid {
   /* The column count is the view's, not the stylesheet's: the grid element
      carries --cal-cols so a page of a different shape needs no new rule. */
-  display: grid; grid-template-columns: repeat(var(--cal-cols, 7), 2rem); gap: 2px;
+  --cal-gap: 2px;
+  --cal-day-track: 2rem;
+  /* The width every view matches, derived from the day grid rather than copied. */
+  --cal-week-width: calc(7 * var(--cal-day-track) + 6 * var(--cal-gap));
+  display: grid;
+  grid-template-columns: repeat(var(--cal-cols, 7), var(--cal-day-track));
+  gap: var(--cal-gap);
   /* Hugs its rows: ~79% of months need five, so reserving six left a dead band
      in the common case to smooth a transition that happens in the other ~21%. */
   align-content: start;
@@ -142,7 +148,15 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 
 /* Months and years page 12 at a time in 3 columns, keeping the same total width
    as the 7-column day grid so the popup does not resize between views. */
-.cal-grid--wide { grid-template-columns: repeat(var(--cal-cols, 3), calc((7 * 2rem + 4 * 2px) / 3)); }
+/* Same total width as the day grid, whatever --cal-cols happens to be: the
+   track is the week width minus this page's own gaps, split across its columns.
+   Nothing here restates a column count. */
+.cal-grid--wide {
+  grid-template-columns: repeat(
+    var(--cal-cols, 3),
+    calc((var(--cal-week-width) - (var(--cal-cols, 3) - 1) * var(--cal-gap)) / var(--cal-cols, 3))
+  );
+}
 /* A block container rather than the day cell's grid: text-overflow only renders
    an ellipsis on a block container, and a month name that is wider than its
    track must show that it was cut — an .active cell fills with the accent and
@@ -259,11 +273,10 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
      than the popup's own max-width, which silently clipped the last weekday
      column behind an edge with no scrollbar to discover it. */
   .cal-grid {
-    grid-template-columns: repeat(var(--cal-cols, 7), min(2.6rem, calc((100vw - 4rem) / 7)));
+    --cal-day-track: min(2.6rem, calc((100vw - 4rem) / 7));
   }
   .cal-cell, .cal-blank { block-size: 2.6rem; }
   .cal-cell { font-size: 0.95rem; }
-  .cal-grid--wide { grid-template-columns: repeat(var(--cal-cols, 3), calc((7 * min(2.6rem, calc((100vw - 4rem) / 7)) + 4 * 2px) / 3)); }
   /* 0.85rem, not 0.9rem: at 320px the track is 88px and "Ordibehesht" measures
      85.9px bold, which is the .active case this rule exists to keep legible. */
   .cal-grid--wide .cal-cell { block-size: 3rem; font-size: 0.85rem; }

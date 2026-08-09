@@ -20,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **28.8 kB of JavaScript (11.0 kB gzipped)** and **15.6 kB of CSS
-(3.4 kB gzipped)**, with no runtime framework.
+The shipped bundle is **29.4 kB of JavaScript (11.3 kB gzipped)** and **15.6 kB of CSS
+(3.5 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
 
@@ -59,7 +59,7 @@ PersianCalendar/
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── tests/              Vitest (306 tests at 100% coverage, incl. .NET parity;
 │   │                         tests/dom/ runs the DOM units under jsdom)
-│   └── e2e/                Playwright (119 tests, incl. converter-ux.spec.ts,
+│   └── e2e/                Playwright (123 tests, incl. converter-ux.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts and the screenshot matrix)
 │
 ├── deploy/
@@ -109,7 +109,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 306 tests, 100% coverage
+### Site unit tests (Vitest) — 317 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -135,7 +135,7 @@ in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 node environment. CI runs `npm test`, not `npm run test:coverage`, so the threshold is a
 local gate rather than a pipeline one.
 
-### E2E (Playwright) — 119 tests
+### E2E (Playwright) — 123 tests
 
 ```bash
 cd Site
@@ -201,7 +201,7 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (119 tests total across the whole E2E suite, including
+actually serves the app while offline (123 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 `calendar.spec.ts`).
 

@@ -2,7 +2,8 @@ import {
   CALENDAR_VIEWS,
   type CalendarMode, type RenderedView, type ViewCell, type ViewState,
 } from '../converter/calendar-views';
-import { STRINGS, type Lang } from '../i18n/strings';
+import { formatTemplate, STRINGS, type Lang } from '../i18n/strings';
+import { PAGE_SIZE } from '../converter/calendar-grid-model';
 import type { Side } from '../converter/converter-core';
 import { gridIntent } from './grid-navigation';
 import { createPopup } from './popup';
@@ -66,7 +67,7 @@ export function createCalendarGrid({
   let view: RenderedView = CALENDAR_VIEWS[mode].render(side, state, getLang(), getCurrent());
   let cells: readonly (ViewCell | null)[] = view.rows.flat();
 
-  const cellId = (value: number): string => `${grid.id}-${view.key}${value}`;
+  const cellId = (value: number): string => `${grid.id}-${view.unit}${value}`;
 
   /**
    * Where `value` sits on the page now on screen. A page that has not got it —
@@ -112,16 +113,14 @@ export function createCalendarGrid({
   };
 
   /**
-   * Today, when it falls on the page being shown. Asking the same strategy to
-   * render today's date answers both halves at once — whether this is today's
-   * page, and which of its cells today is — without this module having to know
-   * that a day page is a month and a year page is twelve years.
+   * Today, when it falls on the page being shown. `selected` is the strategy's
+   * own answer to "is this date on this page, and where" — the same predicate
+   * the committed date uses. Handing it today instead asks the same question
+   * about a different date, rather than re-deriving it here by comparing
+   * human-readable titles and quietly depending on those being unique.
    */
-  const todayValue = (lang: Lang): number | null => {
-    const today = getToday();
-    const forToday = CALENDAR_VIEWS[mode].render(side, today, lang, null);
-    return forToday.title === view.title ? CALENDAR_VIEWS[mode].cursorValue(today) : null;
-  };
+  const todayValue = (lang: Lang): number | null =>
+    CALENDAR_VIEWS[mode].render(side, state, lang, getToday()).selected;
 
   const makeCell = (cell: ViewCell | null, index: number, today: number | null): HTMLElement => {
     const el = document.createElement('div');
@@ -153,6 +152,20 @@ export function createCalendarGrid({
    * `cursorValue` moves the cursor onto that cell first; without it the cursor
    * index stands, which is what a plain cursor move or a language change want.
    */
+  /**
+   * Re-render keeping the cursor in the same slot rather than on the same
+   * value — for a view whose pages are disjoint, the slot is the only thing
+   * that can survive a step. Nudges to the nearest real cell if the target slot
+   * is a blank on the new page.
+   */
+  const renderAtIndex = (index: number): void => {
+    render();
+    const clamped = Math.min(Math.max(index, 0), Math.max(cells.length - 1, 0));
+    const landing = resolve(clamped);
+    cursor = landing ?? 0;
+    render();
+  };
+
   const render = (cursorValue?: number, missing: 'first' | 'last' = 'first'): void => {
     const lang = getLang();
     // The mark belongs to the committed date, so it is re-read every render: a
@@ -198,8 +211,12 @@ export function createCalendarGrid({
     next.disabled = !view.canGoNext;
     // ‹ and › carry no text, so the label is the whole accessible name, and a
     // step means something different in each view.
-    prev.setAttribute('aria-label', STRINGS[lang][view.prevLabel]);
-    next.setAttribute('aria-label', STRINGS[lang][view.nextLabel]);
+    // {count} is filled from the model's own page size, so the announced step
+    // cannot drift from the step actually taken. Labels without a placeholder
+    // pass through untouched.
+    const step = { count: PAGE_SIZE };
+    prev.setAttribute('aria-label', formatTemplate(STRINGS[lang][view.prevLabel], step, lang));
+    next.setAttribute('aria-label', formatTemplate(STRINGS[lang][view.nextLabel], step, lang));
     // The views differ in height, so the cap taken when the popup opened has to
     // be re-applied to whatever it now holds.
     popup.reposition();
@@ -216,11 +233,18 @@ export function createCalendarGrid({
   const step = (delta: -1 | 1): void => {
     const next = CALENDAR_VIEWS[mode].step(side, state, delta);
     if (next === null) return;
-    // Paging is browsing, not arriving: the cursor keeps the value the arrows
-    // gave it instead of snapping back to the date the state carries.
-    const carried = cells[cursor]?.value;
+    // Paging is browsing, not arriving: the cursor keeps what the arrows gave
+    // it instead of snapping back to the date the state carries. What "keeps"
+    // means is the view's to decide — see CalendarView.carry.
+    const policy = CALENDAR_VIEWS[mode].carry;
+    const carriedValue = cells[cursor]?.value;
+    const carriedIndex = cursor;
     state = next;
-    render(carried, 'last');
+    if (policy === 'index') {
+      renderAtIndex(carriedIndex);
+      return;
+    }
+    render(carriedValue, 'last');
   };
 
   const close = (restoreFocus: boolean): void => {
@@ -295,6 +319,10 @@ export function createCalendarGrid({
     }
     switch (intent.kind) {
       case 'move':
+        // Only from the grid. With focus on a nav button that button owns
+        // Enter, so letting arrows move the grid cursor from there would show a
+        // cursor the user cannot act on: Enter would step the month again.
+        if (event.target !== grid) return;
         event.preventDefault();
         moveCursor(intent.index);
         return;
@@ -307,6 +335,9 @@ export function createCalendarGrid({
         // own activation, and choosing a cell out from under it is a surprise.
         if (event.target !== grid) return;
         event.preventDefault();
+        // Auto-repeat is the same press still down. Without this a held Enter
+        // drills years -> months -> days and commits a date nobody chose.
+        if (event.repeat) return;
         if (consumeSelectGuard()) return;
         const cell = cells[cursor];
         if (cell !== undefined && cell !== null) choose(cell.value);

@@ -24,7 +24,7 @@ describe('the days view', () => {
     expect(view.headers).toEqual(['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
     expect(view.title).toBe('Dey 1403');
     expect(view.titleTarget).toBe('years');
-    expect(view.key).toBe('d');
+    expect(view.unit).toBe('day');
     expect(view.unit).toBe('day');
     expect(view.prevLabel).toBe('prevMonth');
     expect(view.nextLabel).toBe('nextMonth');
@@ -93,7 +93,7 @@ describe('the months view', () => {
     expect(view.rows[3]?.[2]).toEqual({ value: 12, label: 'Esfand' });
     expect(view.title).toBe('1403');
     expect(view.titleTarget).toBe('years');
-    expect(view.key).toBe('m');
+    expect(view.unit).toBe('month');
     expect(view.unit).toBe('month');
     expect(view.prevLabel).toBe('prevYear');
     expect(view.nextLabel).toBe('nextYear');
@@ -147,7 +147,7 @@ describe('the years view', () => {
     expect(view.title).toBe('1392 – 1403');
     // There is nothing above the years, so the title has nowhere left to go.
     expect(view.titleTarget).toBeNull();
-    expect(view.key).toBe('y');
+    expect(view.unit).toBe('year');
     expect(view.unit).toBe('year');
     expect(view.prevLabel).toBe('prevYears');
     expect(view.nextLabel).toBe('nextYears');

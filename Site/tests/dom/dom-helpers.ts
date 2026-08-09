@@ -42,6 +42,15 @@ export const press = (el: Element, key: string): KeyboardEvent => {
   return event;
 };
 
+/** A keydown the browser generates while a key is held down, not a fresh press. */
+export const pressRepeat = (el: Element, key: string): KeyboardEvent => {
+  const event = new KeyboardEvent('keydown', {
+    key, bubbles: true, cancelable: true, repeat: true,
+  });
+  el.dispatchEvent(event);
+  return event;
+};
+
 export const pointerDownOn = (el: Element): void => {
   el.dispatchEvent(new Event('pointerdown', { bubbles: true }));
 };
