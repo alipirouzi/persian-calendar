@@ -464,13 +464,37 @@ test('Enter on the title does not cascade into picking a date', async ({ page })
   await page.locator('#p-cal-title').focus();
   await page.keyboard.press('Enter');                 // -> years, title now disabled
   await expect(page.locator('#p-cal-title')).toHaveText('1392 – 1403');
-  // The title is disabled at the top, so focus stays on the grid. A deliberate
-  // second press is then a selection and drills exactly one level — it must not
-  // run the rest of the cascade and commit a date.
+  // The title disabled itself, so focus had to move to the grid. The next Enter
+  // is that same press still repeating, not a choice, and is swallowed once.
   await page.keyboard.press('Enter');
-  await expect(page.locator('#p-cal-title')).toHaveText('1403');
+  await expect(page.locator('#p-cal-title')).toHaveText('1392 – 1403');
   await expect(page.locator('#p-cal-pop')).toBeVisible();
   await expect(page.locator('#p-d')).toHaveValue('22');
+  // A deliberate move proves the user is driving, and selection works again.
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#p-cal-title')).toHaveText('1402');
+});
+
+test.describe('the today panel across time zones', () => {
+  test.use({ timezoneId: 'America/New_York' });
+
+  test('shows one weekday while the viewer and Tehran share a day', async ({ page }) => {
+    // 14:00Z is 10:00 in New York and 17:30 in Tehran — both still 8 August.
+    await page.clock.install({ time: new Date('2026-08-08T14:00:00Z') });
+    await page.goto('/');
+    await expect(page.locator('#today-persian')).toHaveText('Saturday, 17 Mordad 1405');
+    await expect(page.locator('#today-gregorian')).toHaveText('August 8, 2026');
+  });
+
+  test('gives each line its own weekday once Tehran has turned over', async ({ page }) => {
+    // 00:00Z is still 20:00 on the 8th in New York, but already 03:30 on the 9th
+    // in Tehran — the two lines now describe different days.
+    await page.clock.install({ time: new Date('2026-08-09T00:00:00Z') });
+    await page.goto('/');
+    await expect(page.locator('#today-persian')).toHaveText('Sunday, 18 Mordad 1405');
+    await expect(page.locator('#today-gregorian')).toHaveText('Saturday, August 8, 2026');
+  });
 });
 
 test('the step buttons say what they step', async ({ page }) => {

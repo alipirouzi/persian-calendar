@@ -432,6 +432,35 @@ describe('the title', () => {
     expect(dom.pop.hidden).toBe(false);
     expect(dom.onPick).not.toHaveBeenCalled();
   });
+
+  it('does not let the press that disabled it fall through to the grid', () => {
+    clickOn(dom.button);
+    dom.title.focus();
+    // A browser turns Enter on a focused button into a click; that is the whole
+    // mechanism, so the test reproduces it rather than the keydown alone.
+    clickOn(dom.title); // -> years; the title disables itself
+    expect(dom.title.disabled).toBe(true);
+    expect(dom.title.textContent).toBe('1392 – 1403');
+
+    // Focus had to move to the grid, so the repeat of that same press arrives
+    // here. Swallowing it is what stops a held Enter running the whole cascade.
+    press(dom.grid, 'Enter');
+
+    expect(dom.title.textContent).toBe('1392 – 1403');
+    expect(dom.onPick).not.toHaveBeenCalled();
+  });
+
+  it('re-arms selection as soon as the user moves the cursor', () => {
+    clickOn(dom.button);
+    dom.title.focus();
+    clickOn(dom.title); // guard armed
+    // 1403 is the last cell of the page, so move back rather than off the end.
+    press(dom.grid, 'ArrowLeft'); // a deliberate move disarms the guard
+
+    press(dom.grid, 'Enter');
+
+    expect(dom.title.textContent).toBe('1402'); // the year really was chosen
+  });
 });
 
 describe('the keyboard', () => {

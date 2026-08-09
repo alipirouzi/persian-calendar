@@ -226,6 +226,7 @@ export function createCalendarGrid({
   const close = (restoreFocus: boolean): void => {
     popup.close(restoreFocus);
     grid.removeAttribute('aria-activedescendant');
+    disarmSelectGuard();
   };
 
   /** Drill down one view, or pick the date when there is nowhere further down. */
@@ -261,6 +262,9 @@ export function createCalendarGrid({
   const moveCursor = (target: number): void => {
     const landing = resolve(target);
     if (landing === null) return;
+    // A deliberate move is proof the user is driving the grid, so the next
+    // selection is theirs.
+    disarmSelectGuard();
     cursor = landing;
     render();
   };
@@ -269,6 +273,7 @@ export function createCalendarGrid({
     // Always from the top of the date the fields hold: a wizard that reopened
     // three levels deep would be answering a question nobody asked.
     mode = 'days';
+    disarmSelectGuard();
     state = getCurrent() ?? getToday();
     render(CALENDAR_VIEWS[mode].cursorValue(state));
     popup.open({ invoker: button, focusTarget: grid });
@@ -302,6 +307,7 @@ export function createCalendarGrid({
         // own activation, and choosing a cell out from under it is a surprise.
         if (event.target !== grid) return;
         event.preventDefault();
+        if (consumeSelectGuard()) return;
         const cell = cells[cursor];
         if (cell !== undefined && cell !== null) choose(cell.value);
         return;
@@ -328,12 +334,33 @@ export function createCalendarGrid({
    * actually is, or a keyboard press would silently leave them on the grid,
    * where the next Enter picks a cell.
    */
+  /**
+   * Set when focus lands on the grid because the control the user pressed
+   * disabled itself. The next selection key is that same press still repeating,
+   * not a choice, so it is swallowed once.
+   */
+  let selectGuard = false;
+  const armSelectGuard = (): void => { selectGuard = true; };
+  const disarmSelectGuard = (): void => { selectGuard = false; };
+  const consumeSelectGuard = (): boolean => {
+    if (!selectGuard) return false;
+    selectGuard = false;
+    return true;
+  };
+
   const fromButton = (btn: HTMLButtonElement, act: () => void): void => {
     grid.focus({ preventScroll: true });
     act();
-    // Unless the action disabled it: then the grid is the right place to be, and
-    // Escape still closes from there.
-    if (!btn.disabled) btn.focus({ preventScroll: true });
+    if (!btn.disabled) {
+      btn.focus({ preventScroll: true });
+      return;
+    }
+    // The action disabled the button under the user's finger, so focus has to
+    // stay on the grid. That hands the grid the next Enter, which would choose a
+    // cell the user never aimed at — and a held Enter would run the whole
+    // years -> months -> days -> picked cascade from one press. Swallow exactly
+    // one selection; any deliberate move re-arms it.
+    armSelectGuard();
   };
 
   prev.addEventListener('click', () => { fromButton(prev, () => { step(-1); }); });
@@ -353,6 +380,7 @@ export function createCalendarGrid({
     event.preventDefault();
     const value = Number(cell.dataset[view.unit]);
     if (!Number.isInteger(value)) return;
+    disarmSelectGuard();
     choose(value);
   });
 

@@ -92,10 +92,17 @@ test('copy button puts the full sentence on the clipboard', async ({ page, conte
   await expect(page.locator('#btn-copy')).toHaveText('Copy'); // reverts after 1.5s
 });
 
-test('today panel shows the weekday', async ({ page }) => {
+test('today panel shows the weekday once', async ({ page }) => {
   await page.goto('/');
   const now = new Date();
   const weekday = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
   await expect(page.locator('#today-persian')).toContainText(weekday as string);
-  await expect(page.locator('#today-gregorian')).toContainText(weekday as string);
+  // The second line repeats the first unless the viewer and Tehran are on
+  // different days, which they are not in this runner's zone — see the
+  // time-zone pair in calendar.spec.ts for the diverging case.
+  const tehranDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tehran' }).format(now);
+  const localDay = new Intl.DateTimeFormat('en-CA').format(now);
+  if (tehranDay === localDay) {
+    await expect(page.locator('#today-gregorian')).not.toContainText(weekday as string);
+  }
 });

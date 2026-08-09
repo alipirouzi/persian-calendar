@@ -7,6 +7,7 @@ import './styles/base.css';
 import './styles/components.css';
 
 import { nowSnapshot } from './calendar/now';
+import { todayLines } from './calendar/today-lines';
 import { setupConverter } from './converter/converter';
 import { convertFrom } from './converter/converter-core';
 import { parseUrlDate } from './converter/url-state';
@@ -43,12 +44,16 @@ function renderStatic(): void {
 
 function renderToday(): void {
   const snapshot = nowSnapshot();
-  const p = snapshot.local.p;
-  const g = snapshot.local.g;
-  const w = weekdayName(g, lang);
+  const lines = todayLines(snapshot);
   const sep = lang === 'fa' ? ' ' : ', ';
-  text('today-persian', `${w}${sep}${formatPersianDate(p, lang)}`);
-  text('today-gregorian', `${w}${sep}${formatGregorianDate(g, lang)}`);
+  const persianWeekday = weekdayName(lines.persianWeekdaySource, lang);
+  text('today-persian', `${persianWeekday}${sep}${formatPersianDate(lines.persian, lang)}`);
+  // The second weekday would just repeat the first: both lines describe one day,
+  // except when Tehran has turned over and the viewer has not.
+  const gregorianWeekday = lines.daysDiverge
+    ? `${weekdayName(lines.gregorian, lang)}${sep}`
+    : '';
+  text('today-gregorian', `${gregorianWeekday}${formatGregorianDate(lines.gregorian, lang)}`);
   const tehranLine = document.getElementById('tehran-line');
   if (tehranLine) {
     tehranLine.hidden = snapshot.tehranIsLocal;
