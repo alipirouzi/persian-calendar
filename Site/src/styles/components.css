@@ -287,7 +287,7 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
   position: fixed;
   inset-block-start: max(1rem, env(safe-area-inset-top));
   inset-inline-start: max(1.25rem, env(safe-area-inset-left));
-  background: none; border: 1px solid var(--hairline); color: var(--text-muted);
+  background: none; border: 1px solid var(--control-border); color: var(--text-muted);
   font-size: 1rem; line-height: 1; padding: 0.35rem 0.6rem;
   border-radius: 999px; cursor: pointer;
   transition: color var(--duration) var(--ease), border-color var(--duration) var(--ease);
@@ -306,14 +306,14 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 .settings-head { display: flex; justify-content: space-between; align-items: center; margin-block-end: 1rem; }
 .settings-head h2 { font-size: 1.05rem; font-weight: 600; margin: 0; }
 #settings-close {
-  background: none; border: 1px solid var(--hairline); color: var(--text-muted);
+  background: none; border: 1px solid var(--control-border); color: var(--text-muted);
   border-radius: 999px; padding: 0.25rem 0.8rem; cursor: pointer; font: inherit; font-size: 0.85rem;
 }
 .settings-group { display: grid; grid-template-columns: auto 1fr; gap: 0.6rem 0.9rem; align-items: center; }
 .settings-group legend { grid-column: 1 / -1; }
 .settings-group select, .settings-group input {
   font: inherit; color: var(--text); background: var(--surface);
-  border: 1px solid var(--hairline); border-radius: 6px; padding: 0.35rem 0.5rem; min-inline-size: 0;
+  border: 1px solid var(--control-border); border-radius: 6px; padding: 0.35rem 0.5rem; min-inline-size: 0;
 }
 .settings-group select:focus-visible, .settings-group input:focus-visible,
 #settings-close:focus-visible, #settings-toggle:focus-visible {
@@ -323,4 +323,8 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 .settings-custom[hidden] { display: none; }
 .settings-hint { grid-column: 1 / -1; margin: 0; font-size: 0.78rem; color: var(--text-muted); }
 .settings-preview { grid-column: 1 / -1; margin: 0.4rem 0 0; color: var(--text-muted); font-size: 0.9rem; }
+.visually-hidden {
+  position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
 #set-copy-preview { color: var(--text); font-weight: 600; margin-inline-start: 0.4rem; unicode-bidi: isolate; }

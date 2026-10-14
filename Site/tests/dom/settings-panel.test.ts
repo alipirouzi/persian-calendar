@@ -26,6 +26,27 @@ const choose = (id: string, value: string): void => {
   select.dispatchEvent(new Event('change', { bubbles: true }));
 };
 
+const BOX = { left: 100, right: 400, top: 100, bottom: 300 };
+const INSIDE_PADDING = { x: 104, y: 104 };
+const BACKDROP = { x: 20, y: 20 };
+
+const stubDialogBox = (): void => {
+  dialog().getBoundingClientRect = (): DOMRect => ({
+    ...BOX, x: BOX.left, y: BOX.top, width: BOX.right - BOX.left, height: BOX.bottom - BOX.top, toJSON: () => ({}),
+  });
+};
+
+const mouse = (el: Element, type: 'pointerdown' | 'click', at: { x: number; y: number }): MouseEvent => {
+  const event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y });
+  el.dispatchEvent(event);
+  return event;
+};
+
+const tap = (el: Element, at: { x: number; y: number }): void => {
+  mouse(el, 'pointerdown', at);
+  mouse(el, 'click', at);
+};
+
 const typeCustom = (value: string): void => {
   const input = byId<HTMLInputElement>('set-copy-custom');
   input.value = value;
@@ -39,6 +60,7 @@ beforeEach(() => {
   };
   HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
     this.open = false;
+    this.dispatchEvent(new Event('close'));
   };
   const entries = new Map<string, string>();
   Object.defineProperty(globalThis, 'localStorage', {
@@ -111,11 +133,20 @@ describe('settings panel', () => {
 
     choose('set-copy-pattern', 'custom');
     expect(byId('set-copy-custom-row').hidden).toBe(false);
-    expect(document.activeElement).toBe(byId('set-copy-custom'));
 
     typeCustom("'Day' d");
     expect(store.get().copy.pattern).toBe("'Day' d");
     expect(preview()).toBe('Day 22');
+  });
+
+  it('keeps focus on the select when Custom is chosen, so the choice can be reviewed', () => {
+    clickOn(byId('settings-toggle'));
+    const select = byId<HTMLSelectElement>('set-copy-pattern');
+    select.focus();
+
+    choose('set-copy-pattern', 'custom');
+
+    expect(document.activeElement).toBe(select);
   });
 
   it('reuses a custom pattern already typed when Custom is chosen again', () => {
@@ -148,17 +179,61 @@ describe('settings panel', () => {
     expect(preview()).toBe('—');
   });
 
-  it('closes on the close button and on a backdrop click, not on a click inside', () => {
+  it('closes on the close button', () => {
     clickOn(byId('settings-toggle'));
-    clickOn(byId('set-copy-calendar'));
-    expect(dialog().open).toBe(true);
 
-    clickOn(dialog());
-    expect(dialog().open).toBe(false);
-
-    clickOn(byId('settings-toggle'));
     clickOn(byId('settings-close'));
+
     expect(dialog().open).toBe(false);
+  });
+
+  it('closes when the backdrop is pressed and released outside the dialog box', () => {
+    stubDialogBox();
+    clickOn(byId('settings-toggle'));
+
+    tap(dialog(), BACKDROP);
+
+    expect(dialog().open).toBe(false);
+  });
+
+  it('stays open for clicks on its own padding and on its controls', () => {
+    stubDialogBox();
+    clickOn(byId('settings-toggle'));
+
+    tap(dialog(), INSIDE_PADDING);
+    tap(byId('set-copy-calendar'), BACKDROP);
+
+    expect(dialog().open).toBe(true);
+  });
+
+  it('stays open when a drag that began inside ends on the backdrop', () => {
+    stubDialogBox();
+    clickOn(byId('settings-toggle'));
+    choose('set-copy-pattern', 'custom');
+
+    mouse(byId('set-copy-custom'), 'pointerdown', INSIDE_PADDING);
+    mouse(dialog(), 'click', BACKDROP);
+
+    expect(dialog().open).toBe(true);
+  });
+
+  it('stays open when a press on the backdrop is released inside the dialog box', () => {
+    stubDialogBox();
+    clickOn(byId('settings-toggle'));
+
+    mouse(dialog(), 'pointerdown', BACKDROP);
+    mouse(dialog(), 'click', INSIDE_PADDING);
+
+    expect(dialog().open).toBe(true);
+  });
+
+  it('returns focus to the gear whenever the dialog closes', () => {
+    clickOn(byId('settings-toggle'));
+    byId('set-copy-calendar').focus();
+
+    dialog().close();
+
+    expect(document.activeElement).toBe(byId('settings-toggle'));
   });
 
   it('refreshes the preview language on rerender', () => {
@@ -170,5 +245,59 @@ describe('settings panel', () => {
     panel.rerender();
 
     expect(preview()).toBe('دی');
+  });
+});
+
+describe('settings panel live preview', () => {
+  const ANNOUNCE_DELAY_MS = 600;
+  const announcement = (): string => byId('set-copy-announce').textContent ?? '';
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    byId('set-copy-preview-label').textContent = 'Copies as';
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('names the preview by its visible label and keeps the output itself silent', () => {
+    const output = byId('set-copy-preview');
+
+    expect(byId(output.getAttribute('aria-labelledby') as string).textContent).toBe('Copies as');
+    expect(output.getAttribute('aria-live')).toBe('off');
+  });
+
+  it('announces the labelled preview once typing has paused, not per keystroke', () => {
+    clickOn(byId('settings-toggle'));
+    choose('set-copy-pattern', 'custom');
+
+    typeCustom('y');
+    typeCustom('yy');
+    typeCustom('yyyy-mm-dd');
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS - 1);
+    expect(announcement()).toBe('');
+    expect(preview()).toBe('1403-10-22');
+
+    vi.advanceTimersByTime(1);
+    expect(announcement()).toBe('Copies as 1403-10-22');
+  });
+
+  it('does not announce when the dialog merely opens', () => {
+    clickOn(byId('settings-toggle'));
+
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+
+    expect(announcement()).toBe('');
+  });
+
+  it('drops a pending announcement and clears the last one when the dialog closes', () => {
+    clickOn(byId('settings-toggle'));
+    choose('set-copy-calendar', 'both');
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+    expect(announcement()).not.toBe('');
+    choose('set-copy-calendar', 'gregorian');
+
+    dialog().close();
+    vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+
+    expect(announcement()).toBe('');
   });
 });

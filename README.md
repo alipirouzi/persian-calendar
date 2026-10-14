@@ -309,7 +309,8 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   typing and validation. Digits typed in any of the three scripts are normalized before
   conversion, so nothing is lost either way.
 - **Privacy** — no cookies, no analytics, no third-party requests, no personal data
-  processed or stored anywhere. See `docs/SECURITY.md`.
+  processed. The browser keeps only your language and copy-format preferences in
+  `localStorage`; they never leave it. See `docs/SECURITY.md`.
 
 ## Deployment
 

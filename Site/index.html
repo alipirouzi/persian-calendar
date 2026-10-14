@@ -173,8 +173,10 @@
           <option value="latin" data-str="digitsLatin"></option>
           <option value="persian" data-str="digitsPersian"></option>
         </select>
-        <p class="settings-preview"><span data-str="copyPreview"></span>
-          <output id="set-copy-preview" for="set-copy-calendar set-copy-pattern set-copy-custom set-copy-digits"></output></p>
+        <p class="settings-preview"><span id="set-copy-preview-label" data-str="copyPreview"></span>
+          <output id="set-copy-preview" aria-labelledby="set-copy-preview-label" aria-live="off"
+                  for="set-copy-calendar set-copy-pattern set-copy-custom set-copy-digits"></output></p>
+        <div id="set-copy-announce" class="visually-hidden" role="status"></div>
       </fieldset>
     </dialog>
   </main>

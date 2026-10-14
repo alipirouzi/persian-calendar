@@ -28,6 +28,29 @@ test('gear opens a modal settings dialog; Escape closes it and returns focus', a
   await expect(gear).toBeFocused();
 });
 
+test('only the backdrop closes the dialog: not its padding, not a drag that ends outside', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.locator('#set-copy-pattern').selectOption('custom');
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  const box = (await dialog.boundingBox())!;
+  const input = (await page.locator('#set-copy-custom').boundingBox())!;
+  const backdrop = { x: box.x + box.width + 20, y: box.y + box.height + 20 };
+
+  await page.mouse.click(box.x + 4, box.y + 4);
+  await expect(dialog).toBeVisible();
+
+  await page.mouse.move(input.x + input.width / 2, input.y + input.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(backdrop.x, backdrop.y);
+  await page.mouse.up();
+  await expect(dialog).toBeVisible();
+
+  await page.mouse.click(backdrop.x, backdrop.y);
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeFocused();
+});
+
 test('changing the format changes what Copy writes, and survives a reload', async ({ page }) => {
   await page.goto('/');
   await enter(page);
@@ -50,7 +73,7 @@ test('a custom format with quoted words and Persian digits', async ({ page }) =>
   await enter(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.locator('#set-copy-pattern').selectOption('custom');
-  await expect(page.locator('#set-copy-custom')).toBeFocused();
+  await expect(page.locator('#set-copy-custom')).toBeVisible();
   await page.locator('#set-copy-custom').fill("'Today is' dddd d MMMM");
   await page.locator('#set-copy-digits').selectOption('persian');
   await expect(page.locator('#set-copy-preview')).toHaveText('Today is Saturday ۲۲ Dey');

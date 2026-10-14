@@ -73,6 +73,19 @@ describe('formatCopy', () => {
       .toBe('Today is Saturday');
   });
 
+  it.each(["'", "''", "'''", "'abc", 'hello', "it's"])(
+    'falls back to the default pattern when %j contains no date field, never an empty copy',
+    (pattern) => {
+      expect(formatCopy(P, G, copy({ pattern }), 'en')).toBe('1403-10-22');
+      expect(formatCopy(P, G, copy({ pattern, calendar: 'both', digits: 'persian' }), 'en'))
+        .toBe('۱۴۰۳-۱۰-۲۲ / ۲۰۲۵-۰۱-۱۱');
+    },
+  );
+
+  it('keeps a pattern that has a field even when most of it is quoted text', () => {
+    expect(formatCopy(P, G, copy({ pattern: "'day' d" }), 'en')).toBe('day 22');
+  });
+
   it('reproduces the full sentence for the sentence preset', () => {
     expect(formatCopy(P, G, copy({ pattern: 'sentence', calendar: 'gregorian' }), 'en'))
       .toBe('Saturday, 22 Dey 1403 — January 11, 2025');

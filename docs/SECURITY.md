@@ -100,14 +100,14 @@ grew a backend.
 |---|---|---|
 | Automatic restart | every container on the host carries `restart: unless-stopped`, verified before the Docker daemon upgrade so all services self-heal across a daemon restart | `docker inspect`, 2026-07-31 |
 | Fast recovery | the site is static; a total loss is recovered by re-running CI, which rebuilds and redeploys from source in a couple of minutes |  — |
-| No stateful data to lose | nothing is persisted by this application; there is no database, volume, or user content in scope | — |
+| No stateful data to lose | nothing is persisted server-side; there is no database, volume, or user content in scope. The only client-side state is the two `localStorage` preferences listed under Confidentiality and privacy | — |
 
 ### Confidentiality and privacy (C1.1, P1–P8, GDPR)
 
 | Control | Implementation |
 |---|---|
 | No personal data processed | no accounts, no forms, no submissions, no cookies, no analytics, no fingerprinting, no logging of user input — the site never sends anything about the visitor anywhere |
-| No client-side persistence of personal data | `localStorage` holds exactly one value: the chosen UI language (`en` / `fa`). It is a preference, not personal data, and never leaves the browser |
+| No client-side persistence of personal data | `localStorage` holds exactly two keys: the chosen UI language (`en` / `fa`) and `settings.v1`, the copy-format preferences (calendar, pattern, digits). Both are preferences, not personal data, and never leave the browser |
 | No third-party processors in the serving path | all assets self-hosted; CSP restricts every **subresource and connection** destination (`default-src 'self'`, no `connect-src` escape hatch) to this origin, so a rogue dependency cannot load or `fetch`/`XHR`/WebSocket to a third party. CSP does **not** restrict top-level navigation, so it is not a complete exfiltration control — script that runs in the page could still navigate the visitor elsewhere. There is no visitor data to carry in such a navigation, which is why this is acceptable here rather than mitigated |
 | GDPR posture | trivial **by design**: with no personal data collected there is no processing to find a lawful basis for, no data subject rights machinery required, no DPA needed with a sub-processor for user data, and no cross-border transfer of personal data. The hosting provider (Hetzner) is EU-based |
 | Confidentiality of secrets | the only secrets in scope are the three GitHub Actions deploy secrets; nothing sensitive is committed and the repository contains no credentials |

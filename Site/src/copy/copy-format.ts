@@ -3,7 +3,9 @@ import { copySentence, weekdayName } from '../i18n/format';
 import {
   GREGORIAN_MONTHS, PERSIAN_MONTHS, STRINGS, toLocaleDigits, type Lang,
 } from '../i18n/strings';
-import { SENTENCE, type CopyDigits, type CopySettings } from '../settings/settings-model';
+import {
+  DEFAULT_SETTINGS, SENTENCE, type CopyDigits, type CopySettings,
+} from '../settings/settings-model';
 
 type Field = 'yyyy' | 'MMMM' | 'dddd' | 'mm' | 'dd' | 'm' | 'd';
 export type Token = { kind: 'literal'; text: string } | { kind: 'field'; field: Field };
@@ -60,12 +62,20 @@ function render(tokens: readonly Token[], date: DateFields, digits: CopyDigits):
   return tokens.map((t) => (t.kind === 'literal' ? t.text : fields[t.field]())).join('');
 }
 
+/** A pattern with no date field (`'`, `hello`) would copy a constant or nothing at all. */
+const tokensFor = (pattern: string): Token[] => {
+  const tokens = tokenize(pattern);
+  return tokens.some((token) => token.kind === 'field')
+    ? tokens
+    : tokenize(DEFAULT_SETTINGS.copy.pattern);
+};
+
 /** What the Copy button writes for this date under these settings. */
 export function formatCopy(
   p: PersianDateParts, g: GregorianDateParts, copy: CopySettings, lang: Lang,
 ): string {
   if (copy.pattern === SENTENCE) return copySentence(p, g, lang);
-  const tokens = tokenize(copy.pattern);
+  const tokens = tokensFor(copy.pattern);
   const weekday = weekdayName(g, lang);
   const persian = render(tokens, {
     year: p.py, month: p.pm, day: p.pd, monthName: PERSIAN_MONTHS[lang][p.pm - 1] as string, weekday,

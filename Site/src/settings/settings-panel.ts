@@ -6,6 +6,7 @@ import type { SettingsStore } from './settings-store';
 
 const CUSTOM = 'custom';
 const NO_DATE = '—';
+const ANNOUNCE_DELAY_MS = 600;
 
 interface Deps {
   store: SettingsStore;
@@ -22,6 +23,14 @@ function byId<T extends HTMLElement>(id: string): T {
 const isPreset = (pattern: string): boolean =>
   (COPY_PRESETS as readonly string[]).includes(pattern);
 
+/** The dialog element spans its own padding; only points outside its box are the backdrop. */
+const isOnBackdrop = (event: MouseEvent, dialog: HTMLDialogElement): boolean => {
+  if (event.target !== dialog) return false;
+  const box = dialog.getBoundingClientRect();
+  return event.clientX < box.left || event.clientX > box.right
+    || event.clientY < box.top || event.clientY > box.bottom;
+};
+
 export function setupSettingsPanel({ store, getLang, getDate }: Deps): { rerender: () => void } {
   const toggle = byId<HTMLButtonElement>('settings-toggle');
   const dialog = byId<HTMLDialogElement>('settings-dialog');
@@ -32,12 +41,29 @@ export function setupSettingsPanel({ store, getLang, getDate }: Deps): { rerende
   const custom = byId<HTMLInputElement>('set-copy-custom');
   const digits = byId<HTMLSelectElement>('set-copy-digits');
   const preview = byId<HTMLOutputElement>('set-copy-preview');
+  const previewLabel = byId<HTMLElement>('set-copy-preview-label');
+  const announcement = byId<HTMLElement>('set-copy-announce');
 
   const renderPreview = (): void => {
     const date = getDate();
     preview.textContent = date === null
       ? NO_DATE
       : formatCopy(date.p, date.g, store.get().copy, getLang());
+  };
+
+  let announceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** Screen readers hear the settled preview once typing pauses, not every keystroke. */
+  const announceSoon = (): void => {
+    clearTimeout(announceTimer);
+    announceTimer = setTimeout(() => {
+      announcement.textContent = `${previewLabel.textContent} ${preview.textContent}`;
+    }, ANNOUNCE_DELAY_MS);
+  };
+
+  const stopAnnouncing = (): void => {
+    clearTimeout(announceTimer);
+    announcement.textContent = '';
   };
 
   /** Controls follow the store only on open: while editing, the user owns them. */
@@ -61,10 +87,19 @@ export function setupSettingsPanel({ store, getLang, getDate }: Deps): { rerende
     dialog.showModal();
   });
   closeButton.addEventListener('click', () => { dialog.close(); });
-  // A click that lands on the dialog element itself is on the backdrop: the
-  // content is all inside child elements.
+  // A drag that starts in the custom field and ends on the backdrop clicks the dialog
+  // too, so a backdrop click counts only when the press began on the backdrop as well.
+  let pressBeganOnBackdrop = false;
+  dialog.addEventListener('pointerdown', (event) => {
+    pressBeganOnBackdrop = isOnBackdrop(event, dialog);
+  });
   dialog.addEventListener('click', (event) => {
-    if (event.target === dialog) dialog.close();
+    if (pressBeganOnBackdrop && isOnBackdrop(event, dialog)) dialog.close();
+  });
+  // Safari does not focus a tapped button, so the browser has nothing to restore to.
+  dialog.addEventListener('close', () => {
+    stopAnnouncing();
+    toggle.focus();
   });
 
   calendar.addEventListener('change', () => {
@@ -80,13 +115,15 @@ export function setupSettingsPanel({ store, getLang, getDate }: Deps): { rerende
       setPattern(pattern.value);
       return;
     }
-    custom.focus();
     // An empty field stores nothing new; the parser would only turn it into the default.
     if (custom.value !== '') setPattern(custom.value);
   });
   custom.addEventListener('input', () => { setPattern(custom.value); });
 
-  store.subscribe(renderPreview);
+  store.subscribe(() => {
+    renderPreview();
+    announceSoon();
+  });
 
   const rerender = (): void => {
     const label = STRINGS[getLang()].settings;
