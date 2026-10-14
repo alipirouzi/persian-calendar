@@ -17,6 +17,7 @@ import {
 } from './i18n/strings';
 import { formatGregorianDate, formatPersianDate, weekdayName } from './i18n/format';
 import { createClock } from './clock/clock';
+import { DEFAULT_SETTINGS } from './settings/settings-model';
 
 let lang: Lang = initialLang();
 
@@ -67,7 +68,7 @@ function renderAll(converterRerender: () => void): void {
   converterRerender();
 }
 
-const converter = setupConverter(() => lang);
+const converter = setupConverter(() => lang, () => DEFAULT_SETTINGS.copy);
 const urlDate = parseUrlDate(window.location.search);
 const urlOutcome = urlDate === null ? null : convertFrom(urlDate.side, {
   y: String(urlDate.y), m: String(urlDate.m), d: String(urlDate.d),

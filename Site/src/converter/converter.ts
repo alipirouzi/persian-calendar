@@ -7,11 +7,13 @@ import { createNumberPicker, type NumberPicker } from '../ui/number-picker';
 import { createCalendarGrid, type CalendarGrid } from '../ui/calendar-grid';
 import { restrictToDigits } from '../ui/numeric-input';
 import { nowSnapshot } from '../calendar/now';
+import { formatCopy, patternLabel } from '../copy/copy-format';
 import { copySentence } from '../i18n/format';
 import {
   formatTemplate, GREGORIAN_MONTHS, PERSIAN_MONTHS, STRINGS, toLocaleDigits, type Lang,
 } from '../i18n/strings';
 import type { GregorianDateParts, PersianDateParts } from '../calendar/persian';
+import type { CopySettings } from '../settings/settings-model';
 
 const COPIED_RESET_MS = 1500;
 const SIDES = ['persian', 'gregorian'] as const;
@@ -42,9 +44,11 @@ function byId<T extends HTMLElement>(id: string): T {
   return el as T;
 }
 
-export function setupConverter(getLang: () => Lang): {
+export function setupConverter(getLang: () => Lang, getCopy: () => CopySettings): {
   prefill: (p: PersianDateParts, g: GregorianDateParts) => void;
   rerender: () => void;
+  /** The last valid date on screen, or null while the input is invalid. */
+  current: () => { p: PersianDateParts; g: GregorianDateParts } | null;
 } {
   const error = byId<HTMLElement>('converter-error');
   const fullDate = byId<HTMLElement>('full-date');
@@ -287,21 +291,28 @@ export function setupConverter(getLang: () => Lang): {
     }, COPIED_RESET_MS);
   };
 
+  const renderCopyTitle = (): void => {
+    btnCopy.title = patternLabel(getCopy(), getLang());
+  };
+  renderCopyTitle();
+
   btnCopy.addEventListener('click', () => {
     if (lastOk === null) return;
-    navigator.clipboard.writeText(copySentence(lastOk.p, lastOk.g, getLang()))
+    navigator.clipboard.writeText(formatCopy(lastOk.p, lastOk.g, getCopy(), getLang()))
       .then(() => flashCopyLabel('copied'))
       .catch(() => flashCopyLabel('copyFailed'));
   });
 
   return {
     prefill,
+    current: () => lastOk,
     rerender: () => {
       renderLabels();
       // Own the copy button's label regardless of caller ordering: a pending
       // "Copied"/"Copy failed" flash must not survive a language toggle.
       clearTimeout(copiedTimer);
       btnCopy.textContent = STRINGS[getLang()].copy;
+      renderCopyTitle();
       // Language switch: refresh digits/labels on BOTH sides from the last
       // valid state (the user is not mid-typing during a toggle).
       if (lastOk !== null) {

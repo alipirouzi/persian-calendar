@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PAGE from '../../index.html?raw';
 import { setupConverter } from '../../src/converter/converter';
 import type { Lang } from '../../src/i18n/strings';
+import type { CopySettings } from '../../src/settings/settings-model';
+import { DEFAULT_SETTINGS } from '../../src/settings/settings-model';
 import { clickOn, press, setMediaMatches } from './dom-helpers';
 
 /**
@@ -16,6 +18,7 @@ const BODY = PAGE
 const TODAY = new Date('2025-01-11T09:00:00Z');
 
 let lang: Lang;
+let copySettings: CopySettings;
 let writeText: ReturnType<typeof vi.fn>;
 let converter: ReturnType<typeof setupConverter>;
 
@@ -39,11 +42,12 @@ beforeEach(() => {
   vi.setSystemTime(TODAY);
   setMediaMatches(false);
   lang = 'en';
+  copySettings = DEFAULT_SETTINGS.copy;
   writeText = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
   history.replaceState(null, '', '/');
   document.body.innerHTML = BODY;
-  converter = setupConverter(() => lang);
+  converter = setupConverter(() => lang, () => copySettings);
 });
 
 afterEach(() => {
@@ -55,7 +59,7 @@ describe('setup', () => {
   it('refuses to run against a page missing its markup', () => {
     document.body.innerHTML = '';
 
-    expect(() => setupConverter(() => 'en')).toThrow(/Missing element #converter-error/);
+    expect(() => setupConverter(() => 'en', () => DEFAULT_SETTINGS.copy)).toThrow(/Missing element #converter-error/);
   });
 
   it('names every control in the current language', () => {
@@ -279,15 +283,56 @@ describe('Today and Copy', () => {
     expect(byId('p-cal-pop').hidden).toBe(true);
   });
 
-  it('copies the sentence and says so, then goes back to Copy', async () => {
+  it('copies in the configured format and says so, then goes back to Copy', async () => {
     converter.prefill({ py: 1403, pm: 10, pd: 22 }, { gy: 2025, gm: 1, gd: 11 });
 
     clickOn(byId('btn-copy'));
     await vi.waitFor(() => expect(byId('btn-copy').textContent).toBe('Copied'));
 
-    expect(writeText).toHaveBeenCalledWith('Saturday, 22 Dey 1403 — January 11, 2025');
+    expect(writeText).toHaveBeenCalledWith('1403-10-22');
     vi.advanceTimersByTime(1500);
     expect(byId('btn-copy').textContent).toBe('Copy');
+  });
+
+  it('copies the full sentence when that is the configured format', async () => {
+    copySettings = { ...DEFAULT_SETTINGS.copy, pattern: 'sentence' };
+    converter.prefill({ py: 1403, pm: 10, pd: 22 }, { gy: 2025, gm: 1, gd: 11 });
+
+    clickOn(byId('btn-copy'));
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalled());
+
+    expect(writeText).toHaveBeenCalledWith('Saturday, 22 Dey 1403 — January 11, 2025');
+  });
+
+  it('reads the settings at click time, not at setup', async () => {
+    converter.prefill({ py: 1403, pm: 10, pd: 22 }, { gy: 2025, gm: 1, gd: 11 });
+    copySettings = { calendar: 'gregorian', pattern: 'dd.mm.yyyy', digits: 'latin' };
+
+    clickOn(byId('btn-copy'));
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalled());
+
+    expect(writeText).toHaveBeenCalledWith('11.01.2025');
+  });
+
+  it('names the active format in the Copy tooltip and refreshes it on rerender', () => {
+    expect(byId('btn-copy').title).toBe('yyyy-mm-dd');
+    copySettings = { ...DEFAULT_SETTINGS.copy, pattern: 'sentence' };
+    lang = 'fa';
+
+    converter.rerender();
+
+    expect(byId('btn-copy').title).toBe('جمله کامل');
+  });
+
+  it('exposes the current valid date, and null when there is none', () => {
+    converter.prefill({ py: 1403, pm: 10, pd: 22 }, { gy: 2025, gm: 1, gd: 11 });
+    expect(converter.current()).toEqual({
+      p: { py: 1403, pm: 10, pd: 22 }, g: { gy: 2025, gm: 1, gd: 11 },
+    });
+
+    typeInto('p-m', '13');
+
+    expect(converter.current()).toBeNull();
   });
 
   it('says so when the clipboard refuses', async () => {
