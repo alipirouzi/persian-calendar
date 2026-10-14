@@ -18,6 +18,9 @@
 <body>
   <!-- No aria-label: the visible text (فارسی / English) is the accessible name (WCAG 2.5.3). -->
   <button id="lang-toggle" type="button"></button>
+  <!-- The glyph is decorative; the accessible name is set from STRINGS.settings. -->
+  <button id="settings-toggle" type="button" aria-haspopup="dialog"
+          aria-controls="settings-dialog"><span aria-hidden="true">⚙︎</span></button>
   <main>
     <section id="clock-section" aria-label="Clock">
       <div id="clock-mount"></div>
@@ -138,6 +141,42 @@
       <p id="converter-error" role="status" hidden></p>
     </section>
 
+    <dialog id="settings-dialog" aria-labelledby="settings-title">
+      <div class="settings-head">
+        <h2 id="settings-title" data-str="settings"></h2>
+        <button id="settings-close" type="button" data-str="close"></button>
+      </div>
+      <fieldset class="settings-group">
+        <legend data-str="copySection"></legend>
+        <label for="set-copy-calendar" data-str="copyCalendar"></label>
+        <select id="set-copy-calendar">
+          <option value="persian" data-str="calPersian"></option>
+          <option value="gregorian" data-str="calGregorian"></option>
+          <option value="both" data-str="calBoth"></option>
+        </select>
+        <label for="set-copy-pattern" data-str="copyPattern"></label>
+        <select id="set-copy-pattern">
+          <option value="yyyy-mm-dd">yyyy-mm-dd</option>
+          <option value="yyyy/mm/dd">yyyy/mm/dd</option>
+          <option value="dd.mm.yyyy">dd.mm.yyyy</option>
+          <option value="sentence" data-str="patternSentence"></option>
+          <option value="custom" data-str="patternCustom"></option>
+        </select>
+        <div id="set-copy-custom-row" class="settings-custom" hidden>
+          <label for="set-copy-custom" data-str="patternCustomLabel"></label>
+          <input id="set-copy-custom" type="text" maxlength="64" dir="ltr"
+                 autocomplete="off" spellcheck="false" aria-describedby="set-copy-hint" />
+          <p id="set-copy-hint" class="settings-hint" data-str="patternHint"></p>
+        </div>
+        <label for="set-copy-digits" data-str="copyDigits"></label>
+        <select id="set-copy-digits">
+          <option value="latin" data-str="digitsLatin"></option>
+          <option value="persian" data-str="digitsPersian"></option>
+        </select>
+        <p class="settings-preview"><span data-str="copyPreview"></span>
+          <output id="set-copy-preview" for="set-copy-calendar set-copy-pattern set-copy-custom set-copy-digits"></output></p>
+      </fieldset>
+    </dialog>
   </main>
   <script type="module" src="/src/main.ts"></script>
 </body>

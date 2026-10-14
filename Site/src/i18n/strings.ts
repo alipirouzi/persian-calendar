@@ -10,7 +10,10 @@ export type StringKey =
   // label is the whole accessible name and has to say what a step moves.
   | 'prevMonth' | 'nextMonth' | 'prevYear' | 'nextYear' | 'prevYears' | 'nextYears'
   | 'errYearRange' | 'errMonth' | 'errDay' | 'errUnsupported'
-  | 'patternSentence';
+  | 'patternSentence'
+  | 'settings' | 'close' | 'copySection' | 'copyCalendar' | 'calPersian' | 'calGregorian' | 'calBoth'
+  | 'copyPattern' | 'patternCustom' | 'patternCustomLabel' | 'patternHint'
+  | 'copyDigits' | 'digitsLatin' | 'digitsPersian' | 'copyPreview';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -41,6 +44,21 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     errDay: '{month} has {days} days in {year}',
     errUnsupported: 'That date is outside the supported range',
     patternSentence: 'Full sentence',
+    settings: 'Settings',
+    close: 'Close',
+    copySection: 'Copy format',
+    copyCalendar: 'Calendar',
+    calPersian: 'Persian',
+    calGregorian: 'Gregorian',
+    calBoth: 'Both',
+    copyPattern: 'Format',
+    patternCustom: 'Custom…',
+    patternCustomLabel: 'Custom format',
+    patternHint: "yyyy year · mm / m month · dd / d day · MMMM month name · dddd weekday · 'text' as typed",
+    copyDigits: 'Digits',
+    digitsLatin: 'Latin (0–9)',
+    digitsPersian: 'Persian (۰–۹)',
+    copyPreview: 'Copies as',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -70,6 +88,21 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     errDay: '{month} در سال {year} {days} روز دارد',
     errUnsupported: 'این تاریخ خارج از محدوده پشتیبانی‌شده است',
     patternSentence: 'جمله کامل',
+    settings: 'تنظیمات',
+    close: 'بستن',
+    copySection: 'قالب کپی',
+    copyCalendar: 'تقویم',
+    calPersian: 'شمسی',
+    calGregorian: 'میلادی',
+    calBoth: 'هر دو',
+    copyPattern: 'قالب',
+    patternCustom: 'دلخواه…',
+    patternCustomLabel: 'قالب دلخواه',
+    patternHint: "yyyy سال · mm / m ماه · dd / d روز · MMMM نام ماه · dddd نام روز · 'متن' بدون تغییر",
+    copyDigits: 'ارقام',
+    digitsLatin: 'لاتین (0–9)',
+    digitsPersian: 'فارسی (۰–۹)',
+    copyPreview: 'کپی به صورت',
   },
 };
 
