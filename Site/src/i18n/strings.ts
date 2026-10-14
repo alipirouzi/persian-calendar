@@ -9,7 +9,8 @@ export type StringKey =
   // One pair per calendar view: the step buttons show only ‹ and ›, so their
   // label is the whole accessible name and has to say what a step moves.
   | 'prevMonth' | 'nextMonth' | 'prevYear' | 'nextYear' | 'prevYears' | 'nextYears'
-  | 'errYearRange' | 'errMonth' | 'errDay' | 'errUnsupported';
+  | 'errYearRange' | 'errMonth' | 'errDay' | 'errUnsupported'
+  | 'patternSentence';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -39,6 +40,7 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     errMonth: 'Month must be between 1 and 12',
     errDay: '{month} has {days} days in {year}',
     errUnsupported: 'That date is outside the supported range',
+    patternSentence: 'Full sentence',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -67,6 +69,7 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     errMonth: 'ماه باید بین ۱ و ۱۲ باشد',
     errDay: '{month} در سال {year} {days} روز دارد',
     errUnsupported: 'این تاریخ خارج از محدوده پشتیبانی‌شده است',
+    patternSentence: 'جمله کامل',
   },
 };
 
