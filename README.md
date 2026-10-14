@@ -54,13 +54,18 @@ PersianCalendar/
 │   │   │                     number-picker.ts — ARIA listbox popup, DOM only,
 │   │   │                     calendar-grid.ts — ARIA grid date wizard, DOM only,
 │   │   │                     numeric-input.ts — digit-only field filter (pure + DOM)
+│   │   ├── copy/           copy-format.ts — pattern tokenizer and clipboard formatter (pure),
+│   │   ├── settings/       settings-model.ts (types, defaults, validation, pure),
+│   │   │                     settings-store.ts (localStorage `settings.v1`, subscribe),
+│   │   │                     settings-panel.ts (native modal dialog, DOM only),
 │   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits,
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
-│   ├── tests/              Vitest (306 tests at 100% coverage, incl. .NET parity;
+│   ├── tests/              Vitest (357 tests at 100% coverage, incl. .NET parity;
 │   │                         tests/dom/ runs the DOM units under jsdom)
-│   └── e2e/                Playwright (123 tests, incl. converter-ux.spec.ts,
-│                             picker.spec.ts, calendar.spec.ts and the screenshot matrix)
+│   └── e2e/                Playwright (128 tests, incl. converter-ux.spec.ts,
+│                             picker.spec.ts, calendar.spec.ts, settings.spec.ts and the
+│                             screenshot matrix)
 │
 ├── deploy/
 │   ├── nginx.conf             static serving, caching, /health
@@ -109,7 +114,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 317 tests, 100% coverage
+### Site unit tests (Vitest) — 357 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -135,7 +140,7 @@ in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 node environment. CI runs `npm test`, not `npm run test:coverage`, so the threshold is a
 local gate rather than a pipeline one.
 
-### E2E (Playwright) — 123 tests
+### E2E (Playwright) — 128 tests
 
 ```bash
 cd Site
@@ -201,7 +206,7 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (123 tests total across the whole E2E suite, including
+actually serves the app while offline (128 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 `calendar.spec.ts`).
 
@@ -272,13 +277,21 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   under the pointer.
   The grid **hugs its rows**: about 79% of months need five, so reserving a sixth left a dead
   band in the common case to smooth a transition that happens in the other ~21%.
-- **Full date line** — under the form, the converter prints the same sentence the Copy button
-  writes (e.g. "Saturday, 22 Dey 1403 — January 11, 2025"), so what is on screen is exactly
-  what lands on the clipboard. It hides itself when the current input is not a valid date.
+- **Full date line** — under the form, the converter prints the full sentence for the date
+  (e.g. "Saturday, 22 Dey 1403 — January 11, 2025"). What Copy writes is set in Settings
+  (default: the Persian date as `yyyy-mm-dd`), and the Copy button's tooltip names the active
+  format. The line hides itself when the current input is not a valid date.
 - **Status row** — a «Today» / «امروز» button that resets both sides to today, closes every
-  popup and clears the query string, and a «Copy» / «کپی» button that puts the full shareable
-  sentence on the clipboard, swapping its own label to a localized "Copied" state on success
+  popup and clears the query string, and a «Copy» / «کپی» button that puts the date on the
+  clipboard in the configured format, swapping its own label to a localized "Copied" state on success
   or a "Copy failed" state if the clipboard write is rejected.
+- **Settings** — a gear button opens a native modal `<dialog>` (focus trap, `Escape` closes,
+  focus returns to the gear). The Copy format group chooses the calendar (Persian, Gregorian
+  or both), the format (presets `yyyy-mm-dd`, `yyyy/mm/dd`, `dd.mm.yyyy`, a sentence, or a
+  custom pattern with the tokens `yyyy`, `mm`, `m`, `dd`, `d`, `MMMM`, `dddd`; quote literal
+  words, e.g. `'Today is' dddd`) and the digits (Latin or Persian), with a live preview.
+  Settings are stored in `localStorage` under `settings.v1`; an unreadable value or an invalid
+  field falls back to that field's default.
 - **Shareable URLs** — a valid conversion updates the address bar via `history.replaceState`
   (`?p=1403-10-22` or `?g=2025-1-11`, never a full navigation) and loading either query
   param prefills both sides on load; an invalid or malformed param is ignored and today is

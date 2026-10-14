@@ -81,14 +81,14 @@ test('today button resets the converter and clears the query', async ({ page }) 
   expect(new URL(page.url()).search).toBe('');
 });
 
-test('copy button puts the full sentence on the clipboard', async ({ page, context }) => {
+test('copy button writes the default yyyy-mm-dd Persian date', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');
   await enterPersianDate(page);
   await page.locator('#btn-copy').click();
   await expect(page.locator('#btn-copy')).toHaveText('Copied');
   const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboard).toBe('Saturday, 22 Dey 1403 — January 11, 2025');
+  expect(clipboard).toBe('1403-10-22');
   await expect(page.locator('#btn-copy')).toHaveText('Copy'); // reverts after 1.5s
 });
 

@@ -59,9 +59,9 @@ html[lang='fa'] legend { letter-spacing: 0; text-transform: none; }
 /* Invisible hit-area extension, same pattern as #lang-toggle (WCAG 2.5.8). */
 #status-row button::after { content: ''; position: absolute; inset: -12px; }
 
-/* The converter's readout: the same sentence the Copy button writes, so what is
-   on screen is what lands on the clipboard. Muted and small so it reads as a
-   caption of the form rather than competing with the today panel above. */
+/* The converter's readout: the full sentence for the date in the form. Muted and
+   small so it reads as a caption of the form rather than competing with the
+   today panel above. */
 /* The height is reserved so an invalid keystroke only blanks the text: emptying
    the box used to collapse it and jump the Today/Copy row under the thumb.
    The reserve is one whole line box — base.css sets line-height: 1.6, and a

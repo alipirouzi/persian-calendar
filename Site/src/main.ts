@@ -17,7 +17,8 @@ import {
 } from './i18n/strings';
 import { formatGregorianDate, formatPersianDate, weekdayName } from './i18n/format';
 import { createClock } from './clock/clock';
-import { DEFAULT_SETTINGS } from './settings/settings-model';
+import { createSettingsStore } from './settings/settings-store';
+import { setupSettingsPanel } from './settings/settings-panel';
 
 let lang: Lang = initialLang();
 
@@ -66,9 +67,16 @@ function renderAll(converterRerender: () => void): void {
   renderStatic();
   renderToday();
   converterRerender();
+  settingsPanel.rerender();
 }
 
-const converter = setupConverter(() => lang, () => DEFAULT_SETTINGS.copy);
+const settings = createSettingsStore();
+const converter = setupConverter(() => lang, () => settings.get().copy);
+const settingsPanel = setupSettingsPanel({
+  store: settings, getLang: () => lang, getDate: () => converter.current(),
+});
+// The Copy tooltip names the active format; keep it in step with the settings.
+settings.subscribe(() => { converter.rerender(); });
 const urlDate = parseUrlDate(window.location.search);
 const urlOutcome = urlDate === null ? null : convertFrom(urlDate.side, {
   y: String(urlDate.y), m: String(urlDate.m), d: String(urlDate.d),
