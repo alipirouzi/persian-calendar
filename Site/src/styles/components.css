@@ -295,7 +295,10 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 #settings-toggle:hover { color: var(--accent); border-color: var(--accent); }
 #settings-toggle::after { content: ''; position: absolute; inset: -10px; }
 
+/* margin: auto is what centres a modal dialog in the browser's own stylesheet;
+   base.css zeroes every margin, which pinned the dialog to the top-left corner. */
 #settings-dialog {
+  margin: auto;
   inline-size: min(26rem, calc(100vw - 2rem));
   border: 1px solid var(--hairline); border-radius: 12px;
   background: var(--surface-raised); color: var(--text);

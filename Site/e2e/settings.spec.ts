@@ -106,3 +106,18 @@ test('a corrupt stored value falls back to the default format', async ({ page })
   await enter(page);
   expect(await copyAndRead(page)).toBe('1403-10-22');
 });
+
+test('the dialog opens centred in the viewport, at desktop and phone widths', async ({ page }) => {
+  for (const size of [{ width: 1280, height: 800 }, { width: 400, height: 760 }]) {
+    await page.setViewportSize(size);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const box = await page.locator('#settings-dialog').boundingBox();
+    expect(box).not.toBeNull();
+    const { x, y, width, height } = box as { x: number; y: number; width: number; height: number };
+    // Equal space either side, within a pixel of rounding.
+    expect(Math.abs(x - (size.width - x - width))).toBeLessThanOrEqual(1);
+    expect(Math.abs(y - (size.height - y - height))).toBeLessThanOrEqual(1);
+    await page.keyboard.press('Escape');
+  }
+});
