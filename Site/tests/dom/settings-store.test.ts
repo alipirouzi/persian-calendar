@@ -62,6 +62,8 @@ describe('createSettingsStore', () => {
     const expected = {
       copy: { calendar: 'gregorian', pattern: 'yyyy-mm-dd', digits: 'latin' },
       time: { source: 'server' },
+      views: { persian: { enabled: true, open: true }, gregorian: { enabled: true, open: false } },
+      holidays: { sources: ['ir', 'nuremberg', 'user'], user: [] },
     };
     expect(store.get()).toEqual(expected);
     expect(listener).toHaveBeenCalledWith(expected);
