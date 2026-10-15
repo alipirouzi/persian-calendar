@@ -64,7 +64,7 @@ PersianCalendar/
 │   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits,
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
-│   ├── tests/              Vitest (437 tests at 100% coverage, incl. .NET parity;
+│   ├── tests/              Vitest (444 tests at 100% coverage, incl. .NET parity;
 │   │                         tests/dom/ runs the DOM units under jsdom)
 │   └── e2e/                Playwright (139 tests, incl. converter-ux.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts, settings.spec.ts,
@@ -119,7 +119,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 437 tests, 100% coverage
+### Site unit tests (Vitest) — 444 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -136,14 +136,14 @@ changes. Without it the parity test cannot run.
 
 Coverage is enforced, not merely reported: `vite.config.ts` sets a **100% threshold on
 lines, statements, branches and functions**, and the suite currently meets all four
-(2029/2029 lines, 2029/2029 statements, 858/858 branches, 211/211 functions). Only
+(2045/2045 lines, 2045/2045 statements, 867/867 branches, 212/212 functions). Only
 `src/main.ts` (the bootstrap)
 and `src/clock/**` (visual, screenshot-tested) are excluded. Tests under `tests/dom/` run
 in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 `numeric-input.ts` and `converter.ts` are exercised, the last of them against the real
 `index.html` body rather than a hand-copied fixture. Everything else runs in the faster
-node environment. CI runs `npm test`, not `npm run test:coverage`, so the threshold is a
-local gate rather than a pipeline one.
+node environment. CI runs `npm run test:coverage`, so the threshold gates the pipeline as well as local
+runs.
 
 ### E2E (Playwright) — 139 tests
 
@@ -315,7 +315,7 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   digits: a native numeric input only accepts ASCII digits, so localizing it would break
   typing and validation. Digits typed in any of the three scripts are normalized before
   conversion, so nothing is lost either way.
-- **Privacy** — no cookies, no analytics, no third-party requests, no personal data processed. The only requests after load are `GET /api/time` to this same site (three per sync, plus one when you press Test connection); it carries nothing about you and its answer is the server's clock. The browser keeps only your language and settings in `localStorage`; they never leave it. See `docs/SECURITY.md`.
+- **Privacy** — no cookies, no analytics, no third-party requests, no personal data processed. The only requests after load are `GET /api/time` to this same site (three per sync, plus one when you press Test connection); they carry no personal data beyond what any page request does, and the answer is the server's clock. The browser keeps only your language and settings in `localStorage`; they never leave it. See `docs/SECURITY.md`.
 
 ## Deployment
 
