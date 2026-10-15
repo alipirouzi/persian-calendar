@@ -351,9 +351,12 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
   font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);
 }
 .month-view > summary::-webkit-details-marker { display: none; }
-.month-view > summary::before { content: '▸ '; display: inline-block; transition: transform var(--duration) var(--ease); }
+.month-view > summary::before {
+  content: '▸'; display: inline-block; margin-inline-end: 0.35em;
+  transition: transform var(--duration) var(--ease);
+}
 .month-view[open] > summary::before { transform: rotate(90deg); }
-:root[dir='rtl'] .month-view > summary::before { content: '◂ '; }
+:root[dir='rtl'] .month-view > summary::before { content: '◂'; }
 :root[dir='rtl'] .month-view[open] > summary::before { transform: rotate(-90deg); }
 .month-view > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .mv-head { display: flex; align-items: center; gap: 0.5rem; margin-block: 0.75rem 0.5rem; }

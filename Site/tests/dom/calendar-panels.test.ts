@@ -191,4 +191,70 @@ describe('calendar panels', () => {
     ]);
     expect(groupHolidayRuns(new Map())).toEqual([]);
   });
+  it('ignores a holiday listed twice on one day', () => {
+    expect(groupHolidayRuns(new Map([[1, [NOWRUZ, NOWRUZ]], [2, [NOWRUZ]]]))).toEqual([
+      { from: 1, to: 2, holiday: NOWRUZ },
+    ]);
+  });
+
+  it('keeps a focused day focused, without rebuilding, when the minute refresh finds the same date', () => {
+    const before = day('persian', 13);
+    before.focus();
+    now = new Date(2026, 2, 21, 12, 1);
+    panels.refreshToday();
+    expect(day('persian', 13)).toBe(before);
+    expect(document.activeElement).toBe(before);
+  });
+
+  it('puts focus back on the same day after a re-render rebuilds the grid', () => {
+    const before = day('persian', 13);
+    before.focus();
+    store.update((s) => ({ ...s, holidays: { ...s.holidays, sources: ['ir'] } }));
+    expect(day('persian', 13)).not.toBe(before);
+    expect(document.activeElement).toBe(day('persian', 13));
+  });
+
+  it('moves focus to Today when the focused arrow becomes disabled', () => {
+    now = new Date(2121, 11, 15, 12);
+    panels.refreshToday();
+    clickOn(q('gregorian', '.mv-prev'));
+    expect(title('gregorian')).toBe('November 2121');
+    const next = q<HTMLButtonElement>('gregorian', '.mv-next');
+    next.focus();
+    clickOn(next);
+    expect(next.disabled).toBe(true);
+    expect(document.activeElement).toBe(q('gregorian', '.mv-today'));
+    // An arrow that stays enabled keeps its focus.
+    const prev = q<HTMLButtonElement>('gregorian', '.mv-prev');
+    prev.focus();
+    clickOn(prev);
+    expect(document.activeElement).toBe(prev);
+  });
+
+  it('names the Today buttons, the grids and the section', () => {
+    expect(q('persian', '.mv-today').getAttribute('aria-label')).toBe('Go to this month');
+    const table = q('gregorian', '.mv-grid');
+    const labelId = table.getAttribute('aria-labelledby')!;
+    expect(document.getElementById(labelId)?.textContent).toBe('March 2026');
+    expect(document.getElementById('calendars')?.getAttribute('aria-label')).toBe('Calendars');
+    lang = 'fa';
+    panels.rerender();
+    expect(q('persian', '.mv-today').getAttribute('aria-label')).toBe('رفتن به ماه جاری');
+    expect(document.getElementById('calendars')?.getAttribute('aria-label')).toBe('تقویم‌ها');
+  });
+
+  it('hides the whole section when both views are disabled', () => {
+    const section = document.getElementById('calendars')!;
+    store.update((s) => ({ ...s, views: { ...s.views, persian: { enabled: false, open: true } } }));
+    expect(section.hidden).toBe(false);
+    store.update((s) => ({ ...s, views: { ...s.views, gregorian: { enabled: false, open: false } } }));
+    expect(section.hidden).toBe(true);
+  });
+
+  it('throws when the section around the panels is missing', () => {
+    const section = document.getElementById('calendars')!;
+    section.replaceWith(...section.childNodes);
+    expect(() => setupCalendarPanels({ store, holidays: { forMonth }, getLang: () => lang, now: () => now, onPickDay }))
+      .toThrow('#calendars');
+  });
 });

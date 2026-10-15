@@ -20,7 +20,7 @@ export type StringKey =
   | 'testOk' | 'testFail' | 'statusDevice' | 'statusSyncing' | 'statusSynced' | 'statusUnsynced'
   | 'driftNone' | 'driftSlow' | 'driftFast' | 'driftSlowMin' | 'driftFastMin'
   | 'viewPersian' | 'viewGregorian' | 'sourceIr' | 'sourceNuremberg' | 'sourceUser'
-  | 'estimated' | 'noHolidays';
+  | 'estimated' | 'noHolidays' | 'goToThisMonth' | 'calendarsLabel';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -89,6 +89,8 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     sourceUser: 'Mine',
     estimated: 'estimated',
     noHolidays: 'No holidays this month',
+    goToThisMonth: 'Go to this month',
+    calendarsLabel: 'Calendars',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -156,6 +158,8 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     sourceUser: 'شخصی',
     estimated: 'تخمینی',
     noHolidays: 'این ماه تعطیلی ندارد',
+    goToThisMonth: 'رفتن به ماه جاری',
+    calendarsLabel: 'تقویم‌ها',
   },
 };
 

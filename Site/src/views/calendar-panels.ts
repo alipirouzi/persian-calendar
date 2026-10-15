@@ -62,6 +62,7 @@ export function groupHolidayRuns(marks: MonthHolidays): HolidayRun[] {
     for (const holiday of list) {
       const id = identity(holiday);
       const run = open.get(id);
+      if (run && run.to === day) continue; // listed twice on one day
       if (run && run.to === day - 1) {
         run.to = day;
       } else {
@@ -94,11 +95,15 @@ export function setupCalendarPanels(deps: CalendarPanelsDeps): { rerender(): voi
     gregorian: { ...today('gregorian'), following: true },
   };
 
-  const details = (side: Side): HTMLDetailsElement => {
-    const node = document.getElementById(`view-${side}`);
-    if (!node) throw new Error(`Missing element #view-${side}`);
-    return node as HTMLDetailsElement;
+  const byId = <T extends HTMLElement>(id: string): T => {
+    const node = document.getElementById(id);
+    if (!node) throw new Error(`Missing element #${id}`);
+    return node as T;
   };
+  const details = (side: Side): HTMLDetailsElement => byId<HTMLDetailsElement>(`view-${side}`);
+  /** The date each side last rendered as today, so the minute refresh can skip no-op rebuilds. */
+  const lastToday: Record<Side, string> = { persian: '', gregorian: '' };
+  const dayKey = (t: { year: number; month: number; day: number }): string => `${t.year}-${t.month}-${t.day}`;
   const part = <T extends Element>(side: Side, selector: string): T => {
     const node = details(side).querySelector(selector);
     if (!node) throw new Error(`Missing ${selector} in #view-${side}`);
@@ -117,6 +122,7 @@ export function setupCalendarPanels(deps: CalendarPanelsDeps): { rerender(): voi
     const grid = buildMonthGrid(side, year, month, lang);
     const marks = holidays.forMonth(side, year, month);
     const now = today(side);
+    lastToday[side] = dayKey(now);
     const isToday = (d: number): boolean => now.year === year && now.month === month && now.day === d;
 
     part<HTMLElement>(side, '.mv-title').textContent = grid.title;
@@ -126,6 +132,8 @@ export function setupCalendarPanels(deps: CalendarPanelsDeps): { rerender(): voi
     next.disabled = !grid.canGoNext;
     prev.setAttribute('aria-label', strings.prevMonth);
     next.setAttribute('aria-label', strings.nextMonth);
+    // The visible text is "Today" like the converter's button; the name says what this one does.
+    part<HTMLButtonElement>(side, '.mv-today').setAttribute('aria-label', strings.goToThisMonth);
 
     const head = part<HTMLTableRowElement>(side, 'thead tr');
     head.replaceChildren(...grid.weekdayHeaders.map((label) => {
@@ -135,6 +143,9 @@ export function setupCalendarPanels(deps: CalendarPanelsDeps): { rerender(): voi
     }));
 
     const body = part<HTMLTableSectionElement>(side, 'tbody');
+    // Rebuilding the grid would drop a focused day to <body>; note it to put focus back.
+    const focused = document.activeElement;
+    const focusedDay = focused instanceof HTMLElement && body.contains(focused) ? focused.dataset['day'] : undefined;
     body.replaceChildren(...grid.weeks.map((week) => {
       const row = el('tr');
       for (const d of week) {
@@ -160,6 +171,9 @@ export function setupCalendarPanels(deps: CalendarPanelsDeps): { rerender(): voi
       }
       return row;
     }));
+    if (focusedDay !== undefined) {
+      body.querySelector<HTMLButtonElement>(`.mv-day[data-day="${focusedDay}"]`)?.focus();
+    }
 
     const names = side === 'persian' ? PERSIAN_MONTHS[lang] : GREGORIAN_MONTHS[lang];
     const listEl = part<HTMLUListElement>(side, '.mv-holidays');
@@ -179,7 +193,12 @@ export function setupCalendarPanels(deps: CalendarPanelsDeps): { rerender(): voi
       })));
   };
 
-  const rerender = (): void => { for (const side of SIDES) render(side); };
+  const rerender = (): void => {
+    const { views } = store.get();
+    section.hidden = !views.persian.enabled && !views.gregorian.enabled;
+    section.setAttribute('aria-label', STRINGS[getLang()].calendarsLabel);
+    for (const side of SIDES) render(side);
+  };
 
   for (const side of SIDES) {
     part<HTMLButtonElement>(side, '.mv-prev').addEventListener('click', () => { step(side, -1); });
@@ -204,15 +223,23 @@ export function setupCalendarPanels(deps: CalendarPanelsDeps): { rerender(): voi
   function step(side: Side, delta: number): void {
     const target = stepMonth(side, shown[side].year, shown[side].month, delta);
     if (target === null) return;
+    const arrow = part<HTMLButtonElement>(side, delta < 0 ? '.mv-prev' : '.mv-next');
+    const hadFocus = document.activeElement === arrow;
     shown[side] = { ...target, following: false };
     render(side);
+    // A disabled button cannot hold focus; hand it to this panel's Today rather than <body>.
+    if (hadFocus && arrow.disabled) part<HTMLButtonElement>(side, '.mv-today').focus();
   }
 
+  const section = byId<HTMLElement>('calendars');
   store.subscribe(rerender);
 
   const refreshToday = (): void => {
     for (const side of SIDES) {
-      if (shown[side].following) shown[side] = { ...today(side), following: true };
+      const now = today(side);
+      // Same date as last drawn: nothing on this panel can have changed.
+      if (dayKey(now) === lastToday[side]) continue;
+      if (shown[side].following) shown[side] = { ...now, following: true };
       render(side);
     }
   };
