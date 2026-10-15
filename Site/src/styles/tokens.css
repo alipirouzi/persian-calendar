@@ -15,12 +15,19 @@
   --duration: 240ms;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   /* Watch — Analog and Digital */
-  --font-dial: 'Cormorant Garamond', serif;
+  --font-dial: 'Inter Variable', system-ui, sans-serif;
   --font-digital: 'Bodoni Moda', 'Cormorant Garamond', serif;
   --wd-ink: #1d1f24;    --wd-sec: #2f5cc0;
   --wa-dial-0: #fdfbf6; --wa-dial-1: #ece6da;
   --wa-ink: #1d1f24;    --wa-track: #2a2c31;
-  --wa-blue-0: #4a7fe0; --wa-blue-1: #244fae; --wa-blue-2: #13306f;
+  --wa-lit-0: #8fb2ff;   --wa-lit-1: #4f80e6;   --wa-lit-2: #2d5bc4;
+  --wa-shade-0: #2a55b8; --wa-shade-1: #17347e; --wa-shade-2: #0e2457;
+  --wa-sec-0: #5b8cf0;   --wa-sec-1: #16367f;
+  --wa-cap-0: #b9cdfb;   --wa-cap-1: #3b6bd6;   --wa-cap-2: #112a66;
+  --wa-pin: #0c1c45;
+  --wa-edge: #0b1d48;    --wa-edge-a: .35;
+  --wa-shadow: #2b2418;  --wa-shadow-a: .32;
+  --wa-rim-a: .10;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -34,7 +41,14 @@
     --holiday: oklch(74% 0.13 28);
     --wa-dial-0: #23272f; --wa-dial-1: #0e1014;
     --wa-ink: #efe9dc;    --wa-track: #c9c3b6;
-    --wa-blue-0: #9dbcff; --wa-blue-1: #5f8ef0; --wa-blue-2: #3561c4;
+    --wa-lit-0: #c3d6ff;   --wa-lit-1: #7da4f5;   --wa-lit-2: #4f7fe0;
+    --wa-shade-0: #4c78d8; --wa-shade-1: #2f59b8; --wa-shade-2: #1c3f8f;
+    --wa-sec-0: #9dbcff;   --wa-sec-1: #3561c4;
+    --wa-cap-0: #e1eaff;   --wa-cap-1: #6f9cf2;   --wa-cap-2: #24479a;
+    --wa-pin: #0b0d10;
+    --wa-edge: #000;       --wa-edge-a: .4;
+    --wa-shadow: #000;     --wa-shadow-a: .55;
+    --wa-rim-a: .25;
     --wd-ink: #efe9dc;    --wd-sec: #7aa2f7;
   }
 }

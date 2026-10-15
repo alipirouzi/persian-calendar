@@ -262,15 +262,30 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 /* Watch — the Analog face. Classes only (CSP: style-src 'self'). */
 .wa-dial-0 { stop-color: var(--wa-dial-0); }
 .wa-dial-1 { stop-color: var(--wa-dial-1); }
-.wa-blue-0 { stop-color: var(--wa-blue-0); }
-.wa-blue-1 { stop-color: var(--wa-blue-1); }
-.wa-blue-2 { stop-color: var(--wa-blue-2); }
+.wa-lit-0 { stop-color: var(--wa-lit-0); }
+.wa-lit-1 { stop-color: var(--wa-lit-1); }
+.wa-lit-2 { stop-color: var(--wa-lit-2); }
+.wa-shade-0 { stop-color: var(--wa-shade-0); }
+.wa-shade-1 { stop-color: var(--wa-shade-1); }
+.wa-shade-2 { stop-color: var(--wa-shade-2); }
+.wa-sec-0 { stop-color: var(--wa-sec-0); }
+.wa-sec-1 { stop-color: var(--wa-sec-1); }
+.wa-cap-0 { stop-color: var(--wa-cap-0); }
+.wa-cap-1 { stop-color: var(--wa-cap-1); }
+.wa-cap-2 { stop-color: var(--wa-cap-2); }
+.wa-rim-0 { stop-color: #000; stop-opacity: 0; }
+.wa-rim-1 { stop-color: #000; stop-opacity: var(--wa-rim-a); }
+.wa-edge { stroke: var(--wa-edge); stroke-opacity: var(--wa-edge-a); }
+.wa-shadow { flood-color: var(--wa-shadow); flood-opacity: var(--wa-shadow-a); }
+.wa-pin { fill: var(--wa-pin); }
+.wa-idx { fill: var(--wa-ink); }
 .wa-ring { fill: none; stroke: var(--wa-track); }
 .wa-tick, .wa-tick--five { stroke: var(--wa-track); }
 .wa-num {
   fill: var(--wa-ink);
   font-family: var(--font-dial);
   font-weight: 600;
+  letter-spacing: -0.3px;
   font-feature-settings: "lnum";
   font-variant-numeric: lining-nums;
 }

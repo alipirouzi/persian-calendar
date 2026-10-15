@@ -15,7 +15,7 @@ test('Analog is the default; Digital can be chosen and survives a reload', async
 test('Persian page: Latin digits on the dial, Persian label', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('lang', 'fa'));
   await page.goto('/');
-  await expect(page.locator('.wa-num')).toHaveText(['12', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11']);
+  await expect(page.locator('.wa-num')).toHaveText(['12', '3', '6', '9']);
   await expect(page.locator('.clock')).toHaveAttribute('aria-label', /^ساعت، [۰-۹]{2}:[۰-۹]{2}$/);
   await page.locator('#settings-toggle').click();
   await page.locator('#set-watch-face').selectOption('digital');
@@ -91,9 +91,10 @@ test('the analog hands reach their scales on screen', async ({ page }) => {
     const ctm = svg.getScreenCTM()!;
     const unit = Math.hypot(ctm.a, ctm.b);                      // px per viewBox unit
     const c = new DOMPoint(100, 100).matrixTransform(ctm);
-    const reach = (id: string) => {
+    // Hour and minute: the outline (both facets); seconds: the needle.
+    const reach = (id: string, sel: string) => {
       const g = document.getElementById(id) as unknown as SVGGraphicsElement;
-      const path = g.querySelector('path') as SVGPathElement;
+      const path = g.querySelector(sel) as SVGPathElement;
       const m = path.getScreenCTM()!;
       let best = 0;
       for (let i = 0; i <= 400; i++) {
@@ -102,11 +103,12 @@ test('the analog hands reach their scales on screen', async ({ page }) => {
       }
       return best / unit;
     };
-    return { hour: reach('hand-hour'), minute: reach('hand-minute'), second: reach('hand-second') };
+    return { hour: reach('hand-hour', '.wa-edge'), minute: reach('hand-minute', '.wa-edge'), second: reach('hand-second', 'path') };
   });
-  expect(r.hour).toBeGreaterThan(67); expect(r.hour).toBeLessThan(72.5);       // stops at the numerals
-  expect(r.minute).toBeGreaterThan(91.5); expect(r.minute).toBeLessThanOrEqual(96); // inside the track
-  expect(r.second).toBeGreaterThan(94); expect(r.second).toBeLessThanOrEqual(96);
+  console.log(`analog tip radii: ${JSON.stringify(r)}`);
+  expect(r.hour).toBeGreaterThan(69); expect(r.hour).toBeLessThanOrEqual(71.2);     // meets the batons (r 71)
+  expect(r.minute).toBeGreaterThan(90); expect(r.minute).toBeLessThanOrEqual(91.7); // at the inner ring (r 91.5)
+  expect(r.second).toBeGreaterThan(92.5); expect(r.second).toBeLessThan(95);        // inside the marks, short of r 96
 });
 
 test('digital fits a 320 px phone, in Persian, with Latin digits', async ({ page }) => {
@@ -144,7 +146,7 @@ test('light and dark: the analog dial follows the system scheme, live', async ({
   const look = () => page.evaluate(() => [
     getComputedStyle(document.querySelector('.wa-num')!).fill,
     getComputedStyle(document.querySelector('.wa-ring')!).stroke,
-    getComputedStyle(document.querySelector('.wa-blue-1')!).stopColor,
+    getComputedStyle(document.querySelector('.wa-lit-1')!).stopColor,
   ].join('|'));
   const light = await look();
   await page.emulateMedia({ colorScheme: 'dark' });
