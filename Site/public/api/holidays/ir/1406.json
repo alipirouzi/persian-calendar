@@ -1,0 +1,75 @@
+{
+  "year": 1406,
+  "source": "holidayapi.ir",
+  "fetched": "2026-10-15",
+  "holidays": [
+    {
+      "key": "ir.sadiq",
+      "p": "1406-01-14"
+    },
+    {
+      "key": "ir.adha",
+      "p": "1406-02-27"
+    },
+    {
+      "key": "ir.ghadir",
+      "p": "1406-03-04"
+    },
+    {
+      "key": "ir.tasua",
+      "p": "1406-03-25"
+    },
+    {
+      "key": "ir.ashura",
+      "p": "1406-03-26"
+    },
+    {
+      "key": "ir.arbaeen",
+      "p": "1406-05-03"
+    },
+    {
+      "key": "ir.prophet",
+      "p": "1406-05-11"
+    },
+    {
+      "key": "ir.reza",
+      "p": "1406-05-12"
+    },
+    {
+      "key": "ir.askari",
+      "p": "1406-05-20"
+    },
+    {
+      "key": "ir.mawlid",
+      "p": "1406-05-29"
+    },
+    {
+      "key": "ir.fatima",
+      "p": "1406-08-12"
+    },
+    {
+      "key": "ir.ali-birth",
+      "p": "1406-09-21"
+    },
+    {
+      "key": "ir.mabath",
+      "p": "1406-10-05"
+    },
+    {
+      "key": "ir.mahdi",
+      "p": "1406-10-23"
+    },
+    {
+      "key": "ir.ali-martyrdom",
+      "p": "1406-11-29"
+    },
+    {
+      "key": "ir.fitr",
+      "p": "1406-12-08"
+    },
+    {
+      "key": "ir.fitr",
+      "p": "1406-12-09"
+    }
+  ]
+}
