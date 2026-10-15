@@ -22,7 +22,7 @@ const SPRING_INNER = 2;
 const SPRING_OUTER = 21;
 const SPRING_BREATH = 1.8;
 const SPRING_PHASE = 0.9;
-const SPRING_STEPS = 480;               // 48 points a turn keeps the coils smooth
+const SPRING_STEPS = 240;               // 24 points a turn keeps the coils smooth
 const num = (n: number): string => String(Number(n.toFixed(2)));
 const toRad = (deg: number): number => (deg * Math.PI) / 180;
 
@@ -47,6 +47,14 @@ const LABEL_AT: Readonly<Record<PartKey, Point>> = {
   balance: polar(PART_CENTRES.balance, 42, 290),
 };
 
+const SEPARATOR = ' · ';
+
+/** A part string as its name and speed lines; a string without the separator is all name. */
+export function splitLabel(full: string): readonly [string, string] {
+  const cut = full.indexOf(SEPARATOR);
+  return cut < 0 ? [full, ''] : [full.slice(0, cut), full.slice(cut + SEPARATOR.length)];
+}
+
 const spring = (balanceDeg: number): string => {
   const b = toRad(balanceDeg);
   return spiralPath(BAL, SPRING_TURNS, SPRING_INNER, SPRING_OUTER + Math.sin(b) * SPRING_BREATH, b * SPRING_PHASE, SPRING_STEPS);
@@ -64,7 +72,7 @@ export function createMovementView(mount: HTMLElement, getLang: () => Lang): Mov
 
   const parts = {} as Record<PartKey, SVGGElement>;
   for (const key of PART_KEYS) {
-    const g = el('g', { class: 'mv-part', tabindex: 0, 'data-part': key }, svg);
+    const g = el('g', { class: 'mv-part', role: 'img', tabindex: 0, 'data-part': key }, svg);
     BUILDERS[key](g);
     parts[key] = g;
   }
@@ -73,7 +81,7 @@ export function createMovementView(mount: HTMLElement, getLang: () => Lang): Mov
 
   // Name and speed are two separate <text> lines, so Persian runs never reorder across them.
   const labels = {} as Record<PartKey, readonly [SVGTextElement, SVGTextElement]>;
-  const labelLayer = el('g', { class: 'mv-labels' }, svg);
+  const labelLayer = el('g', { class: 'mv-labels', 'aria-hidden': 'true' }, svg);
   for (const key of PART_KEYS) {
     const at = LABEL_AT[key];
     const g = el('g', { 'data-label': key }, labelLayer);
@@ -82,7 +90,7 @@ export function createMovementView(mount: HTMLElement, getLang: () => Lang): Mov
       el('text', { class: 'mv-label mv-label-speed', x: num(at.x), y: num(at.y + 7.5) }, g),
     ];
   }
-  const caption = el('text', { class: 'mv-caption', x: 140, y: 270 }, svg);
+  const caption = el('text', { class: 'mv-caption', x: 140, y: 270, 'aria-hidden': 'true' }, svg);
 
   let captioned: PartKey | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -100,17 +108,17 @@ export function createMovementView(mount: HTMLElement, getLang: () => Lang): Mov
     timer = setTimeout(clearCaption, CAPTION_MS);
   };
   const onDocumentClick = (event: Event): void => {
-    if (!(event.target as Element).closest('.mv-part')) clearCaption();
+    const target = event.target;
+    if (!(target instanceof Element && target.closest('.mv-part'))) clearCaption();
   };
 
   const label = (): void => {
+    svg.setAttribute('aria-label', STRINGS[getLang()].movementLabel);
     for (const key of PART_KEYS) {
       const full = text(key);
-      const cut = full.indexOf(' · ');
       parts[key].setAttribute('aria-label', full);
       const [name, speed] = labels[key];
-      name.textContent = full.slice(0, cut);
-      speed.textContent = full.slice(cut + 3);
+      [name.textContent, speed.textContent] = splitLabel(full);
     }
     if (captioned) caption.textContent = text(captioned);
   };

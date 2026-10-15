@@ -268,7 +268,7 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 .mv-perlage-core { fill: var(--w-plate); opacity: .6; }
 .mv-plate-edge { fill: none; stroke: var(--w-bridge-edge); stroke-width: 1.2; }
 .mv-part { cursor: pointer; outline: none; }
-.mv-part:focus-visible { filter: drop-shadow(0 0 1.5px var(--w-accent)); }
+.mv-part:focus-visible { filter: drop-shadow(0 0 2px var(--w-accent)) drop-shadow(0 0 4px var(--w-accent)); }
 .mv-wheel { fill: var(--w-brass); stroke: var(--w-brass-dark); stroke-width: .35; }
 .mv-pinion { fill: var(--w-steel); stroke: var(--w-steel-dark); stroke-width: .3; }
 .mv-arbor, .mv-arbor-square { fill: var(--w-steel-dark); }

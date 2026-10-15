@@ -1,7 +1,7 @@
 // Site/tests/dom/movement-view.test.ts
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Lang } from '../../src/i18n/strings';
-import { createMovementView } from '../../src/watch/movement-view';
+import { createMovementView, splitLabel } from '../../src/watch/movement-view';
 import { BEAT_MS, watchState } from '../../src/watch/movement-model';
 
 let mount: HTMLElement; let lang: Lang;
@@ -89,6 +89,24 @@ describe('movement view', () => {
     expect(v.root.querySelector('[data-label="balance"]')!.textContent).toContain('چرخ تعادل');
   });
 
+  it('clears the caption on a click dispatched on the document itself', () => {
+    const v = createMovementView(mount, () => lang);
+    part(v, 'fourth').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document.dispatchEvent(new MouseEvent('click'));
+    expect(v.root.querySelector('.mv-caption')!.textContent).toBe('');
+  });
+
+  it('is named for assistive tech: a localized group name, parts as images, decorative text hidden', () => {
+    const v = createMovementView(mount, () => lang);
+    expect(v.root.getAttribute('aria-label')).toBe('Watch movement');
+    for (const g of v.root.querySelectorAll('.mv-part')) expect(g.getAttribute('role')).toBe('img');
+    expect(v.root.querySelector('.mv-labels')!.getAttribute('aria-hidden')).toBe('true');
+    expect(v.root.querySelector('.mv-caption')!.getAttribute('aria-hidden')).toBe('true');
+    lang = 'fa';
+    v.rerender();
+    expect(v.root.getAttribute('aria-label')).toBe('موتور ساعت');
+  });
+
   it('destroy removes it', () => {
     createMovementView(mount, () => lang).destroy();
     expect(mount.children).toHaveLength(0);
@@ -104,5 +122,14 @@ describe('movement view', () => {
       expect(remove).toHaveBeenCalledWith('click', expect.any(Function));
       expect(vi.getTimerCount()).toBe(0);
     } finally { vi.useRealTimers(); }
+  });
+});
+
+describe('splitLabel', () => {
+  it('splits a part string into its name and speed lines', () => {
+    expect(splitLabel('Balance · 4 Hz')).toEqual(['Balance', '4 Hz']);
+  });
+  it('keeps a string without the separator whole, with an empty speed line', () => {
+    expect(splitLabel('Balance')).toEqual(['Balance', '']);
   });
 });

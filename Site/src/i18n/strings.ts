@@ -25,7 +25,8 @@ export type StringKey =
   | 'holidayName' | 'holidayYear' | 'everyYear' | 'holidayAdd' | 'holidaySave' | 'holidayCancel' | 'holidayEdit' | 'holidayDelete'
   | 'holidayInvalid' | 'holidayLimit' | 'noUserHolidays' | 'holidaysTestOk' | 'holidaysTestNone'
   | 'watchSection' | 'watchFace' | 'faceFullBleed' | 'faceClassic' | 'showMovement' | 'showTime' | 'watchLabel'
-  | 'partBarrel' | 'partCentre' | 'partThird' | 'partFourth' | 'partEscape' | 'partPallet' | 'partBalance';
+  | 'partBarrel' | 'partCentre' | 'partThird' | 'partFourth' | 'partEscape' | 'partPallet' | 'partBalance'
+  | 'movementLabel';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -129,6 +130,7 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     partEscape: 'Escape wheel · 16 turns a minute',
     partPallet: 'Pallet fork · 8 beats a second',
     partBalance: 'Balance · 4 Hz',
+    movementLabel: 'Watch movement',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -231,6 +233,7 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     partEscape: 'چرخ گریز · ۱۶ دور در دقیقه',
     partPallet: 'لنگر · ۸ ضربه در ثانیه',
     partBalance: 'چرخ تعادل · ۴ هرتز',
+    movementLabel: 'موتور ساعت',
   },
 };
 
