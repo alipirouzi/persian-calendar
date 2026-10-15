@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 
-// One second before Nowruz 1405 in Tehran: 2026-03-20 23:59:57 +03:30.
-const BEFORE_NOWRUZ_SEC = Date.UTC(2026, 2, 20, 20, 29, 57) / 1000;
+// Ten seconds before Nowruz 1405 in Tehran: 2026-03-20 23:59:50 +03:30.
+const BEFORE_NOWRUZ_SEC = Date.UTC(2026, 2, 20, 20, 29, 50) / 1000;
 
 const answerWith = (body: string, contentType = 'application/json') => (route: Route) =>
   route.fulfill({ status: 200, contentType, headers: { 'Cache-Control': 'no-store' }, body });
@@ -28,7 +28,7 @@ test.describe('with the service worker blocked, so page.route sees every request
       await expect(page.locator('#today-persian')).toContainText('29 Esfand 1404');
       await expect(page.locator('#today-gregorian')).toContainText('March 20, 2026');
 
-      await expect(page.locator('#today-persian')).toContainText('1 Farvardin 1405', { timeout: 10_000 });
+      await expect(page.locator('#today-persian')).toContainText('1 Farvardin 1405', { timeout: 20_000 });
       await expect(page.locator('#today-gregorian')).toContainText('March 21, 2026');
     });
   }
