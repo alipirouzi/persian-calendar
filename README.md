@@ -1,6 +1,6 @@
 # Persian Calendar
 
-Persian (Shamsi / Solar Hijri) ↔ Gregorian date conversion and a live analog watch —
+Persian (Shamsi / Solar Hijri) ↔ Gregorian date conversion and a live watch —
 bilingual EN/FA with full RTL, installable as an offline PWA.
 
 **Live:** <https://time.automated.ink/>
@@ -20,8 +20,9 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **74.3 kB of JavaScript (27.7 kB gzipped)** and **29.0 kB of CSS
-(6.2 kB gzipped)**, with no runtime framework.
+The shipped bundle is **63.9 kB of JavaScript (23.8 kB gzipped)** and **25.5 kB of CSS
+(5.4 kB gzipped)**, with no runtime framework. The Bodoni Moda face adds a 14.5 kB woff2
+(Latin subset, one weight).
 
 ## Repo layout
 
@@ -43,11 +44,10 @@ PersianCalendar/
 │   ├── index.html          single page, semantic markup
 │   ├── src/
 │   │   ├── calendar/       persian.ts (algorithm port), now.ts (today snapshot)
-│   │   ├── watch/          geometry.ts (dial maths), movement-model.ts (beat-derived train state, pure),
-│   │   │                     face.ts (face interface + ids), full-bleed.ts / classic.ts (the two faces),
-│   │   │                     movement-parts.ts (SVG part builders), movement-view.ts (the movement, DOM),
-│   │   │                     watch.ts (driver: frames, visibility, reduced motion),
-│   │   │                     watch-settings.ts (Settings Watch group)
+│   │   ├── watch/          hands.ts (pure: time → hand angles, beat), face.ts (face interface + ids),
+│   │   │                     analog.ts / digital.ts (the two faces),
+│   │   │                     watch-settings.ts (Settings Watch group),
+│   │   │                     watch.ts (driver: frames, visibility, reduced motion)
 │   │   ├── converter/      converter-core.ts (pure), converter.ts (DOM wiring),
 │   │   │                     field-options.ts (pure year/month/day option lists),
 │   │   │                     calendar-grid-model.ts (pure day/month/year page layout),
@@ -75,7 +75,7 @@ PersianCalendar/
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/api/holidays/ir/   official holiday data, one {year}.json per Persian year
 │   │                         (added by reviewed PRs from the crawler; absent until the first one merges)
-│   ├── tests/              Vitest (635 tests at 100% coverage, incl. .NET parity and the crawler;
+│   ├── tests/              Vitest (588 tests at 100% coverage, incl. .NET parity and the crawler;
 │   │                         tests/dom/ runs the DOM units under jsdom)
 │   └── e2e/                Playwright (172 tests, incl. converter-ux.spec.ts, watch.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts, settings.spec.ts,
@@ -134,7 +134,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 635 tests, 100% coverage
+### Site unit tests (Vitest) — 588 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -159,7 +159,7 @@ in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 node environment. CI runs `npm run test:coverage`, so the threshold gates the pipeline as well as local
 runs.
 
-### E2E (Playwright) — 172 tests (171 run, 1 skips itself when its popup does not open upward)
+### E2E (Playwright) — 172 tests (172 passed, 0 skipped)
 
 ```bash
 cd Site
@@ -229,8 +229,8 @@ asserting the watch shrinks so the today panel stays reachable; FA/RTL screensho
 actually serves the app while offline (172 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 `calendar.spec.ts`, `time-sync.spec.ts` for the clock sync, and `calendar-views.spec.ts` and
-`holiday-settings.spec.ts` for the month views and holidays, and `watch.spec.ts` for the faces,
-the movement and the wide-screen layout, with the `watch-*` screenshots in `Site/test-results/screens/`).
+`holiday-settings.spec.ts` for the month views and holidays, and `watch.spec.ts` for the faces
+and the wide-screen layout, with the `watch-*` screenshots in `Site/test-results/screens/`).
 
 ## Supported conversion range: Persian years 1200–1500 AP
 
@@ -254,42 +254,22 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
 
 ## Design and behaviour notes
 
-- **Watch** — inline SVG, two faces chosen in Settings → Watch: **Full bleed** (default; an
-  edge-to-edge dial with broad sword hands and a red seconds hand) and **Classic**. Full bleed
-  always shows Latin 12 / 3 / 6 / 9, also in the Persian UI, and its colours are CSS custom
-  properties (`--w-*`) that follow the system light/dark setting and restyle live (there is
-  deliberately no manual override). Its seconds hand ticks 8 times a second (4 Hz, like a
-  28 800 vph movement); Classic's sweeps. Every colour is applied through classes, never `style` attributes, so
-  the watch works under `style-src 'self'`.
-  - **Show movement** (Full bleed only; session-only, not stored): the dial lifts away and a
-    Swiss-lever movement runs at true speed, with the time as large HH:MM digits while it is open.
-
-    | Part | Speed |
-    |---|---|
-    | Barrel | 1 turn / 8 h |
-    | Centre wheel (= the minute hand) | 1 / hour |
-    | Third wheel | 8 / hour |
-    | Fourth wheel (= the seconds hand) | 1 / minute |
-    | Escape wheel (15 teeth) | 16 / minute, 12° per beat |
-    | Pallet fork | rocks on every beat |
-    | Balance | 4 Hz, ±220° through zero on every beat |
-
-    Nothing is animated independently: every wheel's angle is derived from the escapement's
-    beat count through the train ratios (16 : 7.5 : 8 : 8), so the centre wheel *is* the minute
-    hand and the fourth wheel *is* the seconds hand. Finishing: perlage, Côtes de Genève
-    stripes, jewels and blued screws. Each part is focusable; tapping or focusing it shows its
-    name and speed in a caption at every width, and from 1024 px labels also sit alongside the
-    parts (a little larger on short laptop screens, so they stay legible). The movement SVG
-    exists only while it is open.
-  - **Battery:** Full bleed's dial alone redraws only when the 125 ms beat changes (about
-    8 fps); Classic's sweeping seconds hand and the mounted movement run at the full frame rate,
-    with the movement's train wheels and the HH:MM text rewritten only when they change;
-    everything stops while the page is hidden. `prefers-reduced-motion: reduce` steps the hands once a second, holds the balance
-    still and swaps the movement in and out without the cross-fade.
-  - **Layout:** on phones the watch fills the width (`min(92vw, 62vh)`). From 1024 px the page is
-    two columns: the watch, the today lines and the toggle sit in a sticky, vertically centred
-    left column sized to fit the viewport height, while the converter and month views scroll on
-    the right; RTL mirrors the columns.
+- **Watch** — inline SVG, two faces chosen in Settings → Watch: **Analog** (default) and
+  **Digital**. Both always use Latin digits, also in the Persian UI.
+  - **Analog:** a Breguet-style dial with a railway minute track, twelve Cormorant Garamond
+    numerals, blued leaf hands that reach their scales, and a seconds hand that ticks 8 times a
+    second.
+  - **Digital:** HH:MM in Bodoni Moda with small blued seconds.
+  - Colours are CSS custom properties (`--w-*`) that follow the system light/dark setting and
+    restyle live (there is deliberately no manual override). Every colour is applied through
+    classes, never `style` attributes, so the watch works under `style-src 'self'`.
+  - **Battery:** the watch redraws only when the 125 ms beat changes (about 8 fps); everything
+    stops while the page is hidden. `prefers-reduced-motion: reduce` steps the hands once a
+    second.
+  - **Layout:** on phones the watch fills the width (`min(92vw, 62vh)`), unchanged. From 1024 px
+    the watch is at most 360 px and sits, with the today lines, in a sticky, vertically centred
+    left column, while the converter and month views scroll on the right; RTL mirrors the
+    columns.
 - **Converter** — prefilled with today, no Convert button; editing either side converts on
   input, last-edited side wins. All six fields are plain text inputs (`inputmode="numeric"`)
   and digit-tolerant: Persian-Indic (`۱۴۰۵`), Arabic-Indic (`١٤٠٥`), and ASCII digits are all
@@ -346,7 +326,7 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   words, e.g. `'Today is' dddd`) and the digits (Latin or Persian), with a live preview.
   Settings are stored in `localStorage` under `settings.v1`; an unreadable value or an invalid
   field falls back to that field's default (`settings.v1` also holds the view and holiday
-  preferences, and the watch face). The Watch group chooses the face (Full bleed or Classic). The Calendars & holidays group (views, sources, my holidays, Test connection) is described under Month views and holidays.
+  preferences, and the watch face). The Watch group chooses the face (Analog or Digital). The Calendars & holidays group (views, sources, my holidays, Test connection) is described under Month views and holidays.
 - **Time source** — the clock, the today panel and the converter's Today take their time from `/api/time` on this site (best of three round trips, half the round trip credited to the server, offsets under 250 ms ignored), re-synced at load, on return after five minutes away and every six hours. Settings → Time shows where the time comes from and when it last synced, has a Test connection button, and can switch to this device's clock only. Unreachable or invalid answers keep the last good offset for up to 24 hours, then use the device clock. The today panel refreshes every minute from the watch's own frames, so it turns over at midnight (local and Tehran) even when the app is left open.
 - **Month views and holidays** — below the converter (so it stays above the fold on desktop) sit
   two month panels, Persian (open by default) and Gregorian (closed), each hideable in Settings.
