@@ -178,6 +178,19 @@
                   for="set-copy-calendar set-copy-pattern set-copy-custom set-copy-digits"></output></p>
         <div id="set-copy-announce" class="visually-hidden" role="status"></div>
       </fieldset>
+      <fieldset class="settings-group">
+        <legend data-str="timeSection"></legend>
+        <label for="set-time-source" data-str="timeSourceLabel"></label>
+        <select id="set-time-source">
+          <option value="server"></option>
+          <option value="device" data-str="sourceDevice"></option>
+        </select>
+        <p id="set-time-status" class="settings-status"></p>
+        <div class="settings-test">
+          <button id="set-time-test" type="button" data-str="testConnection"></button>
+          <output id="set-time-test-result" aria-live="polite" dir="auto"></output>
+        </div>
+      </fieldset>
     </dialog>
   </main>
   <script type="module" src="/src/main.ts"></script>

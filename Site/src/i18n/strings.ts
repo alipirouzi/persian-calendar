@@ -13,7 +13,10 @@ export type StringKey =
   | 'patternSentence'
   | 'settings' | 'close' | 'copySection' | 'copyCalendar' | 'calPersian' | 'calGregorian' | 'calBoth'
   | 'copyPattern' | 'patternCustom' | 'patternCustomLabel' | 'patternHint'
-  | 'copyDigits' | 'digitsLatin' | 'digitsPersian' | 'copyPreview';
+  | 'copyDigits' | 'digitsLatin' | 'digitsPersian' | 'copyPreview'
+  | 'timeSection' | 'timeSourceLabel' | 'sourceDevice' | 'testConnection' | 'testing'
+  | 'testOk' | 'testFail' | 'statusDevice' | 'statusSyncing' | 'statusSynced' | 'statusUnsynced'
+  | 'driftNone' | 'driftSlow' | 'driftFast';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -59,6 +62,20 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     digitsLatin: 'Latin (0–9)',
     digitsPersian: 'Persian (۰–۹)',
     copyPreview: 'Copies as',
+    timeSection: 'Time',
+    timeSourceLabel: 'Source',
+    sourceDevice: 'This device only',
+    testConnection: 'Test connection',
+    testing: 'Testing…',
+    testOk: 'OK · {rtt} ms · {drift}',
+    testFail: 'Unreachable',
+    statusDevice: "Using this device's clock",
+    statusSyncing: 'Syncing…',
+    statusSynced: 'Synced {time} · {drift}',
+    statusUnsynced: "Not synced — using this device's clock",
+    driftNone: 'device clock accurate',
+    driftSlow: 'device {s} s slow',
+    driftFast: 'device {s} s fast',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -103,6 +120,20 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     digitsLatin: 'لاتین (0–9)',
     digitsPersian: 'فارسی (۰–۹)',
     copyPreview: 'کپی به صورت',
+    timeSection: 'زمان',
+    timeSourceLabel: 'منبع',
+    sourceDevice: 'فقط همین دستگاه',
+    testConnection: 'آزمایش اتصال',
+    testing: 'در حال آزمایش…',
+    testOk: 'برقرار · {rtt} میلی‌ثانیه · {drift}',
+    testFail: 'در دسترس نیست',
+    statusDevice: 'ساعت همین دستگاه',
+    statusSyncing: 'در حال همگام‌سازی…',
+    statusSynced: 'همگام‌شده {time} · {drift}',
+    statusUnsynced: 'همگام نشد — ساعت همین دستگاه',
+    driftNone: 'ساعت دستگاه دقیق است',
+    driftSlow: 'ساعت دستگاه {s} ثانیه عقب است',
+    driftFast: 'ساعت دستگاه {s} ثانیه جلو است',
   },
 };
 
