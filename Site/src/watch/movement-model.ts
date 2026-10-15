@@ -22,6 +22,8 @@ export interface WatchState extends HandAngles {
   readonly barrel: number;
   readonly pallet: number;
   readonly balance: number;
+  /** The continuous seconds angle, for faces that sweep rather than tick. */
+  readonly smoothSecond: number;
 }
 
 export function msSinceLocalMidnight(date: Date): number {
@@ -53,7 +55,7 @@ export function watchState(ms: number, reduced: boolean): WatchState {
   const third = fourth / TRAIN_RATIOS.fourthToThird;
   const centre = third / TRAIN_RATIOS.thirdToCentre;
   const barrel = centre / TRAIN_RATIOS.centreToBarrel;
-  const { hour, minute } = handAngles(ms);
+  const { hour, minute, second: smoothSecond } = handAngles(ms);
   const second = (fourth % 360 + 360) % 360;
 
   let pallet = 0;
@@ -65,5 +67,5 @@ export function watchState(ms: number, reduced: boolean): WatchState {
     balance = Math.sin(((ms % MS_PER_SECOND) / MS_PER_SECOND) * 2 * Math.PI * BEATS_PER_SECOND / 2) * BALANCE_AMPLITUDE_DEG;
   }
 
-  return { hour, minute, second, beat, escape: -escapeTurn, fourth, third: -third, centre, barrel: -barrel, pallet, balance };
+  return { hour, minute, second, beat, escape: -escapeTurn, fourth, third: -third, centre, barrel: -barrel, pallet, balance, smoothSecond };
 }

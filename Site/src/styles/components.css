@@ -237,6 +237,27 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 
 .clock { color: var(--text); display: block; }
 .clock .second-hand { stroke: var(--accent); }
+.wc-line { stroke: currentColor; }
+.wc-ring { fill: none; stroke: currentColor; }
+.wc-dot { fill: currentColor; }
+
+/* Watch: Full bleed. Every colour is a --w-* token so the theme restyles it live. */
+.wf-edge { fill: none; stroke: var(--w-line); }
+.wf-tick { stroke: var(--w-track); stroke-linecap: round; stroke-width: 1; }
+.wf-tick--major { stroke-width: 2.8; }
+.wf-num {
+  fill: var(--w-ink);
+  font-family: var(--font-ui);
+  font-size: 30px;
+  font-weight: 800;
+  font-feature-settings: "lnum";
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.wf-hand { fill: var(--w-hand); }
+.wf-sec { stroke: var(--w-accent); stroke-width: 1.4; }
+.wf-sec-dot, .wf-cap { fill: var(--w-accent); }
+.wf-cap-pin { fill: var(--w-dial-1); }
 #clock-section { display: grid; justify-items: center; }
 @media (max-width: 480px) { .clock { width: 200px; height: 200px; } }
 /* Tablet portrait: the tall centered column earns a larger dial. Range-capped

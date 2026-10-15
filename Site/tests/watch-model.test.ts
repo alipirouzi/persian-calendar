@@ -32,6 +32,10 @@ describe('watchState', () => {
     expect(watchState(at(0, 0, 1, 125), false).second).toBe(6.75);
   });
 
+  it('also offers a smooth seconds angle for the Classic face', () => {
+    expect(watchState(((0 * 60 + 0) * 60 + 1) * 1000 + 500, false).smoothSecond).toBe(9);
+  });
+
   it('steps once a second under reduced motion', () => {
     expect(watchState(at(0, 0, 1, 900), true).second).toBe(6);
     expect(watchState(at(0, 0, 2, 0), true).second).toBe(12);

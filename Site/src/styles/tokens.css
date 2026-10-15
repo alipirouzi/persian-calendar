@@ -14,6 +14,13 @@
   --space-section: clamp(2.5rem, 1.5rem + 4vw, 5.5rem);
   --duration: 240ms;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Watch — Full bleed and the movement */
+  --w-dial-0: #fbf9f4;  --w-dial-1: #ebe6dc;
+  --w-ink: #15181d;     --w-hand: #1a1f26;   --w-accent: #e0401f;
+  --w-track: #2a2f36;   --w-line: #cdc6b8;
+  --w-plate: #e6e2d9;   --w-plate-dot: #d8d3c8; --w-bridge: #f4f2ee; --w-bridge-edge: #bdb6a8;
+  --w-brass: #c49a4a;   --w-brass-dark: #9c7631; --w-steel: #a9b1ba; --w-steel-dark: #7c858f;
+  --w-jewel: #c2183a;   --w-spring: #3d5fb8;  --w-shadow: rgba(60,50,30,.18);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -25,6 +32,12 @@
     --hairline: oklch(31% 0.01 260);
     --control-border: oklch(56% 0.01 260);
     --holiday: oklch(74% 0.13 28);
+    --w-dial-0: #1d2128;  --w-dial-1: #0b0d10;
+    --w-ink: #f4f1e8;     --w-hand: #e9f5dd;   --w-accent: #ff5a36;
+    --w-track: #e3e0d6;   --w-line: #2c323a;
+    --w-plate: #22262c;   --w-plate-dot: #2b3037; --w-bridge: #3a4048; --w-bridge-edge: #59616b;
+    --w-brass: #c9a45c;   --w-brass-dark: #8c6f35; --w-steel: #b9c0c8; --w-steel-dark: #828a93;
+    --w-jewel: #d4214a;   --w-spring: #7d9be0;  --w-shadow: rgba(0,0,0,.45);
   }
 }
 html[lang='fa'] {
