@@ -1,5 +1,6 @@
 export type CopyCalendar = 'persian' | 'gregorian' | 'both';
 export type CopyDigits = 'latin' | 'persian';
+export type TimeSourceSetting = 'server' | 'device';
 
 /** The pattern value that means "the full sentence", not a token pattern. */
 export const SENTENCE = 'sentence';
@@ -12,16 +13,23 @@ export interface CopySettings {
   readonly digits: CopyDigits;
 }
 
+export interface TimeSettings {
+  readonly source: TimeSourceSetting;
+}
+
 export interface Settings {
   readonly copy: CopySettings;
+  readonly time: TimeSettings;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   copy: { calendar: 'persian', pattern: 'yyyy-mm-dd', digits: 'latin' },
+  time: { source: 'server' },
 };
 
 const CALENDARS: readonly CopyCalendar[] = ['persian', 'gregorian', 'both'];
 const DIGITS: readonly CopyDigits[] = ['latin', 'persian'];
+const TIME_SOURCES: readonly TimeSourceSetting[] = ['server', 'device'];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -40,13 +48,21 @@ const parsePattern = (value: unknown): string =>
  * costs only itself.
  */
 export function parseSettings(raw: unknown): Settings {
-  const copy = isRecord(raw) && isRecord(raw['copy']) ? raw['copy'] : {};
-  const fallback = DEFAULT_SETTINGS.copy;
+  const group = (key: string): Record<string, unknown> => {
+    const value = isRecord(raw) ? raw[key] : undefined;
+    return isRecord(value) ? value : {};
+  };
+  const copy = group('copy');
+  const time = group('time');
+  const fallback = DEFAULT_SETTINGS;
   return {
     copy: {
-      calendar: oneOf(copy['calendar'], CALENDARS, fallback.calendar),
+      calendar: oneOf(copy['calendar'], CALENDARS, fallback.copy.calendar),
       pattern: parsePattern(copy['pattern']),
-      digits: oneOf(copy['digits'], DIGITS, fallback.digits),
+      digits: oneOf(copy['digits'], DIGITS, fallback.copy.digits),
+    },
+    time: {
+      source: oneOf(time['source'], TIME_SOURCES, fallback.time.source),
     },
   };
 }

@@ -78,7 +78,7 @@ export function setupSettingsPanel({ store, getLang, getDate }: Deps): { rerende
   };
 
   const setPattern = (value: string): void => {
-    store.update((s) => ({ copy: { ...s.copy, pattern: value } }));
+    store.update((s) => ({ ...s, copy: { ...s.copy, pattern: value } }));
   };
 
   toggle.addEventListener('click', () => {
@@ -103,10 +103,10 @@ export function setupSettingsPanel({ store, getLang, getDate }: Deps): { rerende
   });
 
   calendar.addEventListener('change', () => {
-    store.update((s) => ({ copy: { ...s.copy, calendar: calendar.value as CopyCalendar } }));
+    store.update((s) => ({ ...s, copy: { ...s.copy, calendar: calendar.value as CopyCalendar } }));
   });
   digits.addEventListener('change', () => {
-    store.update((s) => ({ copy: { ...s.copy, digits: digits.value as CopyDigits } }));
+    store.update((s) => ({ ...s, copy: { ...s.copy, digits: digits.value as CopyDigits } }));
   });
   pattern.addEventListener('change', () => {
     const isCustom = pattern.value === CUSTOM;

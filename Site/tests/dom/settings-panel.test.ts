@@ -77,6 +77,19 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe('settings panel', () => {
+  it('changing the copy format leaves the other settings alone', () => {
+    store.update((s) => ({ ...s, time: { source: 'device' } }));
+    clickOn(byId('settings-toggle'));
+
+    choose('set-copy-calendar', 'both');
+    choose('set-copy-digits', 'persian');
+    choose('set-copy-pattern', 'dd.mm.yyyy');
+    choose('set-copy-pattern', 'custom');
+    typeCustom('yyyy');
+
+    expect(store.get().time.source).toBe('device');
+  });
+
   it('refuses to run against a page missing its markup', () => {
     document.body.innerHTML = '';
     expect(() => setupSettingsPanel({ store, getLang: () => 'en', getDate: () => null }))
@@ -91,7 +104,7 @@ describe('settings panel', () => {
   });
 
   it('opens on the gear showing the stored settings and a preview', () => {
-    store.update(() => ({ copy: { calendar: 'gregorian', pattern: 'dd.mm.yyyy', digits: 'persian' } }));
+    store.update((s) => ({ ...s, copy: { calendar: 'gregorian', pattern: 'dd.mm.yyyy', digits: 'persian' } }));
 
     clickOn(byId('settings-toggle'));
 
@@ -104,7 +117,7 @@ describe('settings panel', () => {
   });
 
   it('shows a stored custom pattern in the custom field', () => {
-    store.update((s) => ({ copy: { ...s.copy, pattern: 'yyyy.m.d' } }));
+    store.update((s) => ({ ...s, copy: { ...s.copy, pattern: 'yyyy.m.d' } }));
 
     clickOn(byId('settings-toggle'));
 
@@ -237,7 +250,7 @@ describe('settings panel', () => {
   });
 
   it('refreshes the preview language on rerender', () => {
-    store.update((s) => ({ copy: { ...s.copy, pattern: 'MMMM' } }));
+    store.update((s) => ({ ...s, copy: { ...s.copy, pattern: 'MMMM' } }));
     clickOn(byId('settings-toggle'));
     expect(preview()).toBe('Dey');
 

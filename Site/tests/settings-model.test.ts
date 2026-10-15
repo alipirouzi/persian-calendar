@@ -11,7 +11,10 @@ describe('parseSettings', () => {
   });
 
   it('keeps every valid field', () => {
-    const raw = { copy: { calendar: 'both', pattern: 'dd.mm.yyyy', digits: 'persian' } };
+    const raw = {
+      copy: { calendar: 'both', pattern: 'dd.mm.yyyy', digits: 'persian' },
+      time: { source: 'device' },
+    };
     expect(parseSettings(raw)).toEqual(raw);
   });
 
@@ -29,6 +32,22 @@ describe('parseSettings', () => {
   it('keeps a pattern exactly at the length limit, spaces included', () => {
     const pattern = ` ${'d'.repeat(MAX_PATTERN_LENGTH - 2)} `;
     expect(parseSettings({ copy: { pattern } }).copy.pattern).toBe(pattern);
+  });
+
+  it('defaults the time source to the server', () => {
+    expect(parseSettings(undefined).time).toEqual({ source: 'server' });
+  });
+
+  it('keeps a valid time source and replaces an invalid one, independently of copy', () => {
+    expect(parseSettings({ time: { source: 'device' } }).time.source).toBe('device');
+    for (const source of ['ntp', 1, null, undefined]) {
+      expect(parseSettings({ time: { source }, copy: { digits: 'persian' } })).toEqual({
+        ...DEFAULT_SETTINGS, copy: { ...DEFAULT_SETTINGS.copy, digits: 'persian' },
+      });
+    }
+    for (const time of ['device', [], 3]) {
+      expect(parseSettings({ time }).time.source).toBe('server');
+    }
   });
 
   it('ignores unknown keys', () => {

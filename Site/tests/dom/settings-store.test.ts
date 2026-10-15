@@ -57,9 +57,12 @@ describe('createSettingsStore', () => {
     const listener = vi.fn();
     store.subscribe(listener);
 
-    store.update((s) => ({ copy: { ...s.copy, calendar: 'gregorian', pattern: '' } }));
+    store.update((s) => ({ ...s, copy: { ...s.copy, calendar: 'gregorian', pattern: '' } }));
 
-    const expected = { copy: { calendar: 'gregorian', pattern: 'yyyy-mm-dd', digits: 'latin' } };
+    const expected = {
+      copy: { calendar: 'gregorian', pattern: 'yyyy-mm-dd', digits: 'latin' },
+      time: { source: 'server' },
+    };
     expect(store.get()).toEqual(expected);
     expect(listener).toHaveBeenCalledWith(expected);
     expect(JSON.parse(storage.entries.get(SETTINGS_STORAGE_KEY) as string)).toEqual(expected);
@@ -69,7 +72,7 @@ describe('createSettingsStore', () => {
     useStorage(denyingStorage());
     const store = createSettingsStore();
 
-    expect(() => store.update((s) => ({ copy: { ...s.copy, digits: 'persian' } }))).not.toThrow();
+    expect(() => store.update((s) => ({ ...s, copy: { ...s.copy, digits: 'persian' } }))).not.toThrow();
     expect(store.get().copy.digits).toBe('persian');
   });
 
