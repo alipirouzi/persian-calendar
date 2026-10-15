@@ -77,7 +77,7 @@ PersianCalendar/
 │   │                         (added by reviewed PRs from the crawler; absent until the first one merges)
 │   ├── tests/              Vitest (588 tests at 100% coverage, incl. .NET parity and the crawler;
 │   │                         tests/dom/ runs the DOM units under jsdom)
-│   └── e2e/                Playwright (172 tests, incl. converter-ux.spec.ts, watch.spec.ts,
+│   └── e2e/                Playwright (171 tests, incl. converter-ux.spec.ts, watch.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts, settings.spec.ts,
 │                             time-sync.spec.ts, calendar-views.spec.ts, holiday-settings.spec.ts
 │                             and the screenshot matrix)
@@ -228,7 +228,7 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the watch shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (172 tests total across the whole E2E suite, including
+actually serves the app while offline (171 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 `calendar.spec.ts`, `time-sync.spec.ts` for the clock sync, and `calendar-views.spec.ts` and
 `holiday-settings.spec.ts` for the month views and holidays, and `watch.spec.ts` for the faces
