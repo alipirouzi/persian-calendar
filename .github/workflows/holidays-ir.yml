@@ -19,12 +19,13 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # Actions are pinned by commit SHA (this job holds a write token); the comment names the release.
       # No persisted credentials: the write token must not sit in .git/config while
       # `npm ci` runs dependency install scripts. create-pull-request uses its own token input.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -37,7 +38,7 @@ jobs:
       - name: Crawl
         run: npx tsx ../tools/holidays-crawler/crawl.ts public/api/holidays/ir
         working-directory: Site
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
           branch: holidays/ir-update
           delete-branch: true
