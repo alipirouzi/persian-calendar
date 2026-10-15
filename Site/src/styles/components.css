@@ -394,7 +394,11 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 .mv-none { color: var(--text-muted); }
 
 /* Three groups no longer fit a phone screen: the dialog scrolls inside itself. */
-#settings-dialog { max-block-size: calc(100vh - 2rem); max-block-size: calc(100dvh - 2rem); overflow: auto; overscroll-behavior: contain; }
+/* The sticky head is ~3.7rem tall (measured 60px): the scroll padding lands focused controls below it. */
+#settings-dialog {
+  max-block-size: calc(100vh - 2rem); max-block-size: calc(100dvh - 2rem);
+  overflow: auto; overscroll-behavior: contain; scroll-padding-block-start: 4.5rem;
+}
 .settings-subhead { grid-column: 1 / -1; margin: 0.4rem 0 0; font-size: 0.78rem; color: var(--text-muted); }
 .settings-checks { grid-column: 1 / -1; display: grid; gap: 0.6rem; }
 .settings-check { grid-column: 1 / -1; display: flex; gap: 0.5rem; align-items: center; cursor: pointer; }
