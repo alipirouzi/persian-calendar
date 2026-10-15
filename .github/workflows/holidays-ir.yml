@@ -1,0 +1,52 @@
+name: Iranian holidays
+
+# Weekly: crawl holidayapi.ir for this Persian year and next, and open a PR when the
+# lunar holiday dates change. A person checks the PR against the official calendar.
+on:
+  schedule:
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: holidays-ir
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Site/package-lock.json
+      - run: npm ci
+        working-directory: Site
+      - name: Crawler tests
+        run: npx vitest run tests/crawler.test.ts
+        working-directory: Site
+      - name: Crawl
+        run: npx tsx ../tools/holidays-crawler/crawl.ts public/api/holidays/ir
+        working-directory: Site
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: holidays/ir-update
+          delete-branch: true
+          add-paths: Site/public/api/holidays/ir/*.json
+          commit-message: 'chore(data): Iranian holiday dates from holidayapi.ir'
+          title: 'Iranian holiday dates — please verify before merging'
+          body: |
+            The weekly crawl of holidayapi.ir changed the Iranian lunar holiday dates.
+
+            Before merging, check each date against the official calendar of the
+            Islamic Republic of Iran. Moon sighting can move a lunar holiday by a day,
+            and dates for next year may still be provisional.
+
+            Until this is merged the site keeps showing the previous data, or its
+            own estimates, labelled "estimated".
