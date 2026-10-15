@@ -20,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **40.0 kB of JavaScript (15.2 kB gzipped)** and **18.6 kB of CSS
-(4.0 kB gzipped)**, with no runtime framework.
+The shipped bundle is **61.0 kB of JavaScript (22.7 kB gzipped)** and **23.3 kB of CSS
+(4.8 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
 
@@ -55,6 +55,11 @@ PersianCalendar/
 │   │   │                     calendar-grid.ts — ARIA grid date wizard, DOM only,
 │   │   │                     numeric-input.ts — digit-only field filter (pure + DOM)
 │   │   ├── copy/           copy-format.ts — pattern tokenizer and clipboard formatter (pure),
+│   │   ├── holidays/       holiday-data.ts (official-file parse + fetch, all-or-nothing),
+│   │   │                     holiday-service.ts (per-year cache, hourly retry), merge.ts (sources → days),
+│   │   │                     rules-ir.ts / rules-by.ts / lunar-estimate.ts (fixed and estimated rules),
+│   │   │                     holiday-keys.ts, holidays-panel.ts + user-holiday-form.ts (Settings group)
+│   │   ├── views/          calendar-panels.ts — the two month views and their holiday lists
 │   │   ├── settings/       settings-model.ts (types, defaults, validation, pure),
 │   │   │                     settings-store.ts (localStorage `settings.v1`, subscribe),
 │   │   │                     settings-panel.ts (native modal dialog, DOM only),
@@ -64,17 +69,23 @@ PersianCalendar/
 │   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits,
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
-│   ├── tests/              Vitest (444 tests at 100% coverage, incl. .NET parity;
+│   ├── public/api/holidays/ir/   official holiday data, one {year}.json per Persian year
+│   │                         (added by reviewed PRs from the crawler; absent until the first one merges)
+│   ├── tests/              Vitest (563 tests at 100% coverage, incl. .NET parity and the crawler;
 │   │                         tests/dom/ runs the DOM units under jsdom)
-│   └── e2e/                Playwright (139 tests, incl. converter-ux.spec.ts,
+│   └── e2e/                Playwright (151 tests, incl. converter-ux.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts, settings.spec.ts,
-│                             time-sync.spec.ts and the screenshot matrix)
+│                             time-sync.spec.ts, calendar-views.spec.ts, holiday-settings.spec.ts
+│                             and the screenshot matrix)
+├── tools/holidays-crawler/ crawl.ts (CLI) + holidayapi.ts — builds the holiday data files
 │
 ├── deploy/
-│   ├── nginx.conf             static serving, caching, /health, /api/time
+│   ├── nginx.conf             static serving, caching, /health, /api/time, /api/holidays/
 │   └── security-headers.conf  CSP and friends
 ├── Dockerfile              node:22-alpine build → nginx:1.27-alpine runtime
-└── .github/workflows/ci.yml   dotnet → site → deploy
+└── .github/workflows/
+    ├── ci.yml              dotnet → site → deploy
+    └── holidays-ir.yml     weekly holiday-data crawl → pull request
 ```
 
 The C# side is **not** dead code and is not shipped to users. It is the correctness oracle:
@@ -119,7 +130,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 444 tests, 100% coverage
+### Site unit tests (Vitest) — 563 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -136,7 +147,7 @@ changes. Without it the parity test cannot run.
 
 Coverage is enforced, not merely reported: `vite.config.ts` sets a **100% threshold on
 lines, statements, branches and functions**, and the suite currently meets all four
-(2045/2045 lines, 2045/2045 statements, 867/867 branches, 212/212 functions). Only
+(2950/2950 lines, 2950/2950 statements, 1261/1261 branches, 295/295 functions). Only
 `src/main.ts` (the bootstrap)
 and `src/clock/**` (visual, screenshot-tested) are excluded. Tests under `tests/dom/` run
 in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
@@ -145,7 +156,7 @@ in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 node environment. CI runs `npm run test:coverage`, so the threshold gates the pipeline as well as local
 runs.
 
-### E2E (Playwright) — 139 tests
+### E2E (Playwright) — 151 tests
 
 ```bash
 cd Site
@@ -201,7 +212,7 @@ differs by request type:
 | `/api/time` | Not handled (network-only) | Never cached: a stored timestamp is a wrong one. Offline, the sync fails and the app uses the device clock. |
 | Navigations (`mode: 'navigate'`) | Network-first | Falls back to the cached `/` shell when the network is unreachable; `/` is the only navigation cache key. |
 | `/assets/*` (hashed, immutable) | Cache-first | Fetched once and never revalidated — matches the `immutable` `Cache-Control` these paths already ship with. |
-| Everything else same-origin (e.g. the manifest, icons) | Stale-while-revalidate | The cached copy is served immediately while a background fetch (extended via `event.waitUntil`) refreshes the cache for next time. |
+| Everything else same-origin (e.g. the manifest, icons, `/api/holidays/ir/*.json`) | Stale-while-revalidate | The cached copy is served immediately while a background fetch (extended via `event.waitUntil`) refreshes the cache for next time. |
 
 Partial responses (HTTP 206) are never written to the cache by any of the three strategies. To
 invalidate everything that's cached — after a breaking change to a cached asset, for example —
@@ -212,9 +223,10 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (139 tests total across the whole E2E suite, including
+actually serves the app while offline (151 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
-`calendar.spec.ts`, plus `time-sync.spec.ts` for the clock sync).
+`calendar.spec.ts`, `time-sync.spec.ts` for the clock sync, and `calendar-views.spec.ts` and
+`holiday-settings.spec.ts` for the month views and holidays).
 
 ## Supported conversion range: Persian years 1200–1500 AP
 
@@ -297,8 +309,27 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   custom pattern with the tokens `yyyy`, `mm`, `m`, `dd`, `d`, `MMMM`, `dddd`; quote literal
   words, e.g. `'Today is' dddd`) and the digits (Latin or Persian), with a live preview.
   Settings are stored in `localStorage` under `settings.v1`; an unreadable value or an invalid
-  field falls back to that field's default. The Time group is described below.
+  field falls back to that field's default (`settings.v1` also holds the view and holiday
+  preferences). The Calendars & holidays group (views, sources, my holidays, Test connection) are described under Month views and holidays and Time source.
 - **Time source** — the clock, the today panel and the converter's Today take their time from `/api/time` on this site (best of three round trips, half the round trip credited to the server, offsets under 250 ms ignored), re-synced at load, on return after five minutes away and every six hours. Settings → Time shows where the time comes from and when it last synced, has a Test connection button, and can switch to this device's clock only. Unreachable or invalid answers keep the last good offset for up to 24 hours, then use the device clock. The today panel refreshes every minute from the clock's own frames, so it turns over at midnight (local and Tehran) even when the app is left open.
+- **Month views and holidays** — below the converter (so it stays above the fold on desktop) sit
+  two month panels, Persian (open by default) and Gregorian (closed), each hideable in Settings.
+  Each has ‹ / › paging, a Today button that returns to the current month, and a list of that
+  month's holidays; clicking a day fills the converter with that date. Holiday days are marked
+  and carry the holiday names in their accessible name. In the list, consecutive days of one
+  holiday are one entry ("1–4 Farvardin Nowruz"), tagged **Iran**, **Nuremberg** or **Mine**,
+  and **estimated** where the date is an estimate rather than official. The panels refresh once
+  a minute, and only when the date changes, so they follow midnight without losing keyboard focus.
+  Sources, chosen in Settings → Calendars & holidays: **Iran (official)** — the fixed solar holidays
+  plus the lunar ones; **Nuremberg (Bavaria)** — the Bavarian public holidays without Assumption
+  Day, which applies only in Catholic-majority municipalities; and **My holidays**. The lunar
+  Iranian dates come from an official data file per Persian year (`/api/holidays/ir/{year}.json`,
+  see Holiday data). A year without a file, or with an invalid or empty one, falls back to an
+  estimate from the Umm al-Qura calendar, labelled "estimated". My holidays: a name (up to 60
+  characters), a Persian or Gregorian date and an optional year (without it the holiday
+  repeats yearly; with it, once); Esfand 30 and Feb 29 are accepted and shown only in years that
+  have them; up to 200, with add, edit and delete. **Test connection** in that group reports the
+  official file found for the current Persian year, or that estimates are in use.
 - **Shareable URLs** — a valid conversion updates the address bar via `history.replaceState`
   (`?p=1403-10-22` or `?g=2025-1-11`, never a full navigation) and loading either query
   param prefills both sides on load; an invalid or malformed param is ignored and today is
@@ -315,7 +346,30 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   digits: a native numeric input only accepts ASCII digits, so localizing it would break
   typing and validation. Digits typed in any of the three scripts are normalized before
   conversion, so nothing is lost either way.
-- **Privacy** — no cookies, no analytics, no third-party requests, no personal data processed. The only requests after load are `GET /api/time` to this same site (three per sync, plus one when you press Test connection); they carry no personal data beyond what any page request does, and the answer is the server's clock. The browser keeps only your language and settings in `localStorage`; they never leave it. See `docs/SECURITY.md`.
+- **Privacy** — no cookies, no analytics, no third-party requests, no personal data processed. The only requests after load are `GET /api/time` to this same site (three per sync, plus one when you press Test connection) and `GET /api/holidays/ir/{year}.json`, also this same site (a static file); they carry no personal data beyond what any page request does. holidayapi.ir is contacted by the GitHub Action, never by a visitor's browser. The browser keeps only your language and settings (including any holiday names you enter) in `localStorage`; they never leave it. See `docs/SECURITY.md`.
+
+## Holiday data
+
+Official Iranian lunar holiday dates live in `Site/public/api/holidays/ir/{year}.json` (one file
+per Persian year) and are served as static files. The workflow `.github/workflows/holidays-ir.yml`
+("Iranian holidays") maintains them: weekly (Monday 04:23 UTC) and on manual dispatch it runs the
+crawler tests, then `tools/holidays-crawler/crawl.ts`, which asks holidayapi.ir for every day of the
+current and next Persian year.
+
+- **Filter** — an event counts when `is_holiday` is true and either `is_religious` is true or
+  its `additional_description` names a Hijri month. The second rule exists because holidayapi.ir
+  flags Fatimah's martyrdom as `is_religious: false`. A description the crawler does not know
+  fails the job rather than being dropped.
+- **Completeness** — a year with no lunar holidays (not published yet) is skipped. A year missing
+  any of the 16 lunar holidays is skipped with a workflow warning, and the existing file is kept.
+- **Pull request** — only a change in the holiday list writes a file (the `fetched` date alone does
+  not), and then `peter-evans/create-pull-request@v7` opens a PR on the branch `holidays/ir-update`.
+  **Check the dates against the official calendar before merging**: moon sighting can move a
+  lunar holiday, and next year's dates may be provisional. Until a PR is merged the site keeps its
+  previous data or its labelled estimates.
+- **Repository setting** — opening the PR needs **Settings → Actions → General → Workflow
+  permissions → "Allow GitHub Actions to create and approve pull requests"**. Without it the branch
+  is pushed but the PR is not created.
 
 ## Deployment
 
@@ -359,6 +413,7 @@ than interpolated into shell command lines, and the SSH call uses
 - `index.html`: `Cache-Control: no-cache`
 - `/health` → `200 ok` (an nginx `return`, not a file)
 - `/api/time` → `{"epochSec":<seconds.millis>}` (an nginx `return` of `$msec`), `Cache-Control: no-store`
+- `/api/holidays/` (`location ^~`) → the static data files in `Site/dist/api/holidays/`; a year with no file is a `404` (not `index.html`), `Cache-Control: no-cache`, security headers included
 - Security headers on every response: CSP (`default-src 'self'`, `connect-src 'self'`, no external origins —
   every asset is self-hosted), `Strict-Transport-Security`, `X-Content-Type-Options`,
   `Referrer-Policy`, `Permissions-Policy`. **HSTS is set by nginx at the origin** — Caddy

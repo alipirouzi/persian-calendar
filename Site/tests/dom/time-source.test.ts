@@ -305,6 +305,17 @@ describe('time source', () => {
       await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(6); });
     });
 
+    it('resyncs on any return while the device is known to be off, even after a short absence', async () => {
+      const fetchImpl = serverAhead(5_000); // offset +5 s, outside the dead band
+      const t = make(fetchImpl);
+      t.start();
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(3); });
+      setHidden(true);
+      vi.setSystemTime(Date.now() + 60_000); // one minute away, clock moving forward
+      setHidden(false);
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(6); });
+    });
+
     it('does not resync after a short absence when the offset is zero', async () => {
       const fetchImpl = serverAhead(100);
       const t = make(fetchImpl);
