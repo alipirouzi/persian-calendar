@@ -477,11 +477,16 @@ test('Enter on the title does not cascade into picking a date', async ({ page })
 });
 
 test.describe('the today panel across time zones', () => {
-  test.use({ timezoneId: 'America/New_York' });
+  test.use({ timezoneId: 'America/New_York', serviceWorkers: 'block' });
 
   test('shows one weekday while the viewer and Tehran share a day', async ({ page }) => {
     // 14:00Z is 10:00 in New York and 17:30 in Tehran — both still 8 August.
     await page.clock.install({ time: new Date('2026-08-08T14:00:00Z') });
+    // The app now takes its date from /api/time, so the server must agree with the faked clock.
+    await page.route('**/api/time', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ epochSec: Date.parse('2026-08-08T14:00:00Z') / 1000 }),
+    }));
     await page.goto('/');
     await expect(page.locator('#today-persian')).toHaveText('Saturday, 17 Mordad 1405');
     await expect(page.locator('#today-gregorian')).toHaveText('August 8, 2026');
@@ -491,6 +496,11 @@ test.describe('the today panel across time zones', () => {
     // 00:00Z is still 20:00 on the 8th in New York, but already 03:30 on the 9th
     // in Tehran — the two lines now describe different days.
     await page.clock.install({ time: new Date('2026-08-09T00:00:00Z') });
+    // The app now takes its date from /api/time, so the server must agree with the faked clock.
+    await page.route('**/api/time', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ epochSec: Date.parse('2026-08-09T00:00:00Z') / 1000 }),
+    }));
     await page.goto('/');
     await expect(page.locator('#today-persian')).toHaveText('Sunday, 18 Mordad 1405');
     await expect(page.locator('#today-gregorian')).toHaveText('Saturday, August 8, 2026');

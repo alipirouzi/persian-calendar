@@ -268,6 +268,17 @@ describe('the calendar', () => {
 });
 
 describe('Today and Copy', () => {
+  it('Today uses the injected clock, not the device clock', () => {
+    document.body.innerHTML = BODY;
+    // The server says it is Nowruz 1405; the device still thinks it is 2025-01-11.
+    converter = setupConverter(() => lang, () => copySettings, () => new Date('2026-03-21T09:00:00Z'));
+
+    clickOn(byId('btn-today'));
+
+    expect(values('p')).toEqual(['1405', '1', '1']);
+    expect(values('g')).toEqual(['2026', '3', '21']);
+  });
+
   it('resets both sides to today and clears the URL', () => {
     typeInto('p-y', '1400');
     typeInto('p-m', '5');

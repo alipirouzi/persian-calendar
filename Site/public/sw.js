@@ -2,6 +2,7 @@
 //   navigations      → network-first, offline fallback to cached '/'
 //   /assets/* (hashed, immutable) → cache-first
 //   everything else same-origin   → stale-while-revalidate
+//   /api/time → not handled: network-only, never cached
 // Bump CACHE to invalidate every cached response at once.
 const CACHE = 'time-app-v1';
 
@@ -24,6 +25,8 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  // A cached timestamp is a wrong one: the clock sync must always reach the network.
+  if (url.pathname === '/api/time') return;
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request));
   } else if (url.pathname.startsWith('/assets/')) {

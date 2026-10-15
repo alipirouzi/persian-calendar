@@ -44,7 +44,11 @@ function byId<T extends HTMLElement>(id: string): T {
   return el as T;
 }
 
-export function setupConverter(getLang: () => Lang, getCopy: () => CopySettings): {
+export function setupConverter(
+  getLang: () => Lang,
+  getCopy: () => CopySettings,
+  now: () => Date = () => new Date(),
+): {
   prefill: (p: PersianDateParts, g: GregorianDateParts) => void;
   rerender: () => void;
   /** The last valid date on screen, or null while the input is invalid. */
@@ -136,7 +140,7 @@ export function setupConverter(getLang: () => Lang, getCopy: () => CopySettings)
             ? null : { year, month, day };
         },
         getToday: () => {
-          const snap = nowSnapshot().local;
+          const snap = nowSnapshot(now()).local;
           return side === 'persian'
             ? { year: snap.p.py, month: snap.p.pm, day: snap.p.pd }
             : { year: snap.g.gy, month: snap.g.gm, day: snap.g.gd };
@@ -277,7 +281,7 @@ export function setupConverter(getLang: () => Lang, getCopy: () => CopySettings)
       refs[side].dayPicker.close();
       refs[side].calendar.close();
     }
-    const snap = nowSnapshot();
+    const snap = nowSnapshot(now());
     prefill(snap.local.p, snap.local.g);
     history.replaceState(null, '', window.location.pathname);
   });

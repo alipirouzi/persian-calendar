@@ -23,7 +23,14 @@ const CLOCK_SVG = `
   <circle cx="100" cy="100" r="3" fill="currentColor" />
 </svg>`;
 
-export function createClock(mount: HTMLElement): () => void {
+export interface ClockOptions {
+  /** The time to draw; defaults to the device clock. */
+  readonly now?: () => Date;
+  /** Called with the drawn time on every frame (every second under reduced motion). */
+  readonly onTick?: (date: Date) => void;
+}
+
+export function createClock(mount: HTMLElement, { now = () => new Date(), onTick }: ClockOptions = {}): () => void {
   mount.innerHTML = CLOCK_SVG;
   const hour = mount.querySelector<SVGGElement>('#hand-hour');
   const minute = mount.querySelector<SVGGElement>('#hand-minute');
@@ -35,10 +42,12 @@ export function createClock(mount: HTMLElement): () => void {
   let intervalId = 0;
 
   const render = (): void => {
-    const a = handAngles(msSinceLocalMidnight(new Date()));
+    const date = now();
+    const a = handAngles(msSinceLocalMidnight(date));
     hour.setAttribute('transform', `rotate(${a.hour} 100 100)`);
     minute.setAttribute('transform', `rotate(${a.minute} 100 100)`);
     second.setAttribute('transform', `rotate(${a.second} 100 100)`);
+    onTick?.(date);
   };
 
   const loop = (): void => {

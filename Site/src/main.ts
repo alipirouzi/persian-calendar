@@ -19,6 +19,9 @@ import { formatGregorianDate, formatPersianDate, weekdayName } from './i18n/form
 import { createClock } from './clock/clock';
 import { createSettingsStore } from './settings/settings-store';
 import { setupSettingsPanel } from './settings/settings-panel';
+import { createTimeSource } from './time/time-source';
+import { setupTimeSettings } from './time/time-panel';
+import { createMinuteGate } from './time/minute-gate';
 
 let lang: Lang = initialLang();
 
@@ -45,7 +48,7 @@ function renderStatic(): void {
 }
 
 function renderToday(): void {
-  const snapshot = nowSnapshot();
+  const snapshot = nowSnapshot(time.now());
   const lines = todayLines(snapshot);
   const sep = lang === 'fa' ? ' ' : ', ';
   const persianWeekday = weekdayName(lines.persianWeekdaySource, lang);
@@ -68,13 +71,16 @@ function renderAll(converterRerender: () => void): void {
   renderToday();
   converterRerender();
   settingsPanel.rerender();
+  timeSettings.rerender();
 }
 
 const settings = createSettingsStore();
-const converter = setupConverter(() => lang, () => settings.get().copy);
+const time = createTimeSource({ store: settings });
+const converter = setupConverter(() => lang, () => settings.get().copy, time.now);
 const settingsPanel = setupSettingsPanel({
   store: settings, getLang: () => lang, getDate: () => converter.current(),
 });
+const timeSettings = setupTimeSettings({ store: settings, time, getLang: () => lang });
 // The Copy tooltip names the active format; keep it in step with the settings.
 settings.subscribe(() => { converter.rerender(); });
 const urlDate = parseUrlDate(window.location.search);
@@ -85,14 +91,21 @@ if (urlOutcome?.status === 'ok') {
   converter.prefill(urlOutcome.persian, urlOutcome.gregorian);
 } else {
   // No param, or an invalid one — ignore silently and show today.
-  const today = nowSnapshot();
+  const today = nowSnapshot(time.now());
   converter.prefill(today.local.p, today.local.g);
 }
 renderStatic();
 renderToday();
 
+// The today panel is re-rendered once a minute from the clock's own frames: that covers
+// local midnight, Tehran midnight and the Tehran time line, with no long timer for iOS to
+// throttle. A clock that was hidden restarts on visible and ticks straight away.
+const refreshToday = createMinuteGate(() => { renderToday(); });
 const clockMount = document.getElementById('clock-mount');
-if (clockMount) createClock(clockMount);
+if (clockMount) createClock(clockMount, { now: time.now, onTick: refreshToday });
+// A sync can move "now" across a minute or a day; re-check as soon as it lands.
+time.subscribe(() => { refreshToday(time.now()); });
+time.start();
 
 document.getElementById('lang-toggle')?.addEventListener('click', () => {
   lang = lang === 'en' ? 'fa' : 'en';
