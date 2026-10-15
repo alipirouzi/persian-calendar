@@ -61,6 +61,23 @@ const spring = (balanceDeg: number): string => {
 };
 
 /**
+ * Hairspring paths by whole degree of balance. The balance stays within ±220°, so the cache
+ * holds at most 441 paths, shared by every movement view; 1° is finer than the eye can follow.
+ */
+const springPaths = new Map<number, string>();
+const springAt = (deg: number): string => {
+  let d = springPaths.get(deg);
+  if (d === undefined) {
+    d = spring(deg);
+    springPaths.set(deg, d);
+  }
+  return d;
+};
+
+/** The train wheels only move on a beat; the pallet and balance move every frame. */
+const TRAIN: readonly PartKey[] = ['barrel', 'centre', 'third', 'fourth', 'escape'];
+
+/**
  * The movement: a 4 Hz Swiss-lever train laid out with real meshing distances, finished with
  * perlage, Côtes de Genève, jewels and blued screws. Each part is focusable and named; a tap or
  * focus shows its name and speed in a caption, and wide screens show labels beside the parts.
@@ -76,7 +93,8 @@ export function createMovementView(mount: HTMLElement, getLang: () => Lang): Mov
     BUILDERS[key](g);
     parts[key] = g;
   }
-  const hairspring = el('path', { class: 'mv-spring', d: spring(0) }, svg);
+  let springDeg = 0;
+  const hairspring = el('path', { class: 'mv-spring', d: springAt(springDeg) }, svg);
   buildBridges(svg, defs);
 
   // Name and speed are two separate <text> lines, so Persian runs never reorder across them.
@@ -136,17 +154,22 @@ export function createMovementView(mount: HTMLElement, getLang: () => Lang): Mov
     parts[key].setAttribute('transform', `rotate(${deg} ${num(c.x)} ${num(c.y)})`);
   };
 
+  let lastBeat = Number.NaN;
+
   return {
     root: svg,
     render(state: WatchState): void {
-      turn('barrel', state.barrel);
-      turn('centre', state.centre);
-      turn('third', state.third);
-      turn('fourth', state.fourth);
-      turn('escape', state.escape);
+      if (state.beat !== lastBeat) {
+        lastBeat = state.beat;
+        for (const key of TRAIN) turn(key, state[key]);
+      }
       turn('pallet', state.pallet);
       turn('balance', state.balance);
-      hairspring.setAttribute('d', spring(state.balance));
+      const deg = Math.round(state.balance);
+      if (deg !== springDeg) {
+        springDeg = deg;
+        hairspring.setAttribute('d', springAt(deg));
+      }
     },
     rerender: label,
     destroy(): void {

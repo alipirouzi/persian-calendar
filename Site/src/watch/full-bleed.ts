@@ -70,6 +70,7 @@ export function createFullBleed(mount: HTMLElement): Face {
 
   return {
     root: svg,
+    continuous: false,
     render(state: WatchState): void {
       rotate(hour, state.hour);
       rotate(minute, state.minute);

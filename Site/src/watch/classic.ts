@@ -25,7 +25,7 @@ function hand(svg: SVGSVGElement, id: string, attrs: Readonly<Record<string, str
 
 /**
  * The original clock: a thin ring, 60 ticks, three line hands and a centre dot, drawn in
- * `currentColor` with an accent seconds hand. Its seconds hand sweeps continuously.
+ * `currentColor` with an accent seconds hand. Its seconds hand sweeps continuously, so the driver draws it every frame.
  */
 export function createClassic(mount: HTMLElement): Face {
   const svg = el('svg', { viewBox: '0 0 200 200', width: 260, height: 260, class: 'clock watch-face--classic', role: 'img' });
@@ -49,6 +49,7 @@ export function createClassic(mount: HTMLElement): Face {
 
   return {
     root: svg,
+    continuous: true,
     render(state: WatchState): void {
       rotate(hour, state.hour);
       rotate(minute, state.minute);

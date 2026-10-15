@@ -8,7 +8,7 @@ import { setMediaMatches, clickOn } from './dom-helpers';
 
 const BODY = PAGE.slice(PAGE.indexOf('<body>') + 6, PAGE.indexOf('</body>')).replace(/<script[\s\S]*?<\/script>/g, '');
 let frames: FrameRequestCallback[]; let now: Date; let face: FaceId; let lang: Lang; let watch: Watch | undefined;
-let hidden = false;
+let hidden = false; let langCalls = 0;
 const runFrame = () => { const f = frames; frames = []; for (const cb of f) cb(0); };
 const fadeEnd = (target: Element, propertyName = 'opacity') =>
   target.dispatchEvent(Object.assign(new Event('transitionend', { bubbles: true }), { propertyName }));
@@ -28,7 +28,9 @@ beforeEach(() => {
 afterEach(() => { watch?.destroy(); watch = undefined; vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 const make = (onTick = vi.fn()) => {
-  watch = createWatch(document.getElementById('clock-section')!, { now: () => now, onTick, getFace: () => face, getLang: () => lang });
+  watch = createWatch(document.getElementById('clock-section')!, {
+    now: () => now, onTick, getFace: () => face, getLang: () => { langCalls += 1; return lang; },
+  });
   return onTick;
 };
 
@@ -200,5 +202,64 @@ describe('watch driver', () => {
     const root = document.querySelector('.clock');
     watch!.setFace('fullbleed');
     expect(document.querySelector('.clock')).toBe(root);
+  });
+
+  // Final review, finding 1: Classic sweeps (every frame); Full bleed ticks (beat-gated).
+  it('Classic draws every frame, so its seconds hand sweeps', () => {
+    face = 'classic';
+    const onTick = make();
+    onTick.mockClear();
+    now = new Date(now.getTime() + 16); runFrame();
+    const first = second();
+    now = new Date(now.getTime() + 16); runFrame();
+    expect(onTick).toHaveBeenCalledTimes(2);
+    expect(second()).not.toBe(first);
+  });
+
+  it('Full bleed skips frames within one beat while the dial shows', () => {
+    const onTick = make();
+    onTick.mockClear();
+    const before = second();
+    now = new Date(now.getTime() + 16); runFrame();
+    now = new Date(now.getTime() + 16); runFrame();
+    expect(onTick).not.toHaveBeenCalled();
+    expect(second()).toBe(before);
+  });
+
+  // Final review, finding 5.
+  it('setMovementOpen(true) does nothing on a face without a movement', () => {
+    face = 'classic';
+    make();
+    watch!.setMovementOpen(true);
+    expect(document.querySelector('#movement-mount svg')).toBeNull();
+    expect(document.getElementById('watch-box')!.classList.contains('is-movement')).toBe(false);
+    const toggle = document.getElementById('movement-toggle')!;
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(toggle.hidden).toBe(true);
+  });
+
+  // Final review, finding 3: lean frames while the movement is open.
+  it('with the movement open, same-minute frames neither re-label nor rewrite the digits', () => {
+    make();
+    clickOn(document.getElementById('movement-toggle')!);
+    const digital = document.getElementById('watch-digital')!;
+    const text = digital.firstChild;
+    langCalls = 0;
+    now = new Date(now.getTime() + 16); runFrame();
+    now = new Date(now.getTime() + 200); runFrame();
+    expect(langCalls).toBe(0);
+    expect(digital.firstChild).toBe(text);
+    now = new Date(2026, 9, 15, 10, 31, 0, 0); runFrame();
+    expect(digital.textContent).toBe('10:31');
+    expect(document.querySelector('.clock')!.getAttribute('aria-label')).toBe('Watch, 10:31');
+  });
+
+  it('re-labels on a language change even within the same minute', () => {
+    make();
+    runFrame();
+    lang = 'fa';
+    watch!.rerender();
+    now = new Date(now.getTime() + 125); runFrame();
+    expect(document.querySelector('.clock')!.getAttribute('aria-label')).toBe('ساعت، ۱۰:۳۰');
   });
 });

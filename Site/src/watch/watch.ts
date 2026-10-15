@@ -29,12 +29,14 @@ const FACES: Readonly<Record<FaceId, (mount: HTMLElement) => Face>> = {
 const HAS_MOVEMENT: Readonly<Record<FaceId, boolean>> = { fullbleed: true, classic: false };
 /** The CSS fade is 0.9 s; if its transitionend never arrives, tear down a little after. */
 const CLOSE_FALLBACK_MS = 1_100;
+const MS_PER_MINUTE = 60_000;
+const minuteOf = (ms: number): number => Math.floor(ms / MS_PER_MINUTE);
 
 /**
  * Drives the watch: one face, the optional movement behind it, and the Show movement toggle.
- * Frames are rAF-paced but only drawn when the escapement beats (8 a second) while the dial
- * shows; the movement swings continuously, so it is drawn every frame. Reduced motion draws
- * once a second. A hidden page draws nothing and catches up at once on return.
+ * Frames are rAF-paced. A ticking face (Full bleed) alone is only drawn when the escapement
+ * beats (8 a second); a sweeping face (Classic) and the swinging movement are drawn every frame.
+ * Reduced motion draws once a second. A hidden page draws nothing and catches up at once on return.
  */
 export function createWatch(section: HTMLElement, { now, onTick, getFace, getLang }: WatchOptions): Watch {
   const box = section.querySelector<HTMLElement>('#watch-box')!;
@@ -48,24 +50,29 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
   let face = FACES[faceId](clockMount);
   let movement: MovementView | null = null;
   let open = false;
-  let label = '';
+  let labelMinute = Number.NaN;
   let lastBeat = Number.NaN;
   let rafId = 0;
   let intervalId = 0;
   let closeTimer = 0;
 
-  const relabel = (date: Date): void => {
+  /** The label only changes with the minute or the language; rerender resets `labelMinute`. */
+  const relabel = (date: Date, minute: number): void => {
+    if (minute === labelMinute) return;
+    labelMinute = minute;
     const lang = getLang();
-    const next = formatTemplate(STRINGS[lang].watchLabel, { time: hhmm(date) }, lang);
-    if (next === label) return;
-    label = next;
-    face.root.setAttribute('aria-label', label);
+    face.root.setAttribute('aria-label', formatTemplate(STRINGS[lang].watchLabel, { time: hhmm(date) }, lang));
+  };
+
+  const resetLabel = (): void => {
+    labelMinute = Number.NaN;
+    const date = now();
+    relabel(date, minuteOf(msSinceLocalMidnight(date)));
   };
 
   const nameFace = (): void => {
     face.root.setAttribute('role', 'img');
-    label = '';
-    relabel(now());
+    resetLabel();
   };
 
   const render = (): void => {
@@ -75,18 +82,20 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
     face.render(state);
     if (movement) {
       movement.render(state);
-      digital.textContent = hhmm(date);
+      const digits = hhmm(date);
+      if (digital.textContent !== digits) digital.textContent = digits;
     }
-    relabel(date);
+    relabel(date, minuteOf(ms));
     lastBeat = Math.floor(ms / BEAT_MS);
     onTick?.(date);
   };
 
   // While the movement is mounted (open, or still fading out) it swings, so draw every frame;
-  // the dial alone only changes on a beat. rAF only runs without reduced motion.
+  // so does a sweeping face. A ticking face alone only changes on a beat. rAF only runs
+  // without reduced motion.
   const frame = (): void => {
     rafId = requestAnimationFrame(frame);
-    if (!movement && Math.floor(msSinceLocalMidnight(now()) / BEAT_MS) === lastBeat) return;
+    if (!movement && !face.continuous && Math.floor(msSinceLocalMidnight(now()) / BEAT_MS) === lastBeat) return;
     render();
   };
 
@@ -151,7 +160,11 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
     syncToggle();
   };
 
-  const setMovementOpen = (next: boolean): void => { setOpen(next, false); };
+  /** A face without a movement (Classic) has nothing to open. */
+  const setMovementOpen = (next: boolean): void => {
+    if (next && !HAS_MOVEMENT[faceId]) return;
+    setOpen(next, false);
+  };
 
   const onToggle = (): void => {
     setMovementOpen(!open);
@@ -188,8 +201,7 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
     },
     setMovementOpen,
     rerender(): void {
-      label = '';
-      relabel(now());
+      resetLabel();
       syncToggle();
       movement?.rerender();
     },

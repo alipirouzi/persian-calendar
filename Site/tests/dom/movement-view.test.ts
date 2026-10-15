@@ -133,3 +133,32 @@ describe('splitLabel', () => {
     expect(splitLabel('Balance')).toEqual(['Balance', '']);
   });
 });
+
+describe('movement view frames', () => {
+  // Final review, finding 3: wheels move only on a beat; pallet, balance and spring every frame.
+  it('rewrites the wheel transforms only when the beat changes', () => {
+    const v = createMovementView(mount, () => lang);
+    const at = 3_725_000 + 62;                       // near a balance extreme, mid-beat
+    v.render(watchState(at, false));
+    const spies = Object.fromEntries(['barrel', 'centre', 'third', 'fourth', 'escape', 'pallet', 'balance']
+      .map((k) => [k, vi.spyOn(part(v, k), 'setAttribute')]));
+    v.render(watchState(at + 1, false));             // same beat
+    for (const k of ['barrel', 'centre', 'third', 'fourth', 'escape']) expect(spies[k], k).not.toHaveBeenCalled();
+    for (const k of ['pallet', 'balance']) expect(spies[k], k).toHaveBeenCalledWith('transform', expect.any(String));
+    v.render(watchState(at + BEAT_MS, false));       // next beat
+    for (const k of ['barrel', 'centre', 'third', 'fourth', 'escape']) expect(spies[k], k).toHaveBeenCalled();
+  });
+
+  it('quantises the hairspring to whole degrees of balance and reuses the path', () => {
+    const v = createMovementView(mount, () => lang);
+    const spring = v.root.querySelector('.mv-spring')!;
+    v.render(watchState(62, false));                 // balance ≈ 219.97°
+    const d = spring.getAttribute('d');
+    const spy = vi.spyOn(spring, 'setAttribute');
+    v.render(watchState(63, false));                 // balance ≈ 219.98°: same whole degree
+    expect(spy).not.toHaveBeenCalled();
+    v.render(watchState(0, false));                  // balance 0°
+    v.render(watchState(62, false));
+    expect(spring.getAttribute('d')).toBe(d);
+  });
+});

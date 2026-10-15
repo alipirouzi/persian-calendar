@@ -120,17 +120,26 @@ for (const [w, h] of [[1440, 900], [400, 860]] as const) {
   });
 }
 
-// Added beyond the brief (controller ruling): wide-screen part labels must be legible.
-test('wide screens: movement labels render at a legible size', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
-  await page.locator('#movement-toggle').click();
-  await expect(page.locator('#movement-mount .mv-label').first()).toBeVisible();
-  const sizes = await page.locator('#movement-mount .mv-label').evaluateAll((els) =>
-    els.map((el) => parseFloat(getComputedStyle(el).fontSize) * (el as SVGGraphicsElement).getScreenCTM()!.a));
-  expect(sizes.length).toBeGreaterThan(0);
-  expect(Math.min(...sizes)).toBeGreaterThanOrEqual(11);
-});
+// Added beyond the brief (controller ruling): wide-screen part labels must be legible, also on
+// short laptop screens where the watch is smaller (final review): name ≥ 11 px, speed ≥ 10 px.
+for (const [w, h] of [[1440, 900], [1366, 768], [1280, 800]] as const) {
+  test(`wide screens: movement labels render at a legible size at ${w}x${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto('/');
+    await page.locator('#movement-toggle').click();
+    await expect(page.locator('#movement-mount .mv-label').first()).toBeVisible();
+    // Measure the settled movement, not its scale(.96) fade-in.
+    await expect.poll(() => page.locator('#movement-mount svg').evaluate((el) => getComputedStyle(el).transform)).toBe('none');
+    const rendered = (sel: string) => page.locator(sel).evaluateAll((els) =>
+      els.map((el) => parseFloat(getComputedStyle(el).fontSize) * (el as SVGGraphicsElement).getScreenCTM()!.a));
+    const names = await rendered('#movement-mount .mv-label-name');
+    const speeds = await rendered('#movement-mount .mv-label-speed');
+    expect(names).toHaveLength(7);
+    expect(speeds).toHaveLength(7);
+    expect(Math.min(...names)).toBeGreaterThanOrEqual(11);
+    expect(Math.min(...speeds)).toBeGreaterThanOrEqual(10);
+  });
+}
 
 for (const scheme of ['light', 'dark'] as const) {
   for (const [w, h] of [[400, 860], [1440, 900]] as const) {
