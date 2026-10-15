@@ -64,3 +64,27 @@ describe('spiralPath', () => {
     expect(a).not.toEqual(b);
   });
 });
+
+describe('gear tooth proportions', () => {
+  it('gives each tooth half the circular pitch at the pitch circle', () => {
+    const c = { x: 50, y: 50 };
+    const perTooth = 360 / 20;
+    const pts = points(gearPath(c, 1, 20));
+    const crossings: number[] = [];
+    for (let i = 0; i < pts.length; i += 1) {
+      const p = pts[i]!;
+      const q = pts[(i + 1) % pts.length]!;
+      const dp = dist(p) - 10;                           // pitch radius = module × teeth / 2 = 10
+      const dq = dist(q) - 10;
+      if (dp * dq >= 0) continue;
+      const t = dp / (dp - dq);
+      const x = p[0] + t * (q[0] - p[0]);
+      const y = p[1] + t * (q[1] - p[1]);
+      const deg = (Math.atan2(x - c.x, -(y - c.y)) * 180) / Math.PI;   // 0° up, clockwise
+      crossings.push(((deg % 360) + 360) % 360);
+    }
+    const width = crossings[1]! - crossings[0]!;         // first tooth's two flanks, in path order
+    expect(width).toBeGreaterThanOrEqual(0.5 * perTooth - 0.05 * perTooth);
+    expect(width).toBeLessThanOrEqual(0.5 * perTooth + 0.05 * perTooth);
+  });
+});

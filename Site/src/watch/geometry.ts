@@ -18,9 +18,14 @@ export const polar = (from: Point, distance: number, degrees: number): Point => 
 export const meshDistance = (module: number, wheelTeeth: number, pinionTeeth: number): number =>
   pitchRadius(module, wheelTeeth) + pitchRadius(module, pinionTeeth);
 
+/** Tooth flank foot and tip start, as fractions of one tooth pitch; the tooth is centred on 0.5. */
+const TOOTH_FOOT = 0.113;
+const TOOTH_TIP = 0.33;
+
 /**
  * A spur gear: addendum = module, dedendum = 1.25 × module (the standard proportions),
  * flanks drawn as straight lines with a flat tip — close enough to an involute at this size.
+ * Each tooth fills half the circular pitch at the pitch circle, as on a real spur gear.
  */
 export function gearPath(centre: Point, module: number, teeth: number): string {
   const r = pitchRadius(module, teeth);
@@ -30,11 +35,10 @@ export function gearPath(centre: Point, module: number, teeth: number): string {
   for (let i = 0; i < teeth; i += 1) {
     const a = (k: number): number => ((i + k) / teeth) * TAU;
     parts.push(
-      `${i === 0 ? 'M' : 'L'}${at(centre, a(0), root)}`,
-      `L${at(centre, a(0.15), root)}`,
-      `L${at(centre, a(0.3), tip)}`,
-      `L${at(centre, a(0.5), tip)}`,
-      `L${at(centre, a(0.65), root)}`,
+      `${i === 0 ? 'M' : 'L'}${at(centre, a(TOOTH_FOOT), root)}`,
+      `L${at(centre, a(TOOTH_TIP), tip)}`,
+      `L${at(centre, a(1 - TOOTH_TIP), tip)}`,
+      `L${at(centre, a(1 - TOOTH_FOOT), root)}`,
     );
   }
   return `${parts.join(' ')} Z`;
@@ -56,7 +60,10 @@ export function escapeWheelPath(centre: Point, radius: number, teeth = 15): stri
   return `${parts.join(' ')} Z`;
 }
 
-/** An Archimedean spiral — the hairspring. */
+/**
+ * An Archimedean spiral — the hairspring. Uses math orientation, unlike `polar`:
+ * 0 rad points at 3 o'clock (+x), and the angle grows toward +y (clockwise on screen).
+ */
 export function spiralPath(
   centre: Point, turns: number, innerRadius: number, outerRadius: number, phaseRad = 0, steps = 160,
 ): string {
