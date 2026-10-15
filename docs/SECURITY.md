@@ -24,7 +24,7 @@ Criteria referenced: **Security (CC6)**, **Change Management (CC8)**, **Availabi
 
 **It is a static site that processes no personal data.** No accounts, no login, no forms
 submitted anywhere, no cookies, no analytics, no third-party requests, no server-side
-state, no database. Every conversion and clock frame is computed in the visitor's browser.
+state, no database. Its only dynamic answer is the server clock at `/api/time` — an nginx `return`, no application code. Every conversion and clock frame is computed in the visitor's browser.
 The server's entire job is to return files.
 
 That collapses most of the attack surface and most of the privacy surface. There is no user
@@ -57,7 +57,7 @@ grew a backend.
 | Only necessary ports reachable | three allows: **22/tcp, 80/tcp, 443/tcp**, IPv4 and IPv6 | same |
 | No unintended public listeners | audited before enabling the firewall: only 22, 80, 443 bound publicly; the co-tenant application's Postgres and MinIO listen on the docker network only, never on a host port | `ss -tulpn`, 2026-07-31 |
 | TLS terminated at the edge | Caddy terminates TLS for `time.automated.ink` and reverse-proxies to the container over an internal docker network; the container itself is never published to the host | `/opt/caddy/Caddyfile`, `/opt/time/docker-compose.yml` |
-| Browser-side hardening | CSP `default-src 'self'` with no external origins (every asset self-hosted), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()` | `deploy/security-headers.conf`; verified live in response headers |
+| Browser-side hardening | CSP `default-src 'self'; connect-src 'self'` with no external origins (every asset self-hosted), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()` | `deploy/security-headers.conf`; verified live in response headers |
 | HSTS | `Strict-Transport-Security: max-age=31536000; includeSubDomains`, set **by nginx at the origin** — not by Caddy. An earlier revision of this document claimed Caddy adds HSTS automatically; it does not, and the header was in fact absent until 2026-07-31 | `deploy/security-headers.conf`; verified in the container image and live in `curl -sI https://time.automated.ink/` after the 2026-07-31 deploy |
 | Version disclosure suppressed | `server_tokens off` — responses carry `Server: nginx` with no version | `deploy/nginx.conf`; verified live |
 
@@ -108,7 +108,7 @@ grew a backend.
 |---|---|
 | No personal data processed | no accounts, no forms, no submissions, no cookies, no analytics, no fingerprinting, no logging of user input — the site never sends anything about the visitor anywhere |
 | No client-side persistence of personal data | `localStorage` holds exactly two keys: the chosen UI language (`en` / `fa`) and `settings.v1`, the copy-format preferences (calendar, pattern, digits). Both are preferences, not personal data, and never leave the browser |
-| No third-party processors in the serving path | all assets self-hosted; CSP restricts every **subresource and connection** destination (`default-src 'self'`, no `connect-src` escape hatch) to this origin, so a rogue dependency cannot load or `fetch`/`XHR`/WebSocket to a third party. CSP does **not** restrict top-level navigation, so it is not a complete exfiltration control — script that runs in the page could still navigate the visitor elsewhere. There is no visitor data to carry in such a navigation, which is why this is acceptable here rather than mitigated |
+| No third-party processors in the serving path | all assets self-hosted; CSP restricts every **subresource and connection** destination (`default-src 'self'`, and an explicit `connect-src 'self'` that allows only the same-origin `/api/time`) to this origin, so a rogue dependency cannot load or `fetch`/`XHR`/WebSocket to a third party. CSP does **not** restrict top-level navigation, so it is not a complete exfiltration control — script that runs in the page could still navigate the visitor elsewhere. There is no visitor data to carry in such a navigation, which is why this is acceptable here rather than mitigated |
 | GDPR posture | trivial **by design**: with no personal data collected there is no processing to find a lawful basis for, no data subject rights machinery required, no DPA needed with a sub-processor for user data, and no cross-border transfer of personal data. The hosting provider (Hetzner) is EU-based |
 | Confidentiality of secrets | the only secrets in scope are the three GitHub Actions deploy secrets; nothing sensitive is committed and the repository contains no credentials |
 

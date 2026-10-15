@@ -9,7 +9,7 @@ bilingual EN/FA with full RTL, installable as an offline PWA.
 
 A **fully static, client-side site**. There is no application server: nginx serves a
 handful of hashed files, and every conversion, clock frame, and language switch happens
-in the visitor's browser. After first paint there are zero network round-trips.
+in the visitor's browser. After first paint the only requests are a small same-origin clock sync (`/api/time`, at load and every few hours), which the app does without when offline.
 
 ### Why static
 
@@ -20,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **34.5 kB of JavaScript (13.2 kB gzipped)** and **17.9 kB of CSS
-(3.9 kB gzipped)**, with no runtime framework.
+The shipped bundle is **40.0 kB of JavaScript (15.2 kB gzipped)** and **18.6 kB of CSS
+(4.0 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
 
@@ -58,17 +58,20 @@ PersianCalendar/
 │   │   ├── settings/       settings-model.ts (types, defaults, validation, pure),
 │   │   │                     settings-store.ts (localStorage `settings.v1`, subscribe),
 │   │   │                     settings-panel.ts (native modal dialog, DOM only),
+│   │   ├── time/           time-sync-model.ts (offset maths, pure), time-source.ts (fetch,
+│   │   │                     schedule, now()), time-text.ts (status text, pure),
+│   │   │                     time-panel.ts (Settings Time group, DOM), minute-gate.ts (pure)
 │   │   ├── i18n/           strings.ts — EN/FA dictionaries + Persian-Indic digits,
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
-│   ├── tests/              Vitest (374 tests at 100% coverage, incl. .NET parity;
+│   ├── tests/              Vitest (437 tests at 100% coverage, incl. .NET parity;
 │   │                         tests/dom/ runs the DOM units under jsdom)
-│   └── e2e/                Playwright (130 tests, incl. converter-ux.spec.ts,
-│                             picker.spec.ts, calendar.spec.ts, settings.spec.ts and the
-│                             screenshot matrix)
+│   └── e2e/                Playwright (139 tests, incl. converter-ux.spec.ts,
+│                             picker.spec.ts, calendar.spec.ts, settings.spec.ts,
+│                             time-sync.spec.ts and the screenshot matrix)
 │
 ├── deploy/
-│   ├── nginx.conf             static serving, caching, /health
+│   ├── nginx.conf             static serving, caching, /health, /api/time
 │   └── security-headers.conf  CSP and friends
 ├── Dockerfile              node:22-alpine build → nginx:1.27-alpine runtime
 └── .github/workflows/ci.yml   dotnet → site → deploy
@@ -99,6 +102,8 @@ npm run build        # tsc --noEmit + vite build → Site/dist
 npm run preview      # http://localhost:4173
 ```
 
+Both servers answer `/api/time` themselves (a Vite middleware mirroring the nginx location), so the clock sync works locally too.
+
 The C# side needs the .NET 10 SDK:
 
 ```bash
@@ -114,7 +119,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 374 tests, 100% coverage
+### Site unit tests (Vitest) — 437 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -131,7 +136,7 @@ changes. Without it the parity test cannot run.
 
 Coverage is enforced, not merely reported: `vite.config.ts` sets a **100% threshold on
 lines, statements, branches and functions**, and the suite currently meets all four
-(1427/1427 lines, 1427/1427 statements, 593/593 branches, 133/133 functions). Only
+(2029/2029 lines, 2029/2029 statements, 858/858 branches, 211/211 functions). Only
 `src/main.ts` (the bootstrap)
 and `src/clock/**` (visual, screenshot-tested) are excluded. Tests under `tests/dom/` run
 in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
@@ -140,7 +145,7 @@ in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 node environment. CI runs `npm test`, not `npm run test:coverage`, so the threshold is a
 local gate rather than a pipeline one.
 
-### E2E (Playwright) — 130 tests
+### E2E (Playwright) — 139 tests
 
 ```bash
 cd Site
@@ -193,6 +198,7 @@ differs by request type:
 
 | Request | Strategy | Notes |
 |---|---|---|
+| `/api/time` | Not handled (network-only) | Never cached: a stored timestamp is a wrong one. Offline, the sync fails and the app uses the device clock. |
 | Navigations (`mode: 'navigate'`) | Network-first | Falls back to the cached `/` shell when the network is unreachable; `/` is the only navigation cache key. |
 | `/assets/*` (hashed, immutable) | Cache-first | Fetched once and never revalidated — matches the `immutable` `Cache-Control` these paths already ship with. |
 | Everything else same-origin (e.g. the manifest, icons) | Stale-while-revalidate | The cached copy is served immediately while a background fetch (extended via `event.waitUntil`) refreshes the cache for next time. |
@@ -206,9 +212,9 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (130 tests total across the whole E2E suite, including
+actually serves the app while offline (139 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
-`calendar.spec.ts`).
+`calendar.spec.ts`, plus `time-sync.spec.ts` for the clock sync).
 
 ## Supported conversion range: Persian years 1200–1500 AP
 
@@ -291,7 +297,8 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   custom pattern with the tokens `yyyy`, `mm`, `m`, `dd`, `d`, `MMMM`, `dddd`; quote literal
   words, e.g. `'Today is' dddd`) and the digits (Latin or Persian), with a live preview.
   Settings are stored in `localStorage` under `settings.v1`; an unreadable value or an invalid
-  field falls back to that field's default.
+  field falls back to that field's default. The Time group is described below.
+- **Time source** — the clock, the today panel and the converter's Today take their time from `/api/time` on this site (best of three round trips, half the round trip credited to the server, offsets under 250 ms ignored), re-synced at load, on return after five minutes away and every six hours. Settings → Time shows where the time comes from and when it last synced, has a Test connection button, and can switch to this device's clock only. Unreachable or invalid answers keep the last good offset for up to 24 hours, then use the device clock. The today panel refreshes every minute from the clock's own frames, so it turns over at midnight (local and Tehran) even when the app is left open.
 - **Shareable URLs** — a valid conversion updates the address bar via `history.replaceState`
   (`?p=1403-10-22` or `?g=2025-1-11`, never a full navigation) and loading either query
   param prefills both sides on load; an invalid or malformed param is ignored and today is
@@ -308,9 +315,7 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   digits: a native numeric input only accepts ASCII digits, so localizing it would break
   typing and validation. Digits typed in any of the three scripts are normalized before
   conversion, so nothing is lost either way.
-- **Privacy** — no cookies, no analytics, no third-party requests, no personal data
-  processed. The browser keeps only your language and copy-format preferences in
-  `localStorage`; they never leave it. See `docs/SECURITY.md`.
+- **Privacy** — no cookies, no analytics, no third-party requests, no personal data processed. The only request after load is `GET /api/time` to this same site; it carries nothing about you and its answer is the server's clock. The browser keeps only your language and settings in `localStorage`; they never leave it. See `docs/SECURITY.md`.
 
 ## Deployment
 
@@ -353,7 +358,8 @@ than interpolated into shell command lines, and the SSH call uses
 - Hashed assets under `/assets/`: `Cache-Control: public, max-age=31536000, immutable`
 - `index.html`: `Cache-Control: no-cache`
 - `/health` → `200 ok` (an nginx `return`, not a file)
-- Security headers on every response: CSP (`default-src 'self'`, no external origins —
+- `/api/time` → `{"epochSec":<seconds.millis>}` (an nginx `return` of `$msec`), `Cache-Control: no-store`
+- Security headers on every response: CSP (`default-src 'self'`, `connect-src 'self'`, no external origins —
   every asset is self-hosted), `Strict-Transport-Security`, `X-Content-Type-Options`,
   `Referrer-Policy`, `Permissions-Policy`. **HSTS is set by nginx at the origin** — Caddy
   does not add it automatically, contrary to what this file previously claimed.
