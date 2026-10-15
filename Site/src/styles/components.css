@@ -369,6 +369,22 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
   }
 }
 
+/* Watch — the Analog face. Classes only (CSP: style-src 'self'). */
+.wa-dial-0 { stop-color: var(--wa-dial-0); }
+.wa-dial-1 { stop-color: var(--wa-dial-1); }
+.wa-blue-0 { stop-color: var(--wa-blue-0); }
+.wa-blue-1 { stop-color: var(--wa-blue-1); }
+.wa-blue-2 { stop-color: var(--wa-blue-2); }
+.wa-ring { fill: none; stroke: var(--wa-track); }
+.wa-tick, .wa-tick--five { stroke: var(--wa-track); }
+.wa-num {
+  fill: var(--wa-ink);
+  font-family: var(--font-dial);
+  font-weight: 600;
+  font-feature-settings: "lnum";
+  font-variant-numeric: lining-nums;
+}
+
 @media (max-width: 560px) {
   #converter-form { flex-direction: column; align-items: center; gap: 1.1rem; }
   .exchange { transform: rotate(90deg); }
