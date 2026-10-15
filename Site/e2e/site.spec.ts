@@ -171,7 +171,7 @@ test('date inputs stay comfortable touch targets on tablets (768, 1024)', async 
   }
 });
 
-test('desktop stays pixel-identical regardless of short viewport height', async ({ page }) => {
+test('desktop: the watch stays at most 360 px wide, left of centre, and touch rules do not apply', async ({ page }) => {
   // Guards the max-height:480px clock rule and the (pointer: coarse) touch-target
   // rule from ever regressing onto mouse-driven desktop widths (≥1025px).
   await page.setViewportSize({ width: 1440, height: 900 });

@@ -12,15 +12,6 @@ test('Analog is the default; Digital can be chosen and survives a reload', async
   await expect(page.locator('.clock.watch-face--digital')).toBeVisible();
 });
 
-test('light and dark: the dial follows the system scheme, live', async ({ page }) => {
-  await page.emulateMedia({ colorScheme: 'light' });
-  await page.goto('/');
-  const fill = () => page.locator('.wa-num').first().evaluate((el) => getComputedStyle(el).fill);
-  const light = await fill();
-  await page.emulateMedia({ colorScheme: 'dark' });
-  await expect.poll(fill).not.toBe(light);
-});
-
 test('Persian page: Latin digits on the dial, Persian label', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('lang', 'fa'));
   await page.goto('/');
@@ -127,6 +118,13 @@ test('digital fits a 320 px phone, in Persian, with Latin digits', async ({ page
   await page.goto('/');
   const hm = page.locator('.wd-hm');
   await expect(hm).toHaveText(/^\d\d:\d\d$/);
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
+  const order = await page.evaluate(() => ({
+    hmRight: document.querySelector('.wd-hm')!.getBoundingClientRect().right,
+    ssLeft: document.querySelector('.wd-ss')!.getBoundingClientRect().left,
+  }));
+  expect(order.ssLeft).toBeGreaterThanOrEqual(order.hmRight);
   const fit = await page.evaluate(() => {
     const face = document.querySelector('.watch-face--digital') as HTMLElement;
     const box = document.getElementById('watch-box')!.getBoundingClientRect();
@@ -140,7 +138,7 @@ test('digital fits a 320 px phone, in Persian, with Latin digits', async ({ page
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('dark mode restyles the analog dial live', async ({ page }) => {
+test('light and dark: the analog dial follows the system scheme, live', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
   const look = () => page.evaluate(() => [

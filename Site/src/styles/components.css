@@ -460,7 +460,8 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 0.08em;
+  direction: ltr;
+  gap: 1.5cqi;
   color: var(--wd-ink);
   font-family: var(--font-digital);
   font-weight: 400;
