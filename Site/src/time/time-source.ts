@@ -108,14 +108,24 @@ export function createTimeSource({
       hiddenSinceMs = dateNow();
       return;
     }
-    const hiddenFor = hiddenSinceMs === null ? 0 : dateNow() - hiddenSinceMs;
+    if (hiddenSinceMs === null) return;
+    const hiddenFor = dateNow() - hiddenSinceMs;
     hiddenSinceMs = null;
-    if (hiddenFor >= RESYNC_AFTER_HIDDEN_MS) void sync();
+    // Resync after a long absence; after the device clock went back while hidden (a negative
+    // span); or when the device is known to be off, since the user may just have set it by hand.
+    // Only Date.now() is compared: iOS pauses performance.now() while the app is suspended.
+    const knownOff = last !== null && last.offsetMs !== 0;
+    if (hiddenFor >= RESYNC_AFTER_HIDDEN_MS || hiddenFor < 0 || knownOff) void sync();
   };
 
   const onScheduleCheck = (): void => {
-    if (!document.hidden && dateNow() - lastAttemptMs >= RESYNC_INTERVAL_MS) void sync();
+    if (document.hidden) return;
+    // A negative span means the device clock went back since the last attempt.
+    const sinceAttempt = dateNow() - lastAttemptMs;
+    if (sinceAttempt >= RESYNC_INTERVAL_MS || sinceAttempt < 0) void sync();
   };
+
+  const onOnline = (): void => { void sync(); };
 
   const unsubscribeStore = store.subscribe((settings) => {
     if (settings.time.source === source) return;
@@ -150,11 +160,13 @@ export function createTimeSource({
     },
     start() {
       document.addEventListener('visibilitychange', onVisibility);
+      window.addEventListener('online', onOnline);
       intervalId = setInterval(onScheduleCheck, SCHEDULE_CHECK_MS);
       void sync();
     },
     dispose() {
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('online', onOnline);
       clearInterval(intervalId);
       unsubscribeStore();
       listeners.clear();

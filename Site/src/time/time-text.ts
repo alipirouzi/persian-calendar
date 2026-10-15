@@ -7,11 +7,17 @@ const seconds = (ms: number, lang: Lang): string => {
   return lang === 'fa' ? value.replace('.', '٫') : value;
 };
 
+const MINUTE_MS = 60_000;
+
 /** offset = server − device, so a positive offset means the device is behind. */
 export function driftText(offsetMs: number, lang: Lang): string {
   const strings = STRINGS[lang];
   // Below 50 ms the one-decimal value would read 0.0, so call it accurate.
   if (Math.abs(offsetMs) < 50) return strings.driftNone;
+  if (Math.abs(offsetMs) >= MINUTE_MS) {
+    const template = offsetMs > 0 ? strings.driftSlowMin : strings.driftFastMin;
+    return formatTemplate(template, { m: Math.round(Math.abs(offsetMs) / MINUTE_MS) }, lang);
+  }
   const template = offsetMs > 0 ? strings.driftSlow : strings.driftFast;
   return formatTemplate(template, { s: seconds(offsetMs, lang) }, lang);
 }

@@ -273,7 +273,8 @@ describe('time source', () => {
     });
 
     it('resyncs on return after at least five minutes hidden, not sooner', async () => {
-      const fetchImpl = serverAhead(5_000);
+      // Inside the dead band, so the offset is zero and a short absence is not a reason to resync.
+      const fetchImpl = serverAhead(100);
       const t = make(fetchImpl);
       t.start();
       await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(3); });
@@ -288,6 +289,71 @@ describe('time source', () => {
       vi.setSystemTime(Date.now() + RESYNC_AFTER_HIDDEN_MS);
       setHidden(false);
       await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(6); });
+    });
+
+    it('resyncs on return when the device is known to be off, however short the absence', async () => {
+      // The device is 3 min fast; the user sets it right in Settings and comes back a minute later.
+      const fetchImpl = serverAhead(-180_000);
+      const t = make(fetchImpl);
+      t.start();
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(3); });
+      expect(t.status()).toMatchObject({ offsetMs: -180_000 });
+
+      setHidden(true);
+      vi.setSystemTime(Date.now() - 180_000 + 60_000);
+      setHidden(false);
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(6); });
+    });
+
+    it('does not resync after a short absence when the offset is zero', async () => {
+      const fetchImpl = serverAhead(100);
+      const t = make(fetchImpl);
+      t.start();
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(3); });
+
+      setHidden(true);
+      vi.setSystemTime(Date.now() + 60_000);
+      setHidden(false);
+      await Promise.resolve();
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+    });
+
+    it('resyncs on return when the device clock went back while hidden', async () => {
+      const fetchImpl = serverAhead(100);
+      const t = make(fetchImpl);
+      t.start();
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(3); });
+
+      setHidden(true);
+      vi.setSystemTime(Date.now() - 60_000);
+      setHidden(false);
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(6); });
+    });
+
+    it('resyncs on the schedule check when the last attempt is in the future', async () => {
+      const fetchImpl = serverAhead(100);
+      const t = make(fetchImpl);
+      t.start();
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(3); });
+
+      vi.setSystemTime(Date.now() - 10 * 60_000);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(6); });
+    });
+
+    it('resyncs when the browser comes back online, and not after dispose', async () => {
+      const fetchImpl = serverAhead(100);
+      const t = make(fetchImpl);
+      t.start();
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(3); });
+
+      window.dispatchEvent(new Event('online'));
+      await vi.waitFor(() => { expect(fetchImpl).toHaveBeenCalledTimes(6); });
+
+      t.dispose();
+      window.dispatchEvent(new Event('online'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchImpl).toHaveBeenCalledTimes(6);
     });
 
     it('ignores a visible event that was not preceded by hiding', async () => {

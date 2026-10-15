@@ -23,6 +23,20 @@ describe('driftText', () => {
   });
 });
 
+describe('driftText for large drifts', () => {
+  it('switches to whole minutes from one minute up', () => {
+    expect(driftText(59_949, 'en')).toBe('device 59.9 s slow');
+    expect(driftText(60_000, 'en')).toBe('device 1 min slow');
+    expect(driftText(180_000, 'en')).toBe('device 3 min slow');
+    expect(driftText(-3_600_000, 'en')).toBe('device 60 min fast');
+  });
+
+  it('uses Persian digits for minutes', () => {
+    expect(driftText(180_000, 'fa')).toBe('ساعت دستگاه ۳ دقیقه عقب است');
+    expect(driftText(-3_600_000, 'fa')).toBe('ساعت دستگاه ۶۰ دقیقه جلو است');
+  });
+});
+
 describe('statusText', () => {
   it('names each state', () => {
     expect(statusText({ kind: 'device' }, 'en')).toBe("Using this device's clock");

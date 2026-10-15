@@ -16,7 +16,7 @@ export type StringKey =
   | 'copyDigits' | 'digitsLatin' | 'digitsPersian' | 'copyPreview'
   | 'timeSection' | 'timeSourceLabel' | 'sourceDevice' | 'testConnection' | 'testing'
   | 'testOk' | 'testFail' | 'statusDevice' | 'statusSyncing' | 'statusSynced' | 'statusUnsynced'
-  | 'driftNone' | 'driftSlow' | 'driftFast';
+  | 'driftNone' | 'driftSlow' | 'driftFast' | 'driftSlowMin' | 'driftFastMin';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -76,6 +76,8 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     driftNone: 'device clock accurate',
     driftSlow: 'device {s} s slow',
     driftFast: 'device {s} s fast',
+    driftSlowMin: 'device {m} min slow',
+    driftFastMin: 'device {m} min fast',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -134,6 +136,8 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     driftNone: 'ساعت دستگاه دقیق است',
     driftSlow: 'ساعت دستگاه {s} ثانیه عقب است',
     driftFast: 'ساعت دستگاه {s} ثانیه جلو است',
+    driftSlowMin: 'ساعت دستگاه {m} دقیقه عقب است',
+    driftFastMin: 'ساعت دستگاه {m} دقیقه جلو است',
   },
 };
 
