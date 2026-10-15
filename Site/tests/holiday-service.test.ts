@@ -94,3 +94,12 @@ describe('holiday service', () => {
     }
   });
 });
+
+describe('holiday service at the edge of the range', () => {
+  it('gives December 2121 with the real estimate', () => {
+    const service = createHolidayService({ store: storeWith(), fetchFile: async () => null });
+    expect(() => service.forMonth('gregorian', 2121, 12)).not.toThrow();
+    expect(service.forMonth('gregorian', 2121, 12).get(25)?.map((h) => h.source === 'user' ? h.name : h.key))
+      .toContain('by.christmas');
+  });
+});

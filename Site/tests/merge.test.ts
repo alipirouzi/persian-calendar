@@ -67,3 +67,12 @@ describe('holidaysForMonth', () => {
     expect(holidaysForMonth('gregorian', 2026, 2, only).size).toBe(0);
   });
 });
+
+describe('holidaysForMonth at the edges of the supported range', () => {
+  it('does not throw for the first and last supported months', () => {
+    expect(() => holidaysForMonth('persian', 1500, 12, ALL)).not.toThrow();
+    expect(() => holidaysForMonth('gregorian', 2121, 12, ALL)).not.toThrow();
+    expect(() => holidaysForMonth('gregorian', 1822, 1, ALL)).not.toThrow();
+    expect(() => holidaysForMonth('persian', 1200, 1, ALL)).not.toThrow();
+  });
+});

@@ -1,5 +1,5 @@
 import {
-  daysInPersianMonth, toGregorian, type GregorianDateParts, type PersianDateParts,
+  daysInPersianMonth, PERSIAN_YEAR_MAX, toGregorian, type GregorianDateParts, type PersianDateParts,
 } from '../calendar/persian';
 import type { IrLunarKey } from './holiday-keys';
 import type { PersianHoliday } from './rules-ir';
@@ -46,10 +46,12 @@ function daysOf(py: number): PersianDateParts[] {
 
 function compute(py: number, hijri: HijriOf): readonly PersianHoliday[] {
   // One day past the year's end, so the year's last day can be checked for "last day of Safar".
-  const days = [...daysOf(py), { py: py + 1, pm: 1, pd: 1 }];
+  // The last supported year has no next day to convert: its final day is simply left unmarked.
+  const year = daysOf(py);
+  const days = py < PERSIAN_YEAR_MAX ? [...year, { py: py + 1, pm: 1, pd: 1 }] : year;
   const dates = days.map((p) => hijri(toGregorian(p)));
   const holidays: PersianHoliday[] = [];
-  for (let i = 0; i < days.length - 1; i += 1) {
+  for (let i = 0; i < year.length; i += 1) {
     const h = dates[i];
     if (!h) continue;
     const key = RULES[`${h.hm}-${h.hd}`];

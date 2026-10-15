@@ -57,3 +57,24 @@ describe('estimateIrLunar', () => {
     expect(estimateIrLunar(1405, none)).toEqual([]);
   });
 });
+
+describe('the edges of the supported range', () => {
+  it('estimates the last supported Persian year without stepping past it', () => {
+    const holidays = estimateIrLunar(1500);
+    expect(holidays.length).toBeGreaterThan(10);
+    expect(holidays.every((h) => h.p.py === 1500)).toBe(true);
+  });
+
+  it('marks the last day of Safar on a year\'s final day only when the next day is in range', () => {
+    // Safar throughout, Rabi I from the first day of 1500: 1499's final day is the last of Safar.
+    const rabiFrom = toGregorian({ py: 1500, pm: 1, pd: 1 });
+    const start = Date.UTC(rabiFrom.gy, rabiFrom.gm - 1, rabiFrom.gd);
+    const hijri: HijriOf = (g) => (Date.UTC(g.gy, g.gm - 1, g.gd) >= start ? { hm: 3, hd: 1 } : { hm: 2, hd: 1 });
+    expect(estimateIrLunar(1499, hijri).filter((h) => h.key === 'ir.reza')).toEqual([
+      { p: { py: 1499, pm: 12, pd: 29 }, key: 'ir.reza' },
+    ]);
+    // 1500 has no next day to look at, so its final day is never marked.
+    const safarOnly: HijriOf = () => ({ hm: 2, hd: 1 });
+    expect(estimateIrLunar(1500, safarOnly).some((h) => h.key === 'ir.reza')).toBe(false);
+  });
+});
