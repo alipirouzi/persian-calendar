@@ -260,6 +260,56 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 .wf-sec { stroke: var(--w-accent); stroke-width: 1.4; }
 .wf-sec-dot, .wf-cap { fill: var(--w-accent); }
 .wf-cap-pin { fill: var(--w-dial-1); }
+
+/* Watch: the movement. Colours are classes only (CSP: style-src 'self'); patterns and
+   bridges reference url(#…) through attributes, so their classes never set fill/stroke. */
+.mv-perlage-bg { fill: var(--w-plate); }
+.mv-perlage-grain { fill: var(--w-plate-dot); stroke: var(--w-plate); stroke-width: .5; }
+.mv-perlage-core { fill: var(--w-plate); opacity: .6; }
+.mv-plate-edge { fill: none; stroke: var(--w-bridge-edge); stroke-width: 1.2; }
+.mv-part { cursor: pointer; outline: none; }
+.mv-part:focus-visible { filter: drop-shadow(0 0 1.5px var(--w-accent)); }
+.mv-wheel { fill: var(--w-brass); stroke: var(--w-brass-dark); stroke-width: .35; }
+.mv-pinion { fill: var(--w-steel); stroke: var(--w-steel-dark); stroke-width: .3; }
+.mv-arbor, .mv-arbor-square { fill: var(--w-steel-dark); }
+.mv-drum { fill: var(--w-brass-dark); stroke: var(--w-brass); stroke-width: .6; }
+.mv-drum-ring { fill: none; stroke: var(--w-brass); stroke-width: .4; opacity: .55; }
+.mv-drum-hub { fill: var(--w-steel); stroke: var(--w-steel-dark); stroke-width: .5; }
+.mv-escape { fill: var(--w-steel); stroke: var(--w-steel-dark); stroke-width: .3; }
+.mv-lever { fill: none; stroke: var(--w-steel); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.mv-fork { fill: none; stroke: var(--w-steel); stroke-width: 1.3; stroke-linecap: round; }
+.mv-lever-hub { fill: var(--w-steel); stroke: var(--w-steel-dark); stroke-width: .4; }
+.mv-stone { stroke: var(--w-jewel); stroke-width: 1.7; }
+.mv-spoke { stroke: var(--w-brass); stroke-width: 1.8; stroke-linecap: round; }
+.mv-rim { fill: none; stroke: var(--w-brass); stroke-width: 2.6; }
+.mv-timing-screw { fill: var(--w-brass-dark); stroke: var(--w-brass); stroke-width: .3; }
+.mv-roller { fill: var(--w-steel); stroke: var(--w-steel-dark); stroke-width: .3; }
+.mv-spring { fill: none; stroke: var(--w-spring); stroke-width: .38; pointer-events: none; }
+.mv-cotes-bg { fill: var(--w-bridge); }
+.mv-cotes-band { fill: var(--w-bridge-edge); opacity: .22; }
+.mv-cotes-sheen { fill: var(--w-bridge-edge); opacity: .4; }
+.mv-bridges, .mv-pins, .mv-labels, .mv-caption { pointer-events: none; }
+.mv-bridge { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.mv-bridge-edge { fill: none; stroke: var(--w-bridge-edge); stroke-linecap: round; stroke-linejoin: round; }
+.mv-chaton { fill: var(--w-bridge-edge); }
+.mv-jewel { fill: var(--w-jewel); }
+.mv-screw { fill: var(--w-spring); stroke: var(--w-bridge-edge); stroke-width: .4; }
+.mv-screw-slot { stroke: var(--w-bridge); stroke-width: .7; }
+.mv-label, .mv-caption {
+  fill: var(--w-ink);
+  stroke: var(--w-plate);
+  stroke-width: 2.4px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  font-family: var(--font-ui);
+  text-anchor: middle;
+}
+.mv-label { display: none; font-size: 7px; }
+.mv-label-name { font-weight: 700; }
+.mv-label-speed { font-size: 6px; fill-opacity: .8; }
+.mv-caption { font-size: 10px; font-weight: 600; }
+/* Wide screens show every part's name beside it; narrow screens caption on tap or focus. */
+@media (min-width: 1024px) { .mv-label { display: inline; } }
 #clock-section { display: grid; justify-items: center; }
 @media (max-width: 480px) { .clock { width: 200px; height: 200px; } }
 /* Tablet portrait: the tall centered column earns a larger dial. Range-capped
