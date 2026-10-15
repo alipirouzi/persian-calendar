@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import RAW_1405 from './fixtures/holidayapi-1405-holidays.json';
 import OFFICIAL_1405 from './fixtures/ir-official-1405.json';
 import {
-  buildFile, crawlYear, dayUrl, DESCRIPTION_KEYS, keyFor, lunarHolidayDescriptions, sameHolidays,
-  SOURCE, UnknownHolidayError,
+  buildFile, crawlYear, dayUrl, DESCRIPTION_KEYS, isCompleteYear, keyFor, lunarHolidayDescriptions,
+  missingLunarKeys, sameHolidays, SOURCE, UnknownHolidayError, yearDecision,
 } from '../../tools/holidays-crawler/holidayapi';
 import { parseOfficialFile } from '../src/holidays/holiday-data';
 
@@ -97,5 +97,38 @@ describe('buildFile and sameHolidays', () => {
     expect(sameHolidays({ ...OFFICIAL_1405, holidays: [] }, holidays)).toBe(false);
     expect(sameHolidays(undefined, holidays)).toBe(false);
     expect(sameHolidays('garbage', holidays)).toBe(false);
+  });
+});
+
+describe('isCompleteYear and missingLunarKeys', () => {
+  const complete = OFFICIAL_1405.holidays as never as { key: never; p: string }[];
+  const withoutFatima = complete.filter((h) => (h.key as string) !== 'ir.fatima');
+
+  it('accepts the 1405 recording, which has every lunar holiday', () => {
+    expect(isCompleteYear(complete)).toBe(true);
+    expect(missingLunarKeys(complete)).toEqual([]);
+  });
+
+  it('rejects a year missing a lunar holiday, and names it', () => {
+    expect(isCompleteYear(withoutFatima)).toBe(false);
+    expect(missingLunarKeys(withoutFatima)).toEqual(['ir.fatima']);
+  });
+});
+
+describe('yearDecision', () => {
+  const complete = OFFICIAL_1405.holidays as never as { key: never; p: string }[];
+  const withoutFatima = complete.filter((h) => (h.key as string) !== 'ir.fatima');
+
+  it('skips a year with nothing published yet', () => {
+    expect(yearDecision([], undefined)).toEqual({ action: 'skip' });
+  });
+
+  it('keeps the existing file when the crawl is incomplete', () => {
+    expect(yearDecision(withoutFatima, OFFICIAL_1405)).toEqual({ action: 'incomplete', missing: ['ir.fatima'] });
+  });
+
+  it('leaves an unchanged year alone and writes a changed one', () => {
+    expect(yearDecision(complete, { ...OFFICIAL_1405, fetched: '1999-01-01' })).toEqual({ action: 'unchanged' });
+    expect(yearDecision(complete, undefined)).toEqual({ action: 'write' });
   });
 });

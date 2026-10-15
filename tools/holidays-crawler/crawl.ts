@@ -4,20 +4,24 @@ import { join } from 'node:path';
 import { gregorianPartsIn } from '../../Site/src/calendar/now';
 import { toPersian } from '../../Site/src/calendar/persian';
 import { parseOfficialFile } from '../../Site/src/holidays/holiday-data';
-import { buildFile, crawlYear, sameHolidays } from './holidayapi';
+import { buildFile, crawlYear, yearDecision } from './holidayapi';
 
 const ATTEMPTS = 3;
+const REQUEST_TIMEOUT_MS = 15_000;
 
 async function fetchJson(url: string): Promise<unknown> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= ATTEMPTS; attempt += 1) {
     try {
-      const response = await fetch(url, { headers: { Accept: 'application/json' } });
+      const response = await fetch(url, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
       return await response.json();
     } catch (error) {
       lastError = error;
-      await new Promise((resolve) => { setTimeout(resolve, 2000 * attempt); });
+      if (attempt < ATTEMPTS) await new Promise((resolve) => { setTimeout(resolve, 2000 * attempt); });
     }
   }
   throw lastError;
@@ -33,14 +37,21 @@ async function main(): Promise<void> {
   for (const py of [currentYear, currentYear + 1]) {
     const holidays = await crawlYear(py, { fetchJson, delay: (ms) => new Promise((r) => { setTimeout(r, ms); }) });
     const path = join(outDir, `${py}.json`);
-    if (holidays.length === 0) {
+    const existing: unknown = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : undefined;
+    const decision = yearDecision(holidays, existing);
+    if (decision.action === 'skip') {
       // Not published yet: an empty file would read as "no official data" anyway (the client
       // keeps its estimates), so writing one would only churn the repository.
       console.log(`${py}: no lunar holidays published yet; skipped`);
       continue;
     }
-    const existing: unknown = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : undefined;
-    if (sameHolidays(existing, holidays)) {
+    if (decision.action === 'incomplete') {
+      // A partial year would replace good data (or the estimates) with gaps: keep what is
+      // there and surface it on the run, without failing the job.
+      console.log(`::warning title=Incomplete holiday data::${py}: missing ${decision.missing.join(', ')}`);
+      continue;
+    }
+    if (decision.action === 'unchanged') {
       console.log(`${py}: unchanged (${holidays.length} holidays)`);
       continue;
     }

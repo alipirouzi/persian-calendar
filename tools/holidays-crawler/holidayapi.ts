@@ -1,5 +1,5 @@
 import { daysInPersianMonth } from '../../Site/src/calendar/persian';
-import type { IrLunarKey } from '../../Site/src/holidays/holiday-keys';
+import { IR_LUNAR_KEYS, type IrLunarKey } from '../../Site/src/holidays/holiday-keys';
 
 export const SOURCE = 'holidayapi.ir';
 
@@ -110,4 +110,30 @@ export function buildFile(
 export function sameHolidays(existing: unknown, holidays: readonly { key: IrLunarKey; p: string }[]): boolean {
   return isRecord(existing) && Array.isArray(existing.holidays)
     && JSON.stringify(existing.holidays) === JSON.stringify(holidays);
+}
+
+/**
+ * The lunar holidays absent from a crawled year. A solar year contains every Hijri
+ * date at least once, so a complete official year names every lunar key.
+ */
+export function missingLunarKeys(holidays: readonly { key: IrLunarKey }[]): IrLunarKey[] {
+  const present = new Set(holidays.map((h) => h.key));
+  return IR_LUNAR_KEYS.filter((key) => !present.has(key));
+}
+
+export const isCompleteYear = (holidays: readonly { key: IrLunarKey }[]): boolean =>
+  missingLunarKeys(holidays).length === 0;
+
+export type YearDecision =
+  | { action: 'skip' }
+  | { action: 'incomplete'; missing: IrLunarKey[] }
+  | { action: 'unchanged' }
+  | { action: 'write' };
+
+/** What the CLI does with one crawled year, given the file already on disk (if any). */
+export function yearDecision(holidays: readonly { key: IrLunarKey; p: string }[], existing: unknown): YearDecision {
+  if (holidays.length === 0) return { action: 'skip' };
+  const missing = missingLunarKeys(holidays);
+  if (missing.length > 0) return { action: 'incomplete', missing };
+  return sameHolidays(existing, holidays) ? { action: 'unchanged' } : { action: 'write' };
 }
