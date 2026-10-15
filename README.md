@@ -20,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **63.9 kB of JavaScript (23.8 kB gzipped)** and **25.5 kB of CSS
-(5.4 kB gzipped)**, with no runtime framework. The Bodoni Moda face adds a 14.5 kB woff2
+The shipped bundle is **64.7 kB of JavaScript (24.2 kB gzipped)** and **26.6 kB of CSS
+(5.7 kB gzipped)**, with no runtime framework. The Bodoni Moda face adds a 14.5 kB woff2
 (Latin subset, one weight).
 
 ## Repo layout
@@ -75,7 +75,7 @@ PersianCalendar/
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/api/holidays/ir/   official holiday data, one {year}.json per Persian year
 │   │                         (added by reviewed PRs from the crawler; absent until the first one merges)
-│   ├── tests/              Vitest (588 tests at 100% coverage, incl. .NET parity and the crawler;
+│   ├── tests/              Vitest (589 tests at 100% coverage, incl. .NET parity and the crawler;
 │   │                         tests/dom/ runs the DOM units under jsdom)
 │   └── e2e/                Playwright (171 tests, incl. converter-ux.spec.ts, watch.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts, settings.spec.ts,
@@ -134,7 +134,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 588 tests, 100% coverage
+### Site unit tests (Vitest) — 589 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -258,8 +258,10 @@ Inter, Cormorant Garamond, Bodoni Moda and Vazirmatn, all under the SIL Open Fon
 
 - **Watch** — two faces chosen in Settings → Watch: **Analog** (default) and
   **Digital**. Both always use Latin digits, also in the Persian UI.
-  - **Analog:** inline SVG, a Breguet-style dial with a railway minute track, twelve Cormorant Garamond
-    numerals, blued leaf hands that reach their scales, and a seconds hand that ticks 8 times a
+  - **Analog:** inline SVG, a Sinn-style dial with a railway minute track, 12/3/6/9 numerals in
+    Inter and slim batons at the other hours, and faceted, shaded blued leaf hands. Each hand
+    reaches its scale: the hour hand meets the batons, the minute hand meets the track's inner
+    ring, and the seconds hand ends inside the minute marks. The seconds hand ticks 8 times a
     second.
   - **Digital:** HTML text (not SVG), HH:MM in Bodoni Moda with small blued seconds; it always reads left-to-right.
   - Colours are CSS custom properties (`--wa-*` for Analog, `--wd-*` for Digital) that follow the system light/dark setting and

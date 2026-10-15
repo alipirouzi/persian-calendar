@@ -201,3 +201,30 @@ src/watch/
 
 - **README:** the watch section (faces, Settings), repo layout, test counts and bundle size.
 - **`docs/SECURITY.md`:** test counts, if listed.
+
+## Revision (2026-10-15, user feedback)
+
+The user chose mockup A (Sinn-style) for a polished Analog face. These details supersede the Analog
+dial, hand and Analog test details above; Digital, the driver, Settings and the layout are unchanged.
+
+- **Numerals:** only 12, 3, 6 and 9, upright, at r 79, font size 19, in Inter (`--font-dial:
+  'Inter Variable', system-ui, sans-serif`, not overridden on Persian pages), weight 600,
+  `letter-spacing: -0.3px`, lining figures.
+- **Batons:** a slim baton (`.wa-idx`, 2.4 × 19.5, r 71–90.5) at each of the other eight hours.
+- **Rim:** a radial rim shade (`rim` gradient, transparent to `--wa-rim-a` black) over the dial disc.
+  The railway track is unchanged.
+- **Hand lengths:** hour r 70 (meets the batons), minute r 91 (meets the track's inner ring at
+  r 91.5), seconds r 93.5 (inside the minute marks).
+- **Hand finish:** the hour and minute leaf hands are faceted: a lit left half (`lit` gradient), a
+  shaded right half (`shade` gradient) and a fine `.wa-edge` outline. The seconds needle and
+  counterweight use the `sec` gradient; a domed cap (`cap` gradient, r 2.7) and a pin (`.wa-pin`,
+  r 0.75) sit at the centre.
+- **Shadow:** the three hands and the cap share one `feDropShadow` filter (`.wa-shadow`); the pin is
+  drawn on top, outside it.
+- **Colours:** new `--wa-lit-*`, `--wa-shade-*`, `--wa-sec-*`, `--wa-cap-*`, `--wa-pin`,
+  `--wa-edge(-a)`, `--wa-shadow(-a)` and `--wa-rim-a` tokens for light and dark, applied through
+  classes only (CSP `style-src 'self'`). The single `wa-blue-*` gradient and its tokens are removed.
+- **Tests:** the DOM test expects numerals `12, 3, 6, 9`, 8 batons, tip radii 70 / 91 / 93.5, stop
+  classes `wa-(dial|lit|shade|sec|cap|rim)-N`, unique gradient and filter ids per instance, and the
+  hands inside one filtered group. The e2e reach test measures the outline (hour, minute) and the
+  needle (seconds) on screen: hour 69–71.2, minute 90–91.7, seconds 92.5–95.
