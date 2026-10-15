@@ -105,7 +105,6 @@ test('the analog hands reach their scales on screen', async ({ page }) => {
     };
     return { hour: reach('hand-hour', '.wa-edge'), minute: reach('hand-minute', '.wa-edge'), second: reach('hand-second', 'path') };
   });
-  console.log(`analog tip radii: ${JSON.stringify(r)}`);
   expect(r.hour).toBeGreaterThan(69); expect(r.hour).toBeLessThanOrEqual(71.2);     // meets the batons (r 71)
   expect(r.minute).toBeGreaterThan(90); expect(r.minute).toBeLessThanOrEqual(91.7); // at the inner ring (r 91.5)
   expect(r.second).toBeGreaterThan(92.5); expect(r.second).toBeLessThan(95);        // inside the marks, short of r 96
