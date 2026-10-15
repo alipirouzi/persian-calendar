@@ -41,7 +41,8 @@ export function parseOfficialFile(raw: unknown, year: number): OfficialFile | nu
   const { source, fetched, holidays } = raw;
   if (typeof source !== 'string' || source === '') return null;
   if (typeof fetched !== 'string' || !ISO_DATE.test(fetched)) return null;
-  if (!Array.isArray(holidays)) return null;
+  // An empty list means the dates are not published yet: keep the estimates rather than show no lunar holidays.
+  if (!Array.isArray(holidays) || holidays.length === 0) return null;
   const parsed = holidays.map((h) => parseHoliday(h, year));
   if (parsed.some((h) => h === null)) return null;
   return { year, source, fetched, holidays: parsed as OfficialHoliday[] };

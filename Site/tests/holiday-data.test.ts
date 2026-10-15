@@ -33,6 +33,7 @@ describe('parseOfficialFile', () => {
       { ...VALID, source: '' },
       { ...VALID, fetched: '12.10.2026' },
       { ...VALID, holidays: 'none' },
+      { ...VALID, holidays: [] },                                 // nothing published yet
       { ...VALID, holidays: [null] },
       { ...VALID, holidays: [{ key: 'ir.nowruz', p: '1405-01-01' }] },  // solar keys are not official-file keys
       { ...VALID, holidays: [{ key: 'ir.unknown', p: '1405-04-04' }] },
