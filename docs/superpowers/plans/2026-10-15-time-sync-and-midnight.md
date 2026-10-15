@@ -1645,7 +1645,7 @@ test.describe('with the service worker blocked, so page.route sees every request
     await openSettings(page);
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(page.locator('#set-time-test')).toHaveText('آزمایش اتصال');
-    await expect(page.locator('#set-time-status')).toHaveText(/^همگام‌شده [۰-۹]{2}:[۰-۹]{2} · ساعت دستگاه دقیق است$/);
+    await expect(page.locator('#set-time-status')).toHaveText(/^همگام‌شده در [۰-۹]{2}:[۰-۹]{2} · ساعت دستگاه دقیق است$/);
   });
 });
 
