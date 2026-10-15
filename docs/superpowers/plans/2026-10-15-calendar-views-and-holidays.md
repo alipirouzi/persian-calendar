@@ -2499,7 +2499,8 @@ test('test connection reports missing, then present, official data', async ({ pa
   await page.unroute('**/api/holidays/ir/*.json');
   await page.route('**/api/holidays/ir/1405.json', (route) => route.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify({ year: 1405, source: 'holidayapi.ir', fetched: '2026-10-12', holidays: [] }),
+    // A file needs at least one holiday to count as official data.
+    body: JSON.stringify({ year: 1405, source: 'holidayapi.ir', fetched: '2026-10-12', holidays: [{ key: 'ir.ashura', p: '1405-04-04' }] }),
   }));
   await page.locator('#set-holidays-test').click();
   await expect(page.locator('#set-holidays-test-result')).toHaveText('OK · 1405 official data · updated 2026-10-12');
@@ -2735,6 +2736,12 @@ async function main(): Promise<void> {
   for (const py of [currentYear, currentYear + 1]) {
     const holidays = await crawlYear(py, { fetchJson, delay: (ms) => new Promise((r) => { setTimeout(r, ms); }) });
     const path = join(outDir, `${py}.json`);
+    if (holidays.length === 0) {
+      // Not published yet: an empty file would read as "no official data" anyway (the client
+      // keeps its estimates), so writing one would only churn the repository.
+      console.log(`${py}: no lunar holidays published yet; skipped`);
+      continue;
+    }
     const existing: unknown = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : undefined;
     if (sameHolidays(existing, holidays)) {
       console.log(`${py}: unchanged (${holidays.length} holidays)`);
