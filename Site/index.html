@@ -141,6 +141,37 @@
       <p id="converter-error" role="status" hidden></p>
     </section>
 
+    <section id="calendars" aria-label="Calendars">
+      <details id="view-persian" class="month-view" data-side="persian">
+        <summary data-str="viewPersian"></summary>
+        <div class="mv-head">
+          <button class="mv-nav mv-prev" type="button">‹</button>
+          <h2 class="mv-title"></h2>
+          <button class="mv-nav mv-next" type="button">›</button>
+          <button class="mv-today" type="button" data-str="today"></button>
+        </div>
+        <table class="mv-grid">
+          <thead><tr></tr></thead>
+          <tbody></tbody>
+        </table>
+        <ul class="mv-holidays"></ul>
+      </details>
+      <details id="view-gregorian" class="month-view" data-side="gregorian">
+        <summary data-str="viewGregorian"></summary>
+        <div class="mv-head">
+          <button class="mv-nav mv-prev" type="button">‹</button>
+          <h2 class="mv-title"></h2>
+          <button class="mv-nav mv-next" type="button">›</button>
+          <button class="mv-today" type="button" data-str="today"></button>
+        </div>
+        <table class="mv-grid">
+          <thead><tr></tr></thead>
+          <tbody></tbody>
+        </table>
+        <ul class="mv-holidays"></ul>
+      </details>
+    </section>
+
     <dialog id="settings-dialog" aria-labelledby="settings-title">
       <div class="settings-head">
         <h2 id="settings-title" data-str="settings"></h2>

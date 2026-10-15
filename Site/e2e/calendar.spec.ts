@@ -101,6 +101,9 @@ test('only one popup is open across pickers and calendars', async ({ page }) => 
 
 test('opening the calendar does not scroll the page', async ({ page }) => {
   await page.goto('/');
+  // The month views push the converter down; bring the button into view first so the
+  // click's own auto-scroll is not mistaken for the popup scrolling the page.
+  await page.locator('#p-cal').scrollIntoViewIfNeeded();
   const before = await page.evaluate(() => window.scrollY);
   await page.locator('#p-cal').click();
   await expect(page.locator('#p-cal-pop')).toBeVisible();

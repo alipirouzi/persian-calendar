@@ -18,7 +18,9 @@ export type StringKey =
   | 'copyDigits' | 'digitsLatin' | 'digitsPersian' | 'copyPreview'
   | 'timeSection' | 'timeSourceLabel' | 'sourceDevice' | 'testConnection' | 'testing'
   | 'testOk' | 'testFail' | 'statusDevice' | 'statusSyncing' | 'statusSynced' | 'statusUnsynced'
-  | 'driftNone' | 'driftSlow' | 'driftFast' | 'driftSlowMin' | 'driftFastMin';
+  | 'driftNone' | 'driftSlow' | 'driftFast' | 'driftSlowMin' | 'driftFastMin'
+  | 'viewPersian' | 'viewGregorian' | 'sourceIr' | 'sourceNuremberg' | 'sourceUser'
+  | 'estimated' | 'noHolidays';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -80,6 +82,13 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     driftFast: 'device {s} s fast',
     driftSlowMin: 'device {m} min slow',
     driftFastMin: 'device {m} min fast',
+    viewPersian: 'Persian month',
+    viewGregorian: 'Gregorian month',
+    sourceIr: 'Iran',
+    sourceNuremberg: 'Nuremberg',
+    sourceUser: 'Mine',
+    estimated: 'estimated',
+    noHolidays: 'No holidays this month',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -140,6 +149,13 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     driftFast: 'ساعت دستگاه {s} ثانیه جلو است',
     driftSlowMin: 'ساعت دستگاه {m} دقیقه عقب است',
     driftFastMin: 'ساعت دستگاه {m} دقیقه جلو است',
+    viewPersian: 'ماه شمسی',
+    viewGregorian: 'ماه میلادی',
+    sourceIr: 'ایران',
+    sourceNuremberg: 'نورنبرگ',
+    sourceUser: 'شخصی',
+    estimated: 'تخمینی',
+    noHolidays: 'این ماه تعطیلی ندارد',
   },
 };
 

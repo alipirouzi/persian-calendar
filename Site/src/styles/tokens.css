@@ -6,6 +6,7 @@
   --accent: oklch(52% 0.09 245);        /* blued steel */
   --hairline: oklch(86% 0.008 85);
   --control-border: oklch(60% 0.01 260); /* 3:1 on --surface and --surface-raised (WCAG 1.4.11) */
+  --holiday: oklch(52% 0.17 28);
   --font-display: 'Cormorant Garamond', 'Vazirmatn', serif;
   --font-ui: 'Inter Variable', 'Vazirmatn', system-ui, sans-serif;
   --text-base: clamp(1rem, 0.94rem + 0.3vw, 1.125rem);
@@ -23,6 +24,7 @@
     --accent: oklch(72% 0.1 245);
     --hairline: oklch(31% 0.01 260);
     --control-border: oklch(56% 0.01 260);
+    --holiday: oklch(74% 0.13 28);
   }
 }
 html[lang='fa'] {

@@ -22,6 +22,8 @@ import { setupSettingsPanel } from './settings/settings-panel';
 import { createTimeSource } from './time/time-source';
 import { setupTimeSettings } from './time/time-panel';
 import { createMinuteGate } from './time/minute-gate';
+import { createHolidayService } from './holidays/holiday-service';
+import { setupCalendarPanels } from './views/calendar-panels';
 
 let lang: Lang = initialLang();
 
@@ -72,6 +74,7 @@ function renderAll(converterRerender: () => void): void {
   converterRerender();
   settingsPanel.rerender();
   timeSettings.rerender();
+  panels.rerender();
 }
 
 const settings = createSettingsStore();
@@ -94,13 +97,25 @@ if (urlOutcome?.status === 'ok') {
   const today = nowSnapshot(time.now());
   converter.prefill(today.local.p, today.local.g);
 }
+const holidayService = createHolidayService({ store: settings });
+const panels = setupCalendarPanels({
+  store: settings,
+  holidays: holidayService,
+  getLang: () => lang,
+  now: time.now,
+  onPickDay: (p, g) => {
+    converter.prefill(p, g);
+    document.getElementById('converter')?.scrollIntoView({ block: 'nearest' });
+  },
+});
+holidayService.subscribe(() => { panels.rerender(); });
 renderStatic();
 renderToday();
 
 // The today panel is re-rendered once a minute from the clock's own frames: that covers
 // local midnight, Tehran midnight and the Tehran time line, with no long timer for iOS to
 // throttle. A clock that was hidden restarts on visible and ticks straight away.
-const refreshToday = createMinuteGate(() => { renderToday(); });
+const refreshToday = createMinuteGate(() => { renderToday(); panels.refreshToday(); });
 const clockMount = document.getElementById('clock-mount');
 if (clockMount) createClock(clockMount, { now: time.now, onTick: refreshToday });
 // A sync can move "now" across a minute or a day; re-check as soon as it lands.

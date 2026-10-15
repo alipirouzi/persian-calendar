@@ -410,6 +410,9 @@ test('the list never renders off the top, at any viewport height', async ({ page
 test('opening a popup does not scroll the page', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
+  // The month views push the converter down; bring the toggle into view first so the
+  // click's own auto-scroll is not mistaken for the popup scrolling the page.
+  await page.locator('#p-d-toggle').scrollIntoViewIfNeeded();
   const before = await page.evaluate(() => window.scrollY);
   await page.locator('#p-d-toggle').click();
   await expect(page.locator('#p-d-list')).toBeVisible();
