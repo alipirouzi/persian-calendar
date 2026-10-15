@@ -24,26 +24,30 @@ describe('watch settings', () => {
     expect(() => setupWatchSettings({ store, getLang: () => lang })).toThrow('#set-watch-face');
   });
 
+  it('offers exactly the Analog and Digital faces', () => {
+    expect([...select().options].map((o) => o.value)).toEqual(['analog', 'digital']);
+  });
+
   it('shows the stored face when the dialog opens', () => {
     setupWatchSettings({ store, getLang: () => lang });
-    store.update((s) => ({ ...s, watch: { face: 'classic' } }));
+    store.update((s) => ({ ...s, watch: { face: 'digital' } }));
     clickOn(document.getElementById('settings-toggle')!);
-    expect(select().value).toBe('classic');
+    expect(select().value).toBe('digital');
   });
 
   it('stores a new face and keeps the other groups', () => {
     setupWatchSettings({ store, getLang: () => lang });
     store.update((s) => ({ ...s, time: { source: 'device' } }));
-    select().value = 'classic';
+    select().value = 'digital';
     select().dispatchEvent(new Event('change', { bubbles: true }));
-    expect(store.get().watch.face).toBe('classic');
+    expect(store.get().watch.face).toBe('digital');
     expect(store.get().time.source).toBe('device');
   });
 
   it('rerender leaves the selection alone', () => {
     const { rerender } = setupWatchSettings({ store, getLang: () => lang });
-    select().value = 'classic';
+    select().value = 'digital';
     rerender();
-    expect(select().value).toBe('classic');
+    expect(select().value).toBe('digital');
   });
 });

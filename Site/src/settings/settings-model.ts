@@ -60,7 +60,7 @@ export const DEFAULT_SETTINGS: Settings = {
   time: { source: 'server' },
   views: { persian: { enabled: true, open: true }, gregorian: { enabled: true, open: false } },
   holidays: { sources: HOLIDAY_SOURCES, user: [] },
-  watch: { face: 'fullbleed' },
+  watch: { face: 'analog' },
 };
 
 const CALENDARS: readonly CopyCalendar[] = ['persian', 'gregorian', 'both'];

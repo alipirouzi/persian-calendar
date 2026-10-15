@@ -1,11 +1,11 @@
-import type { DialFace } from './face';
+import type { Face } from './face';
 import { hhmm, pad2 } from './hands';
 
 /**
  * The digital face: 24-hour HH:MM in Bodoni Moda with small blued seconds. The visible digits
  * are aria-hidden; the driver names the face. Text is written only when it changes.
  */
-export function createDigital(mount: HTMLElement): DialFace {
+export function createDigital(mount: HTMLElement): Face {
   const root = document.createElement('div');
   root.className = 'clock watch-face--digital';
   const hm = document.createElement('span');

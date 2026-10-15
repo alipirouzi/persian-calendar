@@ -1,4 +1,4 @@
-import type { DialFace } from './face';
+import type { Face } from './face';
 import type { HandState } from './hands';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -36,7 +36,7 @@ const rotate = (node: Element, deg: number): void => node.setAttribute('transfor
  * blued leaf hands. Each hand reaches its scale. Every colour comes from a class, so a theme
  * switch restyles it live and the CSP (style-src 'self') holds.
  */
-export function createAnalog(mount: HTMLElement): DialFace {
+export function createAnalog(mount: HTMLElement): Face {
   const n = ++seq;
   const svg = el('svg', { viewBox: '0 0 200 200', class: 'clock watch-face--analog' });
   const defs = el('defs', {}, svg);

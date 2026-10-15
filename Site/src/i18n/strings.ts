@@ -24,9 +24,7 @@ export type StringKey =
   | 'holidaysSection' | 'viewsLabel' | 'holidaySourcesLabel' | 'sourceIrLong' | 'sourceNurembergLong' | 'sourceUserLong'
   | 'holidayName' | 'holidayYear' | 'everyYear' | 'holidayAdd' | 'holidaySave' | 'holidayCancel' | 'holidayEdit' | 'holidayDelete'
   | 'holidayInvalid' | 'holidayLimit' | 'noUserHolidays' | 'holidaysTestOk' | 'holidaysTestNone'
-  | 'watchSection' | 'watchFace' | 'faceFullBleed' | 'faceClassic' | 'showMovement' | 'showTime' | 'watchLabel'
-  | 'partBarrel' | 'partCentre' | 'partThird' | 'partFourth' | 'partEscape' | 'partPallet' | 'partBalance'
-  | 'movementLabel';
+  | 'watchSection' | 'watchFace' | 'faceAnalog' | 'faceDigital' | 'watchLabel';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -118,19 +116,9 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     holidaysTestNone: 'No official data for {year} — using estimates',
     watchSection: 'Watch',
     watchFace: 'Face',
-    faceFullBleed: 'Full bleed',
-    faceClassic: 'Classic',
-    showMovement: 'Show movement',
-    showTime: 'Show time',
+    faceAnalog: 'Analog',
+    faceDigital: 'Digital',
     watchLabel: 'Watch, {time}',
-    partBarrel: 'Barrel · 1 turn in 8 hours',
-    partCentre: 'Centre wheel · 1 turn an hour',
-    partThird: 'Third wheel · 8 turns an hour',
-    partFourth: 'Fourth wheel · 1 turn a minute',
-    partEscape: 'Escape wheel · 16 turns a minute',
-    partPallet: 'Pallet fork · 8 beats a second',
-    partBalance: 'Balance · 4 Hz',
-    movementLabel: 'Watch movement',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -221,19 +209,9 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     holidaysTestNone: 'داده رسمی برای {year} نیست — تخمین‌ها استفاده می‌شوند',
     watchSection: 'ساعت',
     watchFace: 'صفحه',
-    faceFullBleed: 'تمام‌صفحه',
-    faceClassic: 'کلاسیک',
-    showMovement: 'نمایش موتور',
-    showTime: 'نمایش ساعت',
+    faceAnalog: 'عقربه‌ای',
+    faceDigital: 'دیجیتال',
     watchLabel: 'ساعت، {time}',
-    partBarrel: 'بشکه · یک دور در ۸ ساعت',
-    partCentre: 'چرخ مرکزی · یک دور در ساعت',
-    partThird: 'چرخ سوم · ۸ دور در ساعت',
-    partFourth: 'چرخ چهارم · یک دور در دقیقه',
-    partEscape: 'چرخ گریز · ۱۶ دور در دقیقه',
-    partPallet: 'لنگر · ۸ ضربه در ثانیه',
-    partBalance: 'چرخ تعادل · ۴ هرتز',
-    movementLabel: 'موتور ساعت',
   },
 };
 

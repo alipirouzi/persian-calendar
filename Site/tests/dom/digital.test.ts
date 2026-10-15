@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createDigital } from '../../src/watch/digital';
-import type { DialFace } from '../../src/watch/face';
+import type { Face } from '../../src/watch/face';
 import { handState, msSinceLocalMidnight } from '../../src/watch/hands';
 
-let mount: HTMLElement; let face: DialFace;
+let mount: HTMLElement; let face: Face;
 const draw = (date: Date) => face.render(handState(msSinceLocalMidnight(date), false), date);
 beforeEach(() => { mount = document.createElement('div'); document.body.appendChild(mount); face = createDigital(mount); });
 afterEach(() => { face.destroy(); mount.remove(); });

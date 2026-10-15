@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createAnalog } from '../../src/watch/analog';
-import type { DialFace } from '../../src/watch/face';
+import type { Face } from '../../src/watch/face';
 import { handState, msSinceLocalMidnight } from '../../src/watch/hands';
 
-let mount: HTMLElement; let face: DialFace;
+let mount: HTMLElement; let face: Face;
 beforeEach(() => { mount = document.createElement('div'); document.body.appendChild(mount); face = createAnalog(mount); });
 afterEach(() => { face.destroy(); mount.remove(); });
 

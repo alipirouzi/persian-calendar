@@ -17,7 +17,7 @@ describe('parseSettings', () => {
       time: { source: 'device' },
       views: { persian: { enabled: false, open: false }, gregorian: { enabled: true, open: true } },
       holidays: { sources: ['nuremberg'], user: [{ id: 'a', name: 'N', calendar: 'persian', month: 1, day: 1 }] },
-      watch: { face: 'classic' },
+      watch: { face: 'digital' },
     };
     expect(parseSettings(raw)).toEqual(raw);
   });
@@ -137,12 +137,14 @@ describe('parseUserHoliday', () => {
 });
 
 describe('watch group', () => {
-  it('defaults to the Full bleed face', () => {
-    expect(parseSettings(undefined).watch).toEqual({ face: 'fullbleed' });
+  it('defaults to the Analog face', () => {
+    expect(parseSettings(undefined).watch).toEqual({ face: 'analog' });
   });
-  it('keeps a known face and replaces an unknown one', () => {
-    expect(parseSettings({ watch: { face: 'classic' } }).watch.face).toBe('classic');
-    for (const face of ['sundial', 3, null]) expect(parseSettings({ watch: { face } }).watch.face).toBe('fullbleed');
-    expect(parseSettings({ watch: 'classic' }).watch.face).toBe('fullbleed');
+  it('keeps a known face and maps legacy and unknown ones to Analog', () => {
+    expect(parseSettings({ watch: { face: 'digital' } }).watch.face).toBe('digital');
+    for (const face of ['fullbleed', 'classic', 'sundial', 3, null]) {
+      expect(parseSettings({ watch: { face } }).watch.face).toBe('analog');
+    }
+    expect(parseSettings({ watch: 'digital' }).watch.face).toBe('analog');
   });
 });
