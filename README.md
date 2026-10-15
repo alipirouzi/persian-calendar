@@ -159,7 +159,9 @@ in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 node environment. CI runs `npm run test:coverage`, so the threshold gates the pipeline as well as local
 runs.
 
-### E2E (Playwright) — 172 tests (172 passed, 0 skipped)
+### E2E (Playwright) — 171 tests (171 passed in the last full run; one test may skip itself)
+
+The one self-skipping test (`an above-anchored popup keeps its head still between views`, `e2e/calendar.spec.ts`) skips when the Gregorian calendar popup does not open upward at 375×812.
 
 ```bash
 cd Site
@@ -250,17 +252,17 @@ ship dates we cannot prove, the range is capped where the proof holds.
 ## Licensing
 
 The project code is MIT licensed (see `LICENSE`). Fonts are self-hosted via npm:
-Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
+Inter, Cormorant Garamond, Bodoni Moda and Vazirmatn, all under the SIL Open Font License.
 
 ## Design and behaviour notes
 
-- **Watch** — inline SVG, two faces chosen in Settings → Watch: **Analog** (default) and
+- **Watch** — two faces chosen in Settings → Watch: **Analog** (default) and
   **Digital**. Both always use Latin digits, also in the Persian UI.
-  - **Analog:** a Breguet-style dial with a railway minute track, twelve Cormorant Garamond
+  - **Analog:** inline SVG, a Breguet-style dial with a railway minute track, twelve Cormorant Garamond
     numerals, blued leaf hands that reach their scales, and a seconds hand that ticks 8 times a
     second.
-  - **Digital:** HH:MM in Bodoni Moda with small blued seconds.
-  - Colours are CSS custom properties (`--w-*`) that follow the system light/dark setting and
+  - **Digital:** HTML text (not SVG), HH:MM in Bodoni Moda with small blued seconds; it always reads left-to-right.
+  - Colours are CSS custom properties (`--wa-*` for Analog, `--wd-*` for Digital) that follow the system light/dark setting and
     restyle live (there is deliberately no manual override). Every colour is applied through
     classes, never `style` attributes, so the watch works under `style-src 'self'`.
   - **Battery:** the watch redraws only when the 125 ms beat changes (about 8 fps); everything
