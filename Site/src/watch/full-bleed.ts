@@ -35,8 +35,8 @@ export function createFullBleed(mount: HTMLElement): Face {
 
   const gradientId = `wf-dial-${++gradientSeq}`;
   const gradient = el('radialGradient', { id: gradientId, cx: '50%', cy: '30%', r: '75%' }, el('defs', {}, svg));
-  el('stop', { offset: 0, style: 'stop-color: var(--w-dial-0)' }, gradient);
-  el('stop', { offset: 1, style: 'stop-color: var(--w-dial-1)' }, gradient);
+  el('stop', { offset: 0, class: 'wf-stop-0' }, gradient);
+  el('stop', { offset: 1, class: 'wf-stop-1' }, gradient);
 
   el('circle', { cx: 100, cy: 100, r: DIAL_R, class: 'wf-dial', fill: `url(#${gradientId})` }, svg);
   el('circle', { cx: 100, cy: 100, r: DIAL_R, class: 'wf-edge' }, svg);

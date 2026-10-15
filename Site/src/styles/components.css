@@ -242,6 +242,8 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 .wc-dot { fill: currentColor; }
 
 /* Watch: Full bleed. Every colour is a --w-* token so the theme restyles it live. */
+.wf-stop-0 { stop-color: var(--w-dial-0); }
+.wf-stop-1 { stop-color: var(--w-dial-1); }
 .wf-edge { fill: none; stroke: var(--w-line); }
 .wf-tick { stroke: var(--w-track); stroke-linecap: round; stroke-width: 1; }
 .wf-tick--major { stroke-width: 2.8; }

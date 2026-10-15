@@ -26,6 +26,7 @@ describe('Full bleed face', () => {
         const v = node.getAttribute(attr);
         if (v !== null) expect(v, `${node.tagName} ${attr}`).toMatch(/^(none|url\(#.+\)|var\(--w-[a-z0-9-]+\))$/);
       }
+      expect(node.hasAttribute('style'), `${node.tagName} style`).toBe(false);
     }
   });
 

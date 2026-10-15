@@ -12,6 +12,10 @@ describe('Classic face', () => {
     expect(face.root.querySelectorAll('line')).toHaveLength(63);
     expect(face.root.querySelector('.second-hand')).not.toBeNull();
   });
+  it('has no inline style attributes, so a strict style-src CSP cannot strip its colours', () => {
+    const face = createClassic(mount);
+    for (const node of [face.root, ...face.root.querySelectorAll('*')]) expect(node.hasAttribute('style'), node.tagName).toBe(false);
+  });
   it('sweeps the seconds smoothly', () => {
     const face = createClassic(mount);
     face.render(watchState(1_500, false));
