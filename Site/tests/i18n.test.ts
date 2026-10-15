@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  formatTemplate, GREGORIAN_MONTHS, PERSIAN_MONTHS, STRINGS, toLocaleDigits,
+  formatTemplate, GREGORIAN_MONTHS, HOLIDAY_NAMES, PERSIAN_MONTHS, STRINGS, toLocaleDigits,
 } from '../src/i18n/strings';
+import { ALL_HOLIDAY_KEYS } from '../src/holidays/holiday-keys';
 
 describe('i18n', () => {
   it('month tables are complete', () => {
@@ -29,5 +30,11 @@ describe('i18n', () => {
     // Better a visible {days} than a sentence that silently lost its number.
     expect(formatTemplate('{month} has {days} days', { month: 'Esfand' }, 'en'))
       .toBe('Esfand has {days} days');
+  });
+  it('names every holiday in both languages', () => {
+    for (const lang of ['en', 'fa'] as const) {
+      expect(Object.keys(HOLIDAY_NAMES[lang]).sort()).toEqual([...ALL_HOLIDAY_KEYS].sort());
+      for (const key of ALL_HOLIDAY_KEYS) expect(HOLIDAY_NAMES[lang][key].trim(), `${lang} ${key}`).not.toBe('');
+    }
   });
 });
