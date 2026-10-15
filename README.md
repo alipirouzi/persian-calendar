@@ -1,6 +1,6 @@
 # Persian Calendar
 
-Persian (Shamsi / Solar Hijri) ↔ Gregorian date conversion and a live analog clock —
+Persian (Shamsi / Solar Hijri) ↔ Gregorian date conversion and a live analog watch —
 bilingual EN/FA with full RTL, installable as an offline PWA.
 
 **Live:** <https://time.automated.ink/>
@@ -8,7 +8,7 @@ bilingual EN/FA with full RTL, installable as an offline PWA.
 ## What it is
 
 A **fully static, client-side site**. There is no application server: nginx serves a
-handful of hashed files, and every conversion, clock frame, and language switch happens
+handful of hashed files, and every conversion, watch frame, and language switch happens
 in the visitor's browser. After first paint the only requests are a small same-origin clock sync (`/api/time`, at load and every few hours), which the app does without when offline.
 
 ### Why static
@@ -20,8 +20,8 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **61.0 kB of JavaScript (22.7 kB gzipped)** and **23.3 kB of CSS
-(4.8 kB gzipped)**, with no runtime framework.
+The shipped bundle is **74.0 kB of JavaScript (27.6 kB gzipped)** and **28.8 kB of CSS
+(6.2 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
 
@@ -43,7 +43,11 @@ PersianCalendar/
 │   ├── index.html          single page, semantic markup
 │   ├── src/
 │   │   ├── calendar/       persian.ts (algorithm port), now.ts (today snapshot)
-│   │   ├── clock/          clock-math.ts (hand angles), clock.ts (SVG + rAF driver)
+│   │   ├── watch/          geometry.ts (dial maths), movement-model.ts (beat-derived train state, pure),
+│   │   │                     face.ts (face interface + ids), full-bleed.ts / classic.ts (the two faces),
+│   │   │                     movement-parts.ts (SVG part builders), movement-view.ts (the movement, DOM),
+│   │   │                     watch.ts (driver: frames, visibility, reduced motion),
+│   │   │                     watch-settings.ts (Settings Watch group)
 │   │   ├── converter/      converter-core.ts (pure), converter.ts (DOM wiring),
 │   │   │                     field-options.ts (pure year/month/day option lists),
 │   │   │                     calendar-grid-model.ts (pure day/month/year page layout),
@@ -71,9 +75,9 @@ PersianCalendar/
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/api/holidays/ir/   official holiday data, one {year}.json per Persian year
 │   │                         (added by reviewed PRs from the crawler; absent until the first one merges)
-│   ├── tests/              Vitest (563 tests at 100% coverage, incl. .NET parity and the crawler;
+│   ├── tests/              Vitest (628 tests at 100% coverage, incl. .NET parity and the crawler;
 │   │                         tests/dom/ runs the DOM units under jsdom)
-│   └── e2e/                Playwright (151 tests, incl. converter-ux.spec.ts,
+│   └── e2e/                Playwright (170 tests, incl. converter-ux.spec.ts, watch.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts, settings.spec.ts,
 │                             time-sync.spec.ts, calendar-views.spec.ts, holiday-settings.spec.ts
 │                             and the screenshot matrix)
@@ -130,7 +134,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 563 tests, 100% coverage
+### Site unit tests (Vitest) — 628 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -147,16 +151,15 @@ changes. Without it the parity test cannot run.
 
 Coverage is enforced, not merely reported: `vite.config.ts` sets a **100% threshold on
 lines, statements, branches and functions**, and the suite currently meets all four
-(2950/2950 lines, 2950/2950 statements, 1261/1261 branches, 295/295 functions). Only
-`src/main.ts` (the bootstrap)
-and `src/clock/**` (visual, screenshot-tested) are excluded. Tests under `tests/dom/` run
+(3624/3624 lines, 3624/3624 statements, 1427/1427 branches, 376/376 functions). Only
+`src/main.ts` (the bootstrap) is excluded; `src/watch/**` is covered. Tests under `tests/dom/` run
 in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 `numeric-input.ts` and `converter.ts` are exercised, the last of them against the real
 `index.html` body rather than a hand-copied fixture. Everything else runs in the faster
 node environment. CI runs `npm run test:coverage`, so the threshold gates the pipeline as well as local
 runs.
 
-### E2E (Playwright) — 151 tests
+### E2E (Playwright) — 170 tests (169 run, 1 skips itself when its popup does not open upward)
 
 ```bash
 cd Site
@@ -167,7 +170,7 @@ npm run e2e
 Playwright starts `npm run preview` itself and tests the real production build. Coverage:
 today prefilled and cross-checked against ICU's Persian calendar, live conversion in both
 directions, month-aware localized validation errors, FA toggle → RTL + Persian digits,
-clock hands actually moving, the `prefers-reduced-motion` interval fallback
+watch hands actually moving, the `prefers-reduced-motion` interval fallback
 still advancing them, a light/dark × 320/375/430/768/820/1024/1440 screenshot matrix
 written to `Site/test-results/screens/`, and the PWA/mobile checks described below.
 `e2e/converter-ux.spec.ts` covers the converter UX work specifically: localized month
@@ -221,12 +224,13 @@ longer matches.
 
 The Playwright suite's viewport and locale matrix was widened alongside this work: light/dark
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
-asserting the clock shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
+asserting the watch shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (151 tests total across the whole E2E suite, including
+actually serves the app while offline (170 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 `calendar.spec.ts`, `time-sync.spec.ts` for the clock sync, and `calendar-views.spec.ts` and
-`holiday-settings.spec.ts` for the month views and holidays).
+`holiday-settings.spec.ts` for the month views and holidays, and `watch.spec.ts` for the faces,
+the movement and the wide-screen layout, with the `watch-*` screenshots in `Site/test-results/screens/`).
 
 ## Supported conversion range: Persian years 1200–1500 AP
 
@@ -250,10 +254,40 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
 
 ## Design and behaviour notes
 
-- **Clock** — inline SVG; the seconds hand glides continuously (angle recomputed from
-  `Date.now()` every `requestAnimationFrame`, Spring-Drive style) rather than ticking.
-  `prefers-reduced-motion: reduce` steps the hands once per second instead. The rAF loop
-  pauses on `visibilitychange`.
+- **Watch** — inline SVG, two faces chosen in Settings → Watch: **Full bleed** (default; an
+  edge-to-edge dial with broad sword hands and a red seconds hand) and **Classic**. Full bleed
+  always shows Latin 12 / 3 / 6 / 9, also in the Persian UI, and its colours are CSS custom
+  properties (`--w-*`) that follow the system light/dark setting and restyle live (there is
+  deliberately no manual override). The seconds hand ticks 8 times a second (4 Hz, like a
+  28 800 vph movement). Every colour is applied through classes, never `style` attributes, so
+  the watch works under `style-src 'self'`.
+  - **Show movement** (Full bleed only; session-only, not stored): the dial lifts away and a
+    Swiss-lever movement runs at true speed, with the time as large HH:MM digits while it is open.
+
+    | Part | Speed |
+    |---|---|
+    | Barrel | 1 turn / 8 h |
+    | Centre wheel (= the minute hand) | 1 / hour |
+    | Third wheel | 8 / hour |
+    | Fourth wheel (= the seconds hand) | 1 / minute |
+    | Escape wheel (15 teeth) | 16 / minute, 12° per beat |
+    | Pallet fork | rocks on every beat |
+    | Balance | 4 Hz, ±220° through zero on every beat |
+
+    Nothing is animated independently: every wheel's angle is derived from the escapement's
+    beat count through the train ratios (16 : 7.5 : 8 : 8), so the centre wheel *is* the minute
+    hand and the fourth wheel *is* the seconds hand. Finishing: perlage, Côtes de Genève
+    stripes, jewels and blued screws. Each part is focusable; tapping or focusing it shows its
+    name in a caption (narrow screens), and from 1024 px labels sit alongside the parts. The
+    movement SVG exists only while it is open.
+  - **Battery:** the dial alone redraws only when the 125 ms beat changes (about 8 fps); the
+    full frame rate runs only while the movement is mounted; everything stops while the page is
+    hidden. `prefers-reduced-motion: reduce` steps the hands once a second, holds the balance
+    still and swaps the movement in and out without the cross-fade.
+  - **Layout:** on phones the watch fills the width (`min(92vw, 62vh)`). From 1024 px the page is
+    two columns: the watch, the today lines and the toggle sit in a sticky, vertically centred
+    left column sized to fit the viewport height, while the converter and month views scroll on
+    the right; RTL mirrors the columns.
 - **Converter** — prefilled with today, no Convert button; editing either side converts on
   input, last-edited side wins. All six fields are plain text inputs (`inputmode="numeric"`)
   and digit-tolerant: Persian-Indic (`۱۴۰۵`), Arabic-Indic (`١٤٠٥`), and ASCII digits are all
@@ -275,7 +309,7 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   line up down the list instead of sitting ragged; logical alignment mirrors it under RTL.
   Validation messages are localized and month-aware ("Esfand has 29 days
   in 1404"). On desktop the converter, including the status row below, sits entirely above
-  the fold (the clock is 210px at that breakpoint).
+  the fold (it sits in the right column beside the sticky watch).
 - **Calendar** — each side's legend carries a calendar button that opens a browsable month
   grid for that calendar: **Persian weeks start on Saturday, Gregorian weeks start on Monday**,
   headers and month title localized. The grid opens on the month currently in the fields
@@ -310,8 +344,8 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   words, e.g. `'Today is' dddd`) and the digits (Latin or Persian), with a live preview.
   Settings are stored in `localStorage` under `settings.v1`; an unreadable value or an invalid
   field falls back to that field's default (`settings.v1` also holds the view and holiday
-  preferences). The Calendars & holidays group (views, sources, my holidays, Test connection) is described under Month views and holidays.
-- **Time source** — the clock, the today panel and the converter's Today take their time from `/api/time` on this site (best of three round trips, half the round trip credited to the server, offsets under 250 ms ignored), re-synced at load, on return after five minutes away and every six hours. Settings → Time shows where the time comes from and when it last synced, has a Test connection button, and can switch to this device's clock only. Unreachable or invalid answers keep the last good offset for up to 24 hours, then use the device clock. The today panel refreshes every minute from the clock's own frames, so it turns over at midnight (local and Tehran) even when the app is left open.
+  preferences, and the watch face). The Watch group chooses the face (Full bleed or Classic). The Calendars & holidays group (views, sources, my holidays, Test connection) is described under Month views and holidays.
+- **Time source** — the clock, the today panel and the converter's Today take their time from `/api/time` on this site (best of three round trips, half the round trip credited to the server, offsets under 250 ms ignored), re-synced at load, on return after five minutes away and every six hours. Settings → Time shows where the time comes from and when it last synced, has a Test connection button, and can switch to this device's clock only. Unreachable or invalid answers keep the last good offset for up to 24 hours, then use the device clock. The today panel refreshes every minute from the watch's own frames, so it turns over at midnight (local and Tehran) even when the app is left open.
 - **Month views and holidays** — below the converter (so it stays above the fold on desktop) sit
   two month panels, Persian (open by default) and Gregorian (closed), each hideable in Settings.
   Each has ‹ / › paging, a Today button that returns to the current month, and a list of that
