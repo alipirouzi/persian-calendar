@@ -1,4 +1,4 @@
-import { handAngles, msSinceLocalMidnight } from './clock-math';
+import { handAngles, msSinceLocalMidnight } from '../watch/movement-model';
 
 const TICKS = Array.from({ length: 60 }, (_, i) => {
   const angle = (i / 60) * 360;
