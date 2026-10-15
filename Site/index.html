@@ -224,17 +224,21 @@
       </fieldset>
       <fieldset class="settings-group settings-holidays">
         <legend data-str="holidaysSection"></legend>
-        <p class="settings-subhead" data-str="viewsLabel"></p>
-        <label class="settings-check"><input type="checkbox" id="set-view-persian" /> <span data-str="viewPersian"></span></label>
-        <label class="settings-check"><input type="checkbox" id="set-view-gregorian" /> <span data-str="viewGregorian"></span></label>
-        <p class="settings-subhead" data-str="holidaySourcesLabel"></p>
-        <label class="settings-check"><input type="checkbox" id="set-src-ir" /> <span data-str="sourceIrLong"></span></label>
-        <label class="settings-check"><input type="checkbox" id="set-src-nuremberg" /> <span data-str="sourceNurembergLong"></span></label>
-        <label class="settings-check"><input type="checkbox" id="set-src-user" /> <span data-str="sourceUserLong"></span></label>
+        <p id="set-views-label" class="settings-subhead" data-str="viewsLabel"></p>
+        <div class="settings-checks" role="group" aria-labelledby="set-views-label">
+          <label class="settings-check"><input type="checkbox" id="set-view-persian" /> <span data-str="viewPersian"></span></label>
+          <label class="settings-check"><input type="checkbox" id="set-view-gregorian" /> <span data-str="viewGregorian"></span></label>
+        </div>
+        <p id="set-sources-label" class="settings-subhead" data-str="holidaySourcesLabel"></p>
+        <div class="settings-checks" role="group" aria-labelledby="set-sources-label">
+          <label class="settings-check"><input type="checkbox" id="set-src-ir" /> <span data-str="sourceIrLong"></span></label>
+          <label class="settings-check"><input type="checkbox" id="set-src-nuremberg" /> <span data-str="sourceNurembergLong"></span></label>
+          <label class="settings-check"><input type="checkbox" id="set-src-user" /> <span data-str="sourceUserLong"></span></label>
+        </div>
         <ul id="set-user-holidays" class="settings-list"></ul>
-        <div class="settings-form">
+        <div id="set-uh-form" class="settings-form">
           <label for="set-uh-name" data-str="holidayName"></label>
-          <input id="set-uh-name" type="text" maxlength="60" autocomplete="off" dir="auto" />
+          <input id="set-uh-name" type="text" maxlength="60" autocomplete="off" dir="auto" aria-describedby="set-uh-error" />
           <label for="set-uh-calendar" data-str="copyCalendar"></label>
           <select id="set-uh-calendar">
             <option value="persian" data-str="calPersian"></option>
@@ -243,9 +247,9 @@
           <label for="set-uh-month" data-str="month"></label>
           <select id="set-uh-month"></select>
           <label for="set-uh-day" data-str="day"></label>
-          <input id="set-uh-day" type="text" inputmode="numeric" maxlength="2" autocomplete="off" />
+          <input id="set-uh-day" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-describedby="set-uh-error" />
           <label for="set-uh-year" data-str="holidayYear"></label>
-          <input id="set-uh-year" type="text" inputmode="numeric" maxlength="4" autocomplete="off" />
+          <input id="set-uh-year" type="text" inputmode="numeric" maxlength="4" autocomplete="off" aria-describedby="set-uh-error" />
           <p id="set-uh-error" class="settings-error" role="alert" hidden></p>
           <div class="settings-test">
             <button id="set-uh-save" type="button"></button>

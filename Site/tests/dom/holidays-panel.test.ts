@@ -3,6 +3,7 @@ import PAGE from '../../index.html?raw';
 import type { Lang } from '../../src/i18n/strings';
 import type { OfficialFile } from '../../src/holidays/holiday-data';
 import { setupHolidaySettings } from '../../src/holidays/holidays-panel';
+import { setupUserHolidayForm } from '../../src/holidays/user-holiday-form';
 import { MAX_USER_HOLIDAYS, parseUserHoliday } from '../../src/settings/settings-model';
 import { createSettingsStore, type SettingsStore } from '../../src/settings/settings-store';
 import { clickOn } from './dom-helpers';
@@ -55,6 +56,11 @@ describe('holiday settings', () => {
     document.body.innerHTML = '';
     expect(() => setupHolidaySettings({ store, service: { probe }, getLang: () => lang, now: () => new Date() }))
       .toThrow('#set-view-persian');
+  });
+
+  it('the user-holiday form refuses to run without its markup either', () => {
+    document.body.innerHTML = '';
+    expect(() => setupUserHolidayForm({ store, getLang: () => lang, newId: () => 'x' })).toThrow('#set-user-holidays');
   });
 
   it('shows the stored view and source choices', () => {
@@ -200,5 +206,110 @@ describe('holiday settings', () => {
     const [saved] = store.get().holidays.user;
     expect(saved?.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(parseUserHoliday({ ...saved })).toEqual(saved);
+  });
+
+  describe('focus and stale edits', () => {
+    const seed = (...names: string[]): void => {
+      store.update((s) => ({ ...s, holidays: { ...s.holidays, user: names.map((name, i) => ({
+        id: `s${i}`, name, calendar: 'persian' as const, month: 1, day: i + 1,
+      })) } }));
+    };
+    const button = (label: string): HTMLButtonElement =>
+      document.querySelector<HTMLButtonElement>(`#set-user-holidays button[aria-label="${label}"]`)!;
+
+    it('Edit and Cancel put focus in the name field', () => {
+      seed('A');
+      clickOn(button('Edit A'));
+      expect(document.activeElement).toBe(byId('set-uh-name'));
+      byId('set-uh-save').focus();
+      clickOn(byId('set-uh-cancel'));
+      expect(document.activeElement).toBe(byId('set-uh-name'));
+    });
+
+    it('Delete of a middle row focuses the row that took its place', () => {
+      seed('A', 'B', 'C');
+      clickOn(button('Delete B'));
+      expect(document.activeElement).toBe(button('Edit C'));
+    });
+
+    it('Delete of the last row focuses the row before it', () => {
+      seed('A', 'B');
+      clickOn(button('Delete B'));
+      expect(document.activeElement).toBe(button('Edit A'));
+    });
+
+    it('Delete of the only row focuses the name field', () => {
+      seed('A');
+      clickOn(button('Delete A'));
+      expect(document.activeElement).toBe(byId('set-uh-name'));
+    });
+
+    it('deleting the entry being edited drops the edit, so Save cannot bring it back', () => {
+      seed('A');
+      clickOn(button('Edit A'));
+      clickOn(button('Delete A'));
+      expect(text('set-uh-save')).toBe('Add');
+      expect(byId<HTMLInputElement>('set-uh-name').value).toBe('');
+      expect(byId('set-uh-cancel').hidden).toBe(true);
+      clickOn(byId('set-uh-save'));
+      expect(store.get().holidays.user).toEqual([]);
+    });
+  });
+
+  describe('the form error', () => {
+    const fields = ['set-uh-name', 'set-uh-day', 'set-uh-year'];
+
+    it('points the fields at the error and marks them invalid only while it shows', () => {
+      for (const id of fields) expect(byId(id).getAttribute('aria-describedby')).toBe('set-uh-error');
+      clickOn(byId('set-uh-save'));
+      for (const id of fields) expect(byId(id).getAttribute('aria-invalid')).toBe('true');
+      setValue('set-uh-name', 'B');
+      expect(byId('set-uh-error').hidden).toBe(true);
+      for (const id of fields) expect(byId(id).hasAttribute('aria-invalid')).toBe(false);
+    });
+
+    it('clears when a select changes too', () => {
+      clickOn(byId('set-uh-save'));
+      setValue('set-uh-month', '3');
+      expect(byId('set-uh-error').hidden).toBe(true);
+    });
+
+    it('is emptied and re-set on every failed save, so the alert speaks again', () => {
+      clickOn(byId('set-uh-save'));
+      const seen: string[] = [];
+      const observer = new MutationObserver(() => undefined);
+      observer.observe(byId('set-uh-error'), { childList: true, subtree: true, characterData: true });
+      clickOn(byId('set-uh-save'));
+      for (const record of observer.takeRecords()) {
+        seen.push(record.type === 'childList' && record.addedNodes.length === 0 ? 'cleared' : 'set');
+      }
+      observer.disconnect();
+      expect(seen[0]).toBe('cleared');
+      expect(seen.at(-1)).toBe('set');
+      expect(text('set-uh-error')).toBe('Enter a name and a date that exists');
+    });
+  });
+
+  it('labels the checkbox groups by their subheads, and the list as My holidays', () => {
+    const groups = [...document.querySelectorAll('.settings-holidays [role="group"]')];
+    expect(groups.map((g) => byId(g.getAttribute('aria-labelledby')!).dataset['str'])).toEqual(['viewsLabel', 'holidaySourcesLabel']);
+    expect(groups[0]!.querySelector('#set-view-persian')).not.toBeNull();
+    expect(groups[1]!.querySelector('#set-src-user')).not.toBeNull();
+    expect(byId('set-user-holidays').getAttribute('aria-label')).toBe('My holidays');
+    lang = 'fa';
+    panel.rerender();
+    expect(byId('set-user-holidays').getAttribute('aria-label')).toBe('تعطیلات من');
+  });
+
+  it('keeps a Gregorian calendar choice after a save, with the month back at 1', () => {
+    setValue('set-uh-name', 'G');
+    setValue('set-uh-calendar', 'gregorian');
+    setValue('set-uh-month', '5');
+    setValue('set-uh-day', '1');
+    clickOn(byId('set-uh-save'));
+    expect(store.get().holidays.user[0]).toMatchObject({ calendar: 'gregorian', month: 5 });
+    expect(byId<HTMLSelectElement>('set-uh-calendar').value).toBe('gregorian');
+    expect(byId<HTMLSelectElement>('set-uh-month').value).toBe('1');
+    expect(byId<HTMLSelectElement>('set-uh-month').selectedOptions[0]?.textContent).toBe('January');
   });
 });

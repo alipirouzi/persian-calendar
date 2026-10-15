@@ -394,8 +394,9 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 .mv-none { color: var(--text-muted); }
 
 /* Three groups no longer fit a phone screen: the dialog scrolls inside itself. */
-#settings-dialog { max-block-size: calc(100dvh - 2rem); overflow: auto; overscroll-behavior: contain; }
+#settings-dialog { max-block-size: calc(100vh - 2rem); max-block-size: calc(100dvh - 2rem); overflow: auto; overscroll-behavior: contain; }
 .settings-subhead { grid-column: 1 / -1; margin: 0.4rem 0 0; font-size: 0.78rem; color: var(--text-muted); }
+.settings-checks { grid-column: 1 / -1; display: grid; gap: 0.6rem; }
 .settings-check { grid-column: 1 / -1; display: flex; gap: 0.5rem; align-items: center; cursor: pointer; }
 .settings-check input { accent-color: var(--accent); inline-size: 1rem; block-size: 1rem; }
 .settings-list { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; font-size: 0.85rem; }
@@ -416,3 +417,9 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 .settings-none { color: var(--text-muted); }
 #set-holidays-test-result { font-size: 0.85rem; color: var(--text-muted); unicode-bidi: isolate; }
 .settings-test-row { margin-block-start: 0.9rem; padding-block-start: 0.75rem; border-block-start: 1px solid var(--hairline); }
+/* The dialog scrolls; Close stays in reach. The head reaches up over the dialog's 1.25rem top
+   padding and pins there, so scrolled content cannot show through above it. */
+.settings-head {
+  position: sticky; inset-block-start: -1.25rem; z-index: 1; background: var(--surface-raised);
+  margin-block-start: -1.25rem; padding-block: 1.25rem 0.5rem;
+}
