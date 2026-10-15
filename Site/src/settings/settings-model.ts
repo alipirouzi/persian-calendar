@@ -2,6 +2,7 @@ import {
   daysInGregorianMonth, daysInPersianMonth, PERSIAN_YEAR_MAX, PERSIAN_YEAR_MIN,
 } from '../calendar/persian';
 import { GREGORIAN_YEAR_MAX, GREGORIAN_YEAR_MIN } from '../converter/converter-core';
+import { FACE_IDS, type FaceId } from '../watch/face';
 
 export type CopyCalendar = 'persian' | 'gregorian' | 'both';
 export type CopyDigits = 'latin' | 'persian';
@@ -51,6 +52,7 @@ export interface Settings {
   readonly time: TimeSettings;
   readonly views: { readonly persian: ViewSettings; readonly gregorian: ViewSettings };
   readonly holidays: { readonly sources: readonly HolidaySource[]; readonly user: readonly UserHoliday[] };
+  readonly watch: { readonly face: FaceId };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -58,6 +60,7 @@ export const DEFAULT_SETTINGS: Settings = {
   time: { source: 'server' },
   views: { persian: { enabled: true, open: true }, gregorian: { enabled: true, open: false } },
   holidays: { sources: HOLIDAY_SOURCES, user: [] },
+  watch: { face: 'fullbleed' },
 };
 
 const CALENDARS: readonly CopyCalendar[] = ['persian', 'gregorian', 'both'];
@@ -161,5 +164,6 @@ export function parseSettings(raw: unknown): Settings {
       sources: parseSources(holidays['sources']),
       user: parseUserHolidays(holidays['user']),
     },
+    watch: { face: oneOf(group('watch')['face'], FACE_IDS, fallback.watch.face) },
   };
 }

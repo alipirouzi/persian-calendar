@@ -21,6 +21,7 @@ import { createSettingsStore } from './settings/settings-store';
 import { setupSettingsPanel } from './settings/settings-panel';
 import { createTimeSource } from './time/time-source';
 import { setupTimeSettings } from './time/time-panel';
+import { setupWatchSettings } from './watch/watch-settings';
 import { createMinuteGate } from './time/minute-gate';
 import { createHolidayService } from './holidays/holiday-service';
 import { setupCalendarPanels } from './views/calendar-panels';
@@ -76,6 +77,7 @@ function renderAll(converterRerender: () => void): void {
   settingsPanel.rerender();
   timeSettings.rerender();
   holidaySettings.rerender();
+  watchSettings.rerender();
   panels.rerender();
 }
 
@@ -86,6 +88,7 @@ const settingsPanel = setupSettingsPanel({
   store: settings, getLang: () => lang, getDate: () => converter.current(),
 });
 const timeSettings = setupTimeSettings({ store: settings, time, getLang: () => lang });
+const watchSettings = setupWatchSettings({ store: settings, getLang: () => lang });
 // The Copy tooltip names the active format; keep it in step with the settings.
 settings.subscribe(() => { converter.rerender(); });
 const urlDate = parseUrlDate(window.location.search);

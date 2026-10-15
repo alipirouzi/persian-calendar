@@ -17,6 +17,7 @@ describe('parseSettings', () => {
       time: { source: 'device' },
       views: { persian: { enabled: false, open: false }, gregorian: { enabled: true, open: true } },
       holidays: { sources: ['nuremberg'], user: [{ id: 'a', name: 'N', calendar: 'persian', month: 1, day: 1 }] },
+      watch: { face: 'classic' },
     };
     expect(parseSettings(raw)).toEqual(raw);
   });
@@ -132,5 +133,16 @@ describe('parseUserHoliday', () => {
   it('knows the longest each month can be', () => {
     expect([1, 6, 7, 11, 12].map((m) => maxDayOfMonth('persian', m))).toEqual([31, 31, 30, 30, 30]);
     expect([1, 2, 4, 12].map((m) => maxDayOfMonth('gregorian', m))).toEqual([31, 29, 30, 31]);
+  });
+});
+
+describe('watch group', () => {
+  it('defaults to the Full bleed face', () => {
+    expect(parseSettings(undefined).watch).toEqual({ face: 'fullbleed' });
+  });
+  it('keeps a known face and replaces an unknown one', () => {
+    expect(parseSettings({ watch: { face: 'classic' } }).watch.face).toBe('classic');
+    for (const face of ['sundial', 3, null]) expect(parseSettings({ watch: { face } }).watch.face).toBe('fullbleed');
+    expect(parseSettings({ watch: 'classic' }).watch.face).toBe('fullbleed');
   });
 });
