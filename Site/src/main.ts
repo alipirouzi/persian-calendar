@@ -24,6 +24,7 @@ import { setupTimeSettings } from './time/time-panel';
 import { createMinuteGate } from './time/minute-gate';
 import { createHolidayService } from './holidays/holiday-service';
 import { setupCalendarPanels } from './views/calendar-panels';
+import { setupHolidaySettings } from './holidays/holidays-panel';
 
 let lang: Lang = initialLang();
 
@@ -74,6 +75,7 @@ function renderAll(converterRerender: () => void): void {
   converterRerender();
   settingsPanel.rerender();
   timeSettings.rerender();
+  holidaySettings.rerender();
   panels.rerender();
 }
 
@@ -109,6 +111,7 @@ const panels = setupCalendarPanels({
   },
 });
 holidayService.subscribe(() => { panels.rerender(); });
+const holidaySettings = setupHolidaySettings({ store: settings, service: holidayService, getLang: () => lang, now: time.now });
 renderStatic();
 renderToday();
 

@@ -20,7 +20,10 @@ export type StringKey =
   | 'testOk' | 'testFail' | 'statusDevice' | 'statusSyncing' | 'statusSynced' | 'statusUnsynced'
   | 'driftNone' | 'driftSlow' | 'driftFast' | 'driftSlowMin' | 'driftFastMin'
   | 'viewPersian' | 'viewGregorian' | 'sourceIr' | 'sourceNuremberg' | 'sourceUser'
-  | 'estimated' | 'noHolidays' | 'goToThisMonth' | 'calendarsLabel';
+  | 'estimated' | 'noHolidays' | 'goToThisMonth' | 'calendarsLabel'
+  | 'holidaysSection' | 'viewsLabel' | 'holidaySourcesLabel' | 'sourceIrLong' | 'sourceNurembergLong' | 'sourceUserLong'
+  | 'holidayName' | 'holidayYear' | 'everyYear' | 'holidayAdd' | 'holidaySave' | 'holidayCancel' | 'holidayEdit' | 'holidayDelete'
+  | 'holidayInvalid' | 'holidayLimit' | 'noUserHolidays' | 'holidaysTestOk' | 'holidaysTestNone';
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = {
   en: {
@@ -91,6 +94,25 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     noHolidays: 'No holidays this month',
     goToThisMonth: 'Go to this month',
     calendarsLabel: 'Calendars',
+    holidaysSection: 'Calendars & holidays',
+    viewsLabel: 'Show under the clock',
+    holidaySourcesLabel: 'Holidays',
+    sourceIrLong: 'Iran (official)',
+    sourceNurembergLong: 'Nuremberg (Bavaria)',
+    sourceUserLong: 'My holidays',
+    holidayName: 'Name',
+    holidayYear: 'Year (optional)',
+    everyYear: 'every year',
+    holidayAdd: 'Add',
+    holidaySave: 'Save',
+    holidayCancel: 'Cancel',
+    holidayEdit: 'Edit',
+    holidayDelete: 'Delete',
+    holidayInvalid: 'Enter a name and a date that exists',
+    holidayLimit: 'You can keep up to {max} holidays',
+    noUserHolidays: 'None yet',
+    holidaysTestOk: 'OK · {year} official data · updated {date}',
+    holidaysTestNone: 'No official data for {year} — using estimates',
   },
   fa: {
     pageTitle: 'تقویم فارسی',
@@ -160,6 +182,25 @@ export const STRINGS: Record<Lang, Record<StringKey, string>> = {
     noHolidays: 'این ماه تعطیلی ندارد',
     goToThisMonth: 'رفتن به ماه جاری',
     calendarsLabel: 'تقویم‌ها',
+    holidaysSection: 'تقویم‌ها و تعطیلات',
+    viewsLabel: 'نمایش زیر ساعت',
+    holidaySourcesLabel: 'تعطیلات',
+    sourceIrLong: 'ایران (رسمی)',
+    sourceNurembergLong: 'نورنبرگ (باواریا)',
+    sourceUserLong: 'تعطیلات من',
+    holidayName: 'نام',
+    holidayYear: 'سال (اختیاری)',
+    everyYear: 'هر سال',
+    holidayAdd: 'افزودن',
+    holidaySave: 'ذخیره',
+    holidayCancel: 'انصراف',
+    holidayEdit: 'ویرایش',
+    holidayDelete: 'حذف',
+    holidayInvalid: 'یک نام و تاریخی معتبر وارد کنید',
+    holidayLimit: 'حداکثر {max} تعطیلی می‌توانید داشته باشید',
+    noUserHolidays: 'هنوز چیزی نیست',
+    holidaysTestOk: 'برقرار · داده رسمی {year} · به‌روزشده {date}',
+    holidaysTestNone: 'داده رسمی برای {year} نیست — تخمین‌ها استفاده می‌شوند',
   },
 };
 

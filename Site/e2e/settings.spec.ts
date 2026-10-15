@@ -35,7 +35,8 @@ test('only the backdrop closes the dialog: not its padding, not a drag that ends
   const dialog = page.getByRole('dialog', { name: 'Settings' });
   const box = (await dialog.boundingBox())!;
   const input = (await page.locator('#set-copy-custom').boundingBox())!;
-  const backdrop = { x: box.x + box.width + 20, y: box.y + box.height + 20 };
+  // Beside the dialog, not below it: the dialog can be as tall as the viewport allows.
+  const backdrop = { x: box.x + box.width + 20, y: box.y + box.height / 2 };
 
   await page.mouse.click(box.x + 4, box.y + 4);
   await expect(dialog).toBeVisible();
