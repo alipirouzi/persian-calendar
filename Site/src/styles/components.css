@@ -248,14 +248,14 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 #watch-box[data-face="digital"] #clock-mount { position: static; }
 /* Landscape phones: keep the today panel reachable without scrolling past the dial. */
 @media (max-height: 480px) { #watch-box { width: min(60vh, 92vw); } }
-/* Wide screens: the watch fills the sticky left half (see base.css for the columns), but never
-   so large that the column (digits, toggle, today lines) overflows a short viewport. `svh` (the
-   viewport with any browser bars shown) keeps the dial from resizing as bars come and go; the
-   floor keeps it a watch on very short windows. The `vh` line is for browsers without `svh`. */
+/* Wide screens: a watch, not a wall clock — at most 360 px, centred in the sticky left column,
+   and never so large that the column (watch and today lines) overflows a short viewport. `svh`
+   keeps the dial from resizing as browser bars come and go; the floor keeps it a watch on very
+   short windows. The `vh` line is for browsers without `svh`. */
 @media (min-width: 1024px) {
   #watch-box {
-    width: min(40vw, 72vh, max(calc(100vh - 22rem), 160px));
-    width: min(40vw, 72vh, max(calc(100svh - 22rem), 160px));
+    width: min(360px, 40vw, 72vh, max(calc(100vh - 16rem), 160px));
+    width: min(360px, 40vw, 72vh, max(calc(100svh - 16rem), 160px));
   }
 }
 

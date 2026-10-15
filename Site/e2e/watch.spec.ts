@@ -72,13 +72,98 @@ for (const [w, h] of [[1366, 768], [1280, 720]] as const) {
   });
 }
 
+for (const [w, h] of [[1440, 900], [1280, 800], [1280, 720]] as const) {
+  test(`wide screens: the watch is at most 360 px and the column fits at ${w}x${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto('/');
+    const box = (await page.locator('#watch-box').boundingBox())!;
+    expect(box.width).toBeLessThanOrEqual(360.5);
+    expect(box.width).toBeGreaterThanOrEqual(200);
+    expect(box.x + box.width / 2).toBeLessThan(w / 2);            // in the left column
+    await expect(page.locator('#today-persian')).toBeInViewport();
+    await expect(page.locator('#today-gregorian')).toBeInViewport();
+  });
+}
+
+test('phones: the watch size is unchanged (min(92vw, 62vh))', async ({ page }) => {
+  await page.setViewportSize({ width: 400, height: 860 });
+  await page.goto('/');
+  const box = (await page.locator('#watch-box').boundingBox())!;
+  expect(box.width).toBeCloseTo(Math.min(0.92 * 400, 0.62 * 860), 0);
+});
+
+test('the analog hands reach their scales on screen', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const r = await page.evaluate(() => {
+    const svg = document.querySelector('.watch-face--analog') as SVGSVGElement;
+    const ctm = svg.getScreenCTM()!;
+    const unit = Math.hypot(ctm.a, ctm.b);                      // px per viewBox unit
+    const c = new DOMPoint(100, 100).matrixTransform(ctm);
+    const reach = (id: string) => {
+      const g = document.getElementById(id) as unknown as SVGGraphicsElement;
+      const path = g.querySelector('path') as SVGPathElement;
+      const m = path.getScreenCTM()!;
+      let best = 0;
+      for (let i = 0; i <= 400; i++) {
+        const p = path.getPointAtLength((path.getTotalLength() * i) / 400).matrixTransform(m);
+        best = Math.max(best, Math.hypot(p.x - c.x, p.y - c.y));
+      }
+      return best / unit;
+    };
+    return { hour: reach('hand-hour'), minute: reach('hand-minute'), second: reach('hand-second') };
+  });
+  expect(r.hour).toBeGreaterThan(67); expect(r.hour).toBeLessThan(72.5);       // stops at the numerals
+  expect(r.minute).toBeGreaterThan(91.5); expect(r.minute).toBeLessThanOrEqual(96); // inside the track
+  expect(r.second).toBeGreaterThan(94); expect(r.second).toBeLessThanOrEqual(96);
+});
+
+test('digital fits a 320 px phone, in Persian, with Latin digits', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('lang', 'fa');
+    localStorage.setItem('settings.v1', JSON.stringify({ watch: { face: 'digital' } }));
+  });
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto('/');
+  const hm = page.locator('.wd-hm');
+  await expect(hm).toHaveText(/^\d\d:\d\d$/);
+  const fit = await page.evaluate(() => {
+    const face = document.querySelector('.watch-face--digital') as HTMLElement;
+    const box = document.getElementById('watch-box')!.getBoundingClientRect();
+    const r = face.getBoundingClientRect();
+    const hmRect = face.querySelector('.wd-hm')!.getBoundingClientRect();
+    return { overflow: face.scrollWidth - face.clientWidth, inside: r.left >= box.left - 0.5 && r.right <= box.right + 0.5, oneLine: hmRect.height < 1.6 * parseFloat(getComputedStyle(face.querySelector('.wd-hm')!).fontSize) };
+  });
+  expect(fit.overflow).toBeLessThanOrEqual(0);
+  expect(fit.inside).toBe(true);
+  expect(fit.oneLine).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('dark mode restyles the analog dial live', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/');
+  const look = () => page.evaluate(() => [
+    getComputedStyle(document.querySelector('.wa-num')!).fill,
+    getComputedStyle(document.querySelector('.wa-ring')!).stroke,
+    getComputedStyle(document.querySelector('.wa-blue-1')!).stopColor,
+  ].join('|'));
+  const light = await look();
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect.poll(look).not.toBe(light);
+});
+
 for (const scheme of ['light', 'dark'] as const) {
-  for (const [w, h] of [[400, 860], [1440, 900]] as const) {
-    test(`screenshot watch ${scheme} ${w} dial`, async ({ page }) => {
-      await page.emulateMedia({ colorScheme: scheme });
-      await page.setViewportSize({ width: w, height: h });
-      await page.goto('/');
-      await page.locator('#clock-section').screenshot({ path: `test-results/screens/watch-${scheme}-${w}-dial.png` });
-    });
+  for (const w of [400, 1440] as const) {
+    for (const face of ['analog', 'digital'] as const) {
+      test(`screenshot watch ${scheme} ${w} ${face}`, async ({ page }) => {
+        await page.addInitScript((f) => localStorage.setItem('settings.v1', JSON.stringify({ watch: { face: f } })), face);
+        await page.emulateMedia({ colorScheme: scheme });
+        await page.setViewportSize({ width: w, height: w === 400 ? 860 : 900 });
+        await page.goto('/');
+        await expect(page.locator(`.watch-face--${face}`)).toBeVisible();
+        await page.locator('#clock-section').screenshot({ path: `test-results/screens/watch-${scheme}-${w}-${face}.png` });
+      });
+    }
   }
 }

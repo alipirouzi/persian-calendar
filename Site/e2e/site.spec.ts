@@ -177,7 +177,7 @@ test('desktop stays pixel-identical regardless of short viewport height', async 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   const clock = await page.locator('.clock').boundingBox();
-  expect(clock!.width).toBeGreaterThanOrEqual(500);
+  expect(clock!.width).toBeLessThanOrEqual(360.5);
   expect(clock!.x + clock!.width / 2).toBeLessThan(720);
   const box = await page.locator('#p-y').boundingBox();
   expect(box!.height).toBeLessThan(44);
