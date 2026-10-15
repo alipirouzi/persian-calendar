@@ -33,9 +33,8 @@ export default defineConfig({
       reporter: ['text-summary', 'json-summary'],
       include: ['src/**/*.ts'],
       // main.ts is the bootstrap — it wires modules together and is covered by
-      // the Playwright suite end to end; clock rendering is likewise visual and
-      // screenshot-tested. Neither has unit-testable logic of its own.
-      exclude: ['src/main.ts', 'src/clock/**'],
+      // the Playwright suite end to end. It has no unit-testable logic of its own.
+      exclude: ['src/main.ts'],
       thresholds: { lines: 100, functions: 100, branches: 100, statements: 100 },
     },
   },

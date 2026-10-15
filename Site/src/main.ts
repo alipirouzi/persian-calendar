@@ -16,12 +16,12 @@ import {
   toLocaleDigits, type Lang, type StringKey,
 } from './i18n/strings';
 import { formatGregorianDate, formatPersianDate, weekdayName } from './i18n/format';
-import { createClock } from './clock/clock';
 import { createSettingsStore } from './settings/settings-store';
 import { setupSettingsPanel } from './settings/settings-panel';
 import { createTimeSource } from './time/time-source';
 import { setupTimeSettings } from './time/time-panel';
 import { setupWatchSettings } from './watch/watch-settings';
+import { createWatch } from './watch/watch';
 import { createMinuteGate } from './time/minute-gate';
 import { createHolidayService } from './holidays/holiday-service';
 import { setupCalendarPanels } from './views/calendar-panels';
@@ -78,6 +78,7 @@ function renderAll(converterRerender: () => void): void {
   timeSettings.rerender();
   holidaySettings.rerender();
   watchSettings.rerender();
+  watch.rerender();
   panels.rerender();
 }
 
@@ -118,12 +119,14 @@ const holidaySettings = setupHolidaySettings({ store: settings, service: holiday
 renderStatic();
 renderToday();
 
-// The today panel is re-rendered once a minute from the clock's own frames: that covers
+// The today panel is re-rendered once a minute from the watch's own frames: that covers
 // local midnight, Tehran midnight and the Tehran time line, with no long timer for iOS to
-// throttle. A clock that was hidden restarts on visible and ticks straight away.
+// throttle. A watch that was hidden restarts on visible and ticks straight away.
 const refreshToday = createMinuteGate(() => { renderToday(); panels.refreshToday(); });
-const clockMount = document.getElementById('clock-mount');
-if (clockMount) createClock(clockMount, { now: time.now, onTick: refreshToday });
+const watch = createWatch(document.getElementById('clock-section')!, {
+  now: time.now, onTick: refreshToday, getFace: () => settings.get().watch.face, getLang: () => lang,
+});
+settings.subscribe((s) => { watch.setFace(s.watch.face); });
 // A sync can move "now" across a minute or a day; re-check as soon as it lands.
 time.subscribe(() => { refreshToday(time.now()); });
 time.start();

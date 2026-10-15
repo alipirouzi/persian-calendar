@@ -106,7 +106,10 @@ test('landscape phone: clock shrinks so today panel is reachable', async ({ page
   await page.setViewportSize({ width: 844, height: 390 });
   await page.goto('/');
   const clock = await page.locator('.clock').boundingBox();
-  expect(clock!.height).toBeLessThanOrEqual(150);
+  expect(clock!.height).toBeLessThanOrEqual(0.65 * 390);
+  await page.locator('#today-persian').scrollIntoViewIfNeeded();
+  await expect(page.locator('#today-persian')).toBeInViewport();
+  await expect(page.locator('.clock')).toBeInViewport();
   await page.screenshot({ path: 'test-results/screens/landscape-844x390.png', fullPage: true });
 });
 
@@ -114,7 +117,7 @@ test('tablet clock is larger than phone clock', async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 1180 });
   await page.goto('/');
   const clock = await page.locator('.clock').boundingBox();
-  expect(clock!.height).toBeGreaterThanOrEqual(300);
+  expect(clock!.height).toBeGreaterThanOrEqual(400);
 });
 
 test('no horizontal overflow at phone widths', async ({ page }) => {
@@ -174,7 +177,8 @@ test('desktop stays pixel-identical regardless of short viewport height', async 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   const clock = await page.locator('.clock').boundingBox();
-  expect(clock!.height).toBe(210);
+  expect(clock!.width).toBeGreaterThanOrEqual(500);
+  expect(clock!.x + clock!.width / 2).toBeLessThan(720);
   const box = await page.locator('#p-y').boundingBox();
   expect(box!.height).toBeLessThan(44);
   const fontPx = await page.locator('#p-y').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
