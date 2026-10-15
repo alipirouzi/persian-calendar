@@ -1,6 +1,7 @@
 import '@fontsource-variable/inter';
 import '@fontsource/cormorant-garamond/500.css';
 import '@fontsource/cormorant-garamond/600.css';
+import '@fontsource/bodoni-moda/latin-400.css';
 import 'vazirmatn/Vazirmatn-Variable-font-face.css';
 import './styles/tokens.css';
 import './styles/base.css';

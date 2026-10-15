@@ -23,6 +23,8 @@
   --w-jewel: #c2183a;   --w-spring: #3d5fb8;  --w-shadow: rgba(60,50,30,.18);
   /* Watch — Analog and Digital */
   --font-dial: 'Cormorant Garamond', serif;
+  --font-digital: 'Bodoni Moda', 'Cormorant Garamond', serif;
+  --wd-ink: #1d1f24;    --wd-sec: #2f5cc0;
   --wa-dial-0: #fdfbf6; --wa-dial-1: #ece6da;
   --wa-ink: #1d1f24;    --wa-track: #2a2c31;
   --wa-blue-0: #4a7fe0; --wa-blue-1: #244fae; --wa-blue-2: #13306f;
@@ -46,6 +48,7 @@
     --wa-dial-0: #23272f; --wa-dial-1: #0e1014;
     --wa-ink: #efe9dc;    --wa-track: #c9c3b6;
     --wa-blue-0: #9dbcff; --wa-blue-1: #5f8ef0; --wa-blue-2: #3561c4;
+    --wd-ink: #efe9dc;    --wd-sec: #7aa2f7;
   }
 }
 html[lang='fa'] {

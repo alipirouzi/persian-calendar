@@ -564,3 +564,20 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
   position: sticky; inset-block-start: -1.25rem; z-index: 1; background: var(--surface-raised);
   margin-block-start: -1.25rem; padding-block: 1.25rem 0.5rem;
 }
+
+/* Watch — the Digital face: sized from its box (container units), never wraps. */
+.watch-face--digital {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.08em;
+  color: var(--wd-ink);
+  font-family: var(--font-digital);
+  font-weight: 400;
+  font-feature-settings: "lnum", "tnum";
+  font-variant-numeric: lining-nums tabular-nums;
+  white-space: nowrap;
+  line-height: 1;
+}
+.wd-hm { font-size: 24cqi; }
+.wd-ss { font-size: 8cqi; color: var(--wd-sec); }
