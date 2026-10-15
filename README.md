@@ -77,7 +77,7 @@ PersianCalendar/
 │   │                         (added by reviewed PRs from the crawler; absent until the first one merges)
 │   ├── tests/              Vitest (589 tests at 100% coverage, incl. .NET parity and the crawler;
 │   │                         tests/dom/ runs the DOM units under jsdom)
-│   └── e2e/                Playwright (171 tests, incl. converter-ux.spec.ts, watch.spec.ts,
+│   └── e2e/                Playwright (172 tests, incl. converter-ux.spec.ts, watch.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts, settings.spec.ts,
 │                             time-sync.spec.ts, calendar-views.spec.ts, holiday-settings.spec.ts
 │                             and the screenshot matrix)
@@ -159,7 +159,7 @@ in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 node environment. CI runs `npm run test:coverage`, so the threshold gates the pipeline as well as local
 runs.
 
-### E2E (Playwright) — 171 tests (171 passed in the last full run; one test may skip itself)
+### E2E (Playwright) — 172 tests (172 passed in the last full run; one test may skip itself)
 
 The one self-skipping test (`an above-anchored popup keeps its head still between views`, `e2e/calendar.spec.ts`) skips when the Gregorian calendar popup does not open upward at 375×812.
 
@@ -228,7 +228,7 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the watch shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (171 tests total across the whole E2E suite, including
+actually serves the app while offline (172 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 `calendar.spec.ts`, `time-sync.spec.ts` for the clock sync, and `calendar-views.spec.ts` and
 `holiday-settings.spec.ts` for the month views and holidays, and `watch.spec.ts` for the faces
@@ -274,6 +274,9 @@ Inter, Cormorant Garamond, Bodoni Moda and Vazirmatn, all under the SIL Open Fon
     the watch is at most 360 px and sits, with the today lines, in a sticky, vertically centred
     left column, while the converter and month views scroll on the right; RTL mirrors the
     columns.
+- **Today lines** — under the watch, the UI language's own calendar leads and carries the
+  weekday: Gregorian first in English, Shamsi first in Persian. The second line repeats the
+  weekday only when Tehran and the viewer are on different days.
 - **Converter** — prefilled with today, no Convert button; editing either side converts on
   input, last-edited side wins. All six fields are plain text inputs (`inputmode="numeric"`)
   and digit-tolerant: Persian-Indic (`۱۴۰۵`), Arabic-Indic (`١٤٠٥`), and ASCII digits are all

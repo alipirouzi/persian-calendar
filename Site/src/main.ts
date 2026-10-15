@@ -39,6 +39,7 @@ function renderStatic(): void {
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
   document.title = STRINGS[lang].pageTitle;
+  orderToday();
   text('lang-toggle', STRINGS[lang].langToggle);
   text('legend-persian', STRINGS[lang].persianLabel);
   text('legend-gregorian', STRINGS[lang].gregorianLabel);
@@ -52,17 +53,31 @@ function renderStatic(): void {
   }
 }
 
+/** The UI language's own calendar leads the today lines: Shamsi in Persian, Gregorian in English. */
+function orderToday(): void {
+  const persian = document.getElementById('today-persian');
+  const gregorian = document.getElementById('today-gregorian');
+  const rule = document.querySelector('#today > hr');
+  if (!persian || !gregorian || !rule) return;
+  const [first, second] = lang === 'fa' ? [persian, gregorian] : [gregorian, persian];
+  rule.before(first);
+  rule.after(second);
+}
+
 function renderToday(): void {
   const snapshot = nowSnapshot(time.now());
   const lines = todayLines(snapshot);
   const sep = lang === 'fa' ? ' ' : ', ';
-  const persianWeekday = weekdayName(lines.persianWeekdaySource, lang);
-  text('today-persian', `${persianWeekday}${sep}${formatPersianDate(lines.persian, lang)}`);
-  // The second weekday would just repeat the first: both lines describe one day,
-  // except when Tehran has turned over and the viewer has not.
-  const gregorianWeekday = lines.daysDiverge
+  const persianLeads = lang === 'fa';
+  // The leading line carries the weekday. The second would just repeat it: both lines
+  // describe one day, except when Tehran has turned over and the viewer has not.
+  const persianWeekday = persianLeads || lines.daysDiverge
+    ? `${weekdayName(lines.persianWeekdaySource, lang)}${sep}`
+    : '';
+  const gregorianWeekday = !persianLeads || lines.daysDiverge
     ? `${weekdayName(lines.gregorian, lang)}${sep}`
     : '';
+  text('today-persian', `${persianWeekday}${formatPersianDate(lines.persian, lang)}`);
   text('today-gregorian', `${gregorianWeekday}${formatGregorianDate(lines.gregorian, lang)}`);
   const tehranLine = document.getElementById('tehran-line');
   if (tehranLine) {

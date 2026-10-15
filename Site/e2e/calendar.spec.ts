@@ -488,8 +488,9 @@ test.describe('the today panel across time zones', () => {
       body: JSON.stringify({ epochSec: Date.parse('2026-08-08T14:00:00Z') / 1000 }),
     }));
     await page.goto('/');
-    await expect(page.locator('#today-persian')).toHaveText('Saturday, 17 Mordad 1405');
-    await expect(page.locator('#today-gregorian')).toHaveText('August 8, 2026');
+    // English leads with the Gregorian line, which carries the weekday.
+    await expect(page.locator('#today-gregorian')).toHaveText('Saturday, August 8, 2026');
+    await expect(page.locator('#today-persian')).toHaveText('17 Mordad 1405');
   });
 
   test('gives each line its own weekday once Tehran has turned over', async ({ page }) => {

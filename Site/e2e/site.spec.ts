@@ -55,6 +55,23 @@ test('language toggle switches to FA with RTL and Persian digits', async ({ page
   await expect(page.locator('#today-persian')).toContainText('۱۴');
 });
 
+test('the today lines lead with the UI language\'s calendar: Gregorian in English, Shamsi in Persian', async ({ page }) => {
+  await page.goto('/');
+  const order = () => page.evaluate(() =>
+    [...document.querySelectorAll('#today .date-display')].map((p) => p.id));
+  const above = () => page.evaluate(() =>
+    document.getElementById('today-gregorian')!.getBoundingClientRect().top
+      < document.getElementById('today-persian')!.getBoundingClientRect().top);
+  expect(await order()).toEqual(['today-gregorian', 'today-persian']);
+  expect(await above()).toBe(true);
+  await page.locator('#lang-toggle').click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fa');
+  expect(await order()).toEqual(['today-persian', 'today-gregorian']);
+  expect(await above()).toBe(false);
+  await page.locator('#lang-toggle').click();
+  expect(await order()).toEqual(['today-gregorian', 'today-persian']);
+});
+
 test('clock hands are driven', async ({ page }) => {
   await page.goto('/');
   const before = await page.locator('#hand-second').getAttribute('transform');
