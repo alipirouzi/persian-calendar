@@ -20,7 +20,7 @@ server-side circuit. The conversion arithmetic itself takes microseconds — eff
 of the perceived latency was transport. Moving to a static bundle removes the transport,
 the per-visitor server state, and the server-side scaling concern in one step.
 
-The shipped bundle is **74.0 kB of JavaScript (27.6 kB gzipped)** and **28.8 kB of CSS
+The shipped bundle is **74.3 kB of JavaScript (27.7 kB gzipped)** and **29.0 kB of CSS
 (6.2 kB gzipped)**, with no runtime framework.
 
 ## Repo layout
@@ -75,9 +75,9 @@ PersianCalendar/
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/api/holidays/ir/   official holiday data, one {year}.json per Persian year
 │   │                         (added by reviewed PRs from the crawler; absent until the first one merges)
-│   ├── tests/              Vitest (628 tests at 100% coverage, incl. .NET parity and the crawler;
+│   ├── tests/              Vitest (635 tests at 100% coverage, incl. .NET parity and the crawler;
 │   │                         tests/dom/ runs the DOM units under jsdom)
-│   └── e2e/                Playwright (170 tests, incl. converter-ux.spec.ts, watch.spec.ts,
+│   └── e2e/                Playwright (172 tests, incl. converter-ux.spec.ts, watch.spec.ts,
 │                             picker.spec.ts, calendar.spec.ts, settings.spec.ts,
 │                             time-sync.spec.ts, calendar-views.spec.ts, holiday-settings.spec.ts
 │                             and the screenshot matrix)
@@ -134,7 +134,7 @@ dotnet build -warnaserror
 dotnet test
 ```
 
-### Site unit tests (Vitest) — 628 tests, 100% coverage
+### Site unit tests (Vitest) — 635 tests, 100% coverage
 
 The parity suite reads `Site/tests/fixtures/vectors.json`, which is **generated, not
 committed**. Generate it first (requires the .NET 10 SDK):
@@ -159,7 +159,7 @@ in jsdom — that is where `popup.ts`, `number-picker.ts`, `calendar-grid.ts`,
 node environment. CI runs `npm run test:coverage`, so the threshold gates the pipeline as well as local
 runs.
 
-### E2E (Playwright) — 170 tests (169 run, 1 skips itself when its popup does not open upward)
+### E2E (Playwright) — 172 tests (171 run, 1 skips itself when its popup does not open upward)
 
 ```bash
 cd Site
@@ -226,7 +226,7 @@ The Playwright suite's viewport and locale matrix was widened alongside this wor
 screenshots at 320, 375, 430, 768, 820, 1024, and 1440 px; a landscape-phone case (844×390)
 asserting the watch shrinks so the today panel stays reachable; FA/RTL screenshots at 375 and
 820; and dedicated tests confirming the manifest and icons resolve and that the service worker
-actually serves the app while offline (170 tests total across the whole E2E suite, including
+actually serves the app while offline (172 tests total across the whole E2E suite, including
 the later converter UX additions in `converter-ux.spec.ts`, `picker.spec.ts` and
 `calendar.spec.ts`, `time-sync.spec.ts` for the clock sync, and `calendar-views.spec.ts` and
 `holiday-settings.spec.ts` for the month views and holidays, and `watch.spec.ts` for the faces,
@@ -258,8 +258,8 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   edge-to-edge dial with broad sword hands and a red seconds hand) and **Classic**. Full bleed
   always shows Latin 12 / 3 / 6 / 9, also in the Persian UI, and its colours are CSS custom
   properties (`--w-*`) that follow the system light/dark setting and restyle live (there is
-  deliberately no manual override). The seconds hand ticks 8 times a second (4 Hz, like a
-  28 800 vph movement). Every colour is applied through classes, never `style` attributes, so
+  deliberately no manual override). Its seconds hand ticks 8 times a second (4 Hz, like a
+  28 800 vph movement); Classic's sweeps. Every colour is applied through classes, never `style` attributes, so
   the watch works under `style-src 'self'`.
   - **Show movement** (Full bleed only; session-only, not stored): the dial lifts away and a
     Swiss-lever movement runs at true speed, with the time as large HH:MM digits while it is open.
@@ -278,11 +278,13 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
     beat count through the train ratios (16 : 7.5 : 8 : 8), so the centre wheel *is* the minute
     hand and the fourth wheel *is* the seconds hand. Finishing: perlage, Côtes de Genève
     stripes, jewels and blued screws. Each part is focusable; tapping or focusing it shows its
-    name in a caption (narrow screens), and from 1024 px labels sit alongside the parts. The
-    movement SVG exists only while it is open.
-  - **Battery:** the dial alone redraws only when the 125 ms beat changes (about 8 fps); the
-    full frame rate runs only while the movement is mounted; everything stops while the page is
-    hidden. `prefers-reduced-motion: reduce` steps the hands once a second, holds the balance
+    name and speed in a caption at every width, and from 1024 px labels also sit alongside the
+    parts (a little larger on short laptop screens, so they stay legible). The movement SVG
+    exists only while it is open.
+  - **Battery:** Full bleed's dial alone redraws only when the 125 ms beat changes (about
+    8 fps); Classic's sweeping seconds hand and the mounted movement run at the full frame rate,
+    with the movement's train wheels and the HH:MM text rewritten only when they change;
+    everything stops while the page is hidden. `prefers-reduced-motion: reduce` steps the hands once a second, holds the balance
     still and swaps the movement in and out without the cross-fade.
   - **Layout:** on phones the watch fills the width (`min(92vw, 62vh)`). From 1024 px the page is
     two columns: the watch, the today lines and the toggle sit in a sticky, vertically centred
