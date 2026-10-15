@@ -315,7 +315,7 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   digits: a native numeric input only accepts ASCII digits, so localizing it would break
   typing and validation. Digits typed in any of the three scripts are normalized before
   conversion, so nothing is lost either way.
-- **Privacy** — no cookies, no analytics, no third-party requests, no personal data processed. The only request after load is `GET /api/time` to this same site; it carries nothing about you and its answer is the server's clock. The browser keeps only your language and settings in `localStorage`; they never leave it. See `docs/SECURITY.md`.
+- **Privacy** — no cookies, no analytics, no third-party requests, no personal data processed. The only requests after load are `GET /api/time` to this same site (three per sync, plus one when you press Test connection); it carries nothing about you and its answer is the server's clock. The browser keeps only your language and settings in `localStorage`; they never leave it. See `docs/SECURITY.md`.
 
 ## Deployment
 
