@@ -161,6 +161,21 @@ describe('time source', () => {
     expect(seen).toEqual(['syncing', 'unsynced']);
   });
 
+  it('recovers from a listener that throws, so a later sync still runs and adopts', async () => {
+    const fetchImpl = serverAhead(5_000);
+    const t = make(fetchImpl);
+    let calls = 0;
+    t.subscribe(() => {
+      calls += 1;
+      if (calls === 1) throw new Error('listener failed');
+    });
+    await expect(t.sync()).rejects.toThrow('listener failed');
+    expect(t.status()).toEqual({ kind: 'unsynced' });
+    await t.sync();
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(t.status()).toMatchObject({ kind: 'synced', offsetMs: 5_000 });
+  });
+
   it('shares one run between overlapping sync calls', async () => {
     const fetchImpl = serverAhead(5_000);
     const t = make(fetchImpl);

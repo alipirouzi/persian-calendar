@@ -81,19 +81,23 @@ export function createTimeSource({
     if (running?.generation === generation) return running.done;
     // `running` is set before the first notify and cleared before the last, so a listener
     // reading status() sees "syncing" while it runs and the outcome once it has finished.
+    // It is cleared in `finally` so a throwing listener cannot leave the run wedged.
     const mine = { generation, done: Promise.resolve() };
     running = mine;
     mine.done = (async () => {
-      lastAttemptMs = dateNow();
-      notify();
-      const samples: Sample[] = [];
-      for (let i = 0; i < SAMPLES_PER_SYNC; i += 1) {
-        const sample = await takeSample();
-        if (sample !== null) samples.push(sample);
+      try {
+        lastAttemptMs = dateNow();
+        notify();
+        const samples: Sample[] = [];
+        for (let i = 0; i < SAMPLES_PER_SYNC; i += 1) {
+          const sample = await takeSample();
+          if (sample !== null) samples.push(sample);
+        }
+        const best = bestSample(samples);
+        if (best !== null && mine.generation === generation) adopt(best);
+      } finally {
+        if (running === mine) running = null;
       }
-      const best = bestSample(samples);
-      if (best !== null && mine.generation === generation) adopt(best);
-      if (running === mine) running = null;
       notify();
     })();
     return mine.done;
