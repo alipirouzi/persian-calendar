@@ -232,14 +232,14 @@ describe('calendar panels', () => {
   });
 
   it('names the Today buttons, the grids and the section', () => {
-    expect(q('persian', '.mv-today').getAttribute('aria-label')).toBe('Go to this month');
+    expect(q('persian', '.mv-today').getAttribute('aria-label')).toBe('Today — go to this month');
     const table = q('gregorian', '.mv-grid');
     const labelId = table.getAttribute('aria-labelledby')!;
     expect(document.getElementById(labelId)?.textContent).toBe('March 2026');
     expect(document.getElementById('calendars')?.getAttribute('aria-label')).toBe('Calendars');
     lang = 'fa';
     panels.rerender();
-    expect(q('persian', '.mv-today').getAttribute('aria-label')).toBe('رفتن به ماه جاری');
+    expect(q('persian', '.mv-today').getAttribute('aria-label')).toBe('امروز — رفتن به ماه جاری');
     expect(document.getElementById('calendars')?.getAttribute('aria-label')).toBe('تقویم‌ها');
   });
 

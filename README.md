@@ -310,7 +310,7 @@ Inter and Cormorant Garamond and Vazirmatn, all under the SIL Open Font License.
   words, e.g. `'Today is' dddd`) and the digits (Latin or Persian), with a live preview.
   Settings are stored in `localStorage` under `settings.v1`; an unreadable value or an invalid
   field falls back to that field's default (`settings.v1` also holds the view and holiday
-  preferences). The Calendars & holidays group (views, sources, my holidays, Test connection) are described under Month views and holidays and Time source.
+  preferences). The Calendars & holidays group (views, sources, my holidays, Test connection) is described under Month views and holidays.
 - **Time source** — the clock, the today panel and the converter's Today take their time from `/api/time` on this site (best of three round trips, half the round trip credited to the server, offsets under 250 ms ignored), re-synced at load, on return after five minutes away and every six hours. Settings → Time shows where the time comes from and when it last synced, has a Test connection button, and can switch to this device's clock only. Unreachable or invalid answers keep the last good offset for up to 24 hours, then use the device clock. The today panel refreshes every minute from the clock's own frames, so it turns over at midnight (local and Tehran) even when the app is left open.
 - **Month views and holidays** — below the converter (so it stays above the fold on desktop) sit
   two month panels, Persian (open by default) and Gregorian (closed), each hideable in Settings.
@@ -367,6 +367,9 @@ current and next Persian year.
   **Check the dates against the official calendar before merging**: moon sighting can move a
   lunar holiday, and next year's dates may be provisional. Until a PR is merged the site keeps its
   previous data or its labelled estimates.
+- **Acceptance test** — PRs opened by the workflow with the default token do not trigger CI, so
+  `Site/tests/official-files.test.ts` (each file parses and every date is within a day of its
+  estimate) runs on `master` after merge, and locally on the PR branch.
 - **Repository setting** — opening the PR needs **Settings → Actions → General → Workflow
   permissions → "Allow GitHub Actions to create and approve pull requests"**. Without it the branch
   is pushed but the PR is not created.

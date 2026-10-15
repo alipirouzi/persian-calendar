@@ -132,7 +132,7 @@ export function setupCalendarPanels(deps: CalendarPanelsDeps): { rerender(): voi
     next.disabled = !grid.canGoNext;
     prev.setAttribute('aria-label', strings.prevMonth);
     next.setAttribute('aria-label', strings.nextMonth);
-    // The visible text is "Today" like the converter's button; the name says what this one does.
+    // The name starts with the visible "Today" (WCAG 2.5.3 Label in Name) and says what this one does.
     part<HTMLButtonElement>(side, '.mv-today').setAttribute('aria-label', strings.goToThisMonth);
 
     const head = part<HTMLTableRowElement>(side, 'thead tr');

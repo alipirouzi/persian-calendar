@@ -85,14 +85,22 @@ test.describe('with a fixed clock and the service worker blocked', () => {
   });
 });
 
-test('offline, the month view still renders with estimated holidays', async ({ page, context }) => {
-  await page.goto('/');
-  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
-  await page.reload();
-  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
-  await context.setOffline(true);
-  await page.reload();
-  await expect(persian(page).locator('.mv-day').first()).toBeVisible();
-  await expect(persian(page).locator('.mv-holidays li').first()).toBeVisible();
-  await context.setOffline(false);
+test.describe('offline, with the service worker active', () => {
+  test.use({ timezoneId: 'Asia/Tehran' });
+
+  // sw.js returns early for /api/time, so the route still pins the clock to Nowruz.
+  // Nothing is routed for holidays: there is no official file, so only estimates can show.
+  test('offline, the month view still renders with estimated holidays', async ({ page, context }) => {
+    await fixTime(page);
+    await page.goto('/');
+    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+    await page.reload();
+    await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+    await context.setOffline(true);
+    await page.reload();
+    await expect(persian(page).locator('.mv-title')).toHaveText('Farvardin 1405');
+    await expect(persian(page).locator('.mv-holidays li', { hasText: 'estimated' }).first()).toBeVisible();
+    await expect(persian(page).locator('.mv-day.holiday')).not.toHaveCount(0);
+    await context.setOffline(false);
+  });
 });
