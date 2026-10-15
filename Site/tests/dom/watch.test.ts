@@ -10,6 +10,8 @@ const BODY = PAGE.slice(PAGE.indexOf('<body>') + 6, PAGE.indexOf('</body>')).rep
 let frames: FrameRequestCallback[]; let now: Date; let face: FaceId; let lang: Lang; let watch: Watch | undefined;
 let hidden = false;
 const runFrame = () => { const f = frames; frames = []; for (const cb of f) cb(0); };
+const fadeEnd = (target: Element, propertyName = 'opacity') =>
+  target.dispatchEvent(Object.assign(new Event('transitionend', { bubbles: true }), { propertyName }));
 const second = () => document.querySelector('#hand-second')!.getAttribute('transform');
 
 beforeEach(() => {
@@ -65,7 +67,8 @@ describe('watch driver', () => {
     expect(toggle.textContent).toBe('Show time');
     expect(document.getElementById('watch-digital')!.textContent).toBe('10:30');
     clickOn(toggle);
-    document.getElementById('watch-box')!.dispatchEvent(new Event('transitionend'));
+    // Fix round 1 mechanics: the close now waits for the movement SVG's own opacity transition.
+    fadeEnd(document.querySelector('#movement-mount svg')!);
     expect(document.querySelector('#movement-mount svg')).toBeNull();
     expect(document.activeElement).toBe(toggle);
   });
@@ -118,6 +121,78 @@ describe('watch driver', () => {
     watch!.rerender();
     expect(document.querySelector('#movement-mount svg')!.getAttribute('aria-label')).toBe(STRINGS.fa.movementLabel);
     expect(document.getElementById('movement-toggle')!.textContent).toBe('نمایش ساعت');
+  });
+
+  it('ignores transitions other than the movement fading out', () => {
+    make();
+    const toggle = document.getElementById('movement-toggle')!;
+    clickOn(toggle);
+    clickOn(toggle);
+    const svg = document.querySelector('#movement-mount svg')!;
+    fadeEnd(svg.querySelector('[data-part="balance"]')!);       // a child's transition
+    fadeEnd(document.querySelector('#clock-mount svg')!);       // the dial fading back
+    fadeEnd(svg, 'transform');                                   // the movement's other property
+    expect(document.querySelector('#movement-mount svg')).toBe(svg);
+  });
+
+  it('tears the movement down after the fade even if no transitionend arrives', () => {
+    make();
+    const toggle = document.getElementById('movement-toggle')!;
+    clickOn(toggle);
+    clickOn(toggle);
+    vi.advanceTimersByTime(1000);
+    expect(document.querySelector('#movement-mount svg')).not.toBeNull();
+    vi.advanceTimersByTime(200);
+    expect(document.querySelector('#movement-mount svg')).toBeNull();
+    expect((document.getElementById('movement-mount') as HTMLElement).hidden).toBe(true);
+  });
+
+  it('reopening during the fade keeps the movement', () => {
+    make();
+    const toggle = document.getElementById('movement-toggle')!;
+    clickOn(toggle);
+    clickOn(toggle);
+    const svg = document.querySelector('#movement-mount svg')!;
+    clickOn(toggle);
+    vi.advanceTimersByTime(2000);
+    fadeEnd(svg);
+    expect(document.querySelector('#movement-mount svg')).toBe(svg);
+  });
+
+  it('keeps drawing every frame while the movement fades out', () => {
+    const onTick = make();
+    const toggle = document.getElementById('movement-toggle')!;
+    clickOn(toggle);
+    clickOn(toggle);
+    onTick.mockClear();
+    runFrame(); runFrame();
+    expect(onTick).toHaveBeenCalledTimes(2);
+  });
+
+  it('a reduced-motion change while hidden does not restart the loop', () => {
+    let onChange: (() => void) | undefined;
+    let reduce = false;
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: () => ({
+        get matches() { return reduce; },
+        addEventListener: (_: string, cb: () => void) => { onChange = cb; },
+        removeEventListener: () => {},
+      }),
+    });
+    const onTick = make();
+    hidden = true; document.dispatchEvent(new Event('visibilitychange'));
+    onTick.mockClear();
+    reduce = true; onChange!();
+    vi.advanceTimersByTime(3000);
+    expect(onTick).not.toHaveBeenCalled();
+    expect(frames).toHaveLength(0);
+    hidden = false; document.dispatchEvent(new Event('visibilitychange'));
+    expect(onTick).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1000);
+    expect(onTick).toHaveBeenCalledTimes(2);
+    reduce = false; onChange!();                                  // visible: switches straight back to rAF
+    expect(frames).toHaveLength(1);
   });
 
   it('setFace with the same face changes nothing', () => {

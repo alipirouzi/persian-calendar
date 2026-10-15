@@ -36,6 +36,7 @@ main {
     top: 0;
     height: 100dvh;
     display: grid;
+    align-content: center;
     align-content: safe center;
     justify-content: center;
     justify-items: center;

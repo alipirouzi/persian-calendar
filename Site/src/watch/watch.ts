@@ -2,7 +2,7 @@ import { formatTemplate, STRINGS, type Lang } from '../i18n/strings';
 import { createClassic } from './classic';
 import type { Face, FaceId } from './face';
 import { createFullBleed } from './full-bleed';
-import { hhmm, msSinceLocalMidnight, watchState } from './movement-model';
+import { BEAT_MS, hhmm, msSinceLocalMidnight, watchState } from './movement-model';
 import { createMovementView, type MovementView } from './movement-view';
 
 export interface WatchOptions {
@@ -27,6 +27,8 @@ const FACES: Readonly<Record<FaceId, (mount: HTMLElement) => Face>> = {
 };
 /** Only Full bleed has a movement behind it; Classic is the plain clock. */
 const HAS_MOVEMENT: Readonly<Record<FaceId, boolean>> = { fullbleed: true, classic: false };
+/** The CSS fade is 0.9 s; if its transitionend never arrives, tear down a little after. */
+const CLOSE_FALLBACK_MS = 1_100;
 
 /**
  * Drives the watch: one face, the optional movement behind it, and the Show movement toggle.
@@ -50,6 +52,7 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
   let lastBeat = Number.NaN;
   let rafId = 0;
   let intervalId = 0;
+  let closeTimer = 0;
 
   const relabel = (date: Date): void => {
     const lang = getLang();
@@ -67,21 +70,23 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
 
   const render = (): void => {
     const date = now();
-    const state = watchState(msSinceLocalMidnight(date), reduced.matches);
+    const ms = msSinceLocalMidnight(date);
+    const state = watchState(ms, reduced.matches);
     face.render(state);
     if (movement) {
       movement.render(state);
       digital.textContent = hhmm(date);
     }
     relabel(date);
-    lastBeat = state.beat;
+    lastBeat = Math.floor(ms / BEAT_MS);
     onTick?.(date);
   };
 
+  // While the movement is mounted (open, or still fading out) it swings, so draw every frame;
+  // the dial alone only changes on a beat. rAF only runs without reduced motion.
   const frame = (): void => {
     rafId = requestAnimationFrame(frame);
-    const state = watchState(msSinceLocalMidnight(now()), false);
-    if (!open && state.beat === lastBeat) return;
+    if (!movement && Math.floor(msSinceLocalMidnight(now()) / BEAT_MS) === lastBeat) return;
     render();
   };
 
@@ -99,13 +104,23 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
     else rafId = requestAnimationFrame(frame);
   };
 
+  const cancelClose = (): void => {
+    box.removeEventListener('transitionend', onCloseEnd);
+    window.clearTimeout(closeTimer);
+  };
+
   const teardownMovement = (): void => {
-    box.removeEventListener('transitionend', teardownMovement);
+    cancelClose();
     movement?.destroy();
     movement = null;
     movementMount.hidden = true;
-    digital.hidden = true;
+    digital.textContent = '';
   };
+
+  /** Only the movement's own fade-out ends the close; the dial's and children's transitions don't. */
+  function onCloseEnd(event: Event): void {
+    if ((event as TransitionEvent).propertyName === 'opacity' && event.target === movementMount.firstElementChild) teardownMovement();
+  }
 
   const syncToggle = (): void => {
     const strings = STRINGS[getLang()];
@@ -118,10 +133,9 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
   const setOpen = (next: boolean, immediate: boolean): void => {
     open = next;
     if (open) {
-      box.removeEventListener('transitionend', teardownMovement);
+      cancelClose();
       movement ??= createMovementView(movementMount, getLang);
       movementMount.hidden = false;
-      digital.hidden = false;
       // Commit the hidden start state first, so adding the class runs the fade-in.
       void movementMount.getBoundingClientRect();
       box.classList.add('is-movement');
@@ -129,7 +143,10 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
     } else {
       box.classList.remove('is-movement');
       if (reduced.matches || immediate) teardownMovement();
-      else box.addEventListener('transitionend', teardownMovement, { once: true });
+      else {
+        box.addEventListener('transitionend', onCloseEnd);
+        closeTimer = window.setTimeout(teardownMovement, CLOSE_FALLBACK_MS);
+      }
     }
     syncToggle();
   };
@@ -146,9 +163,14 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
     else start();
   };
 
+  /** A hidden page stays stopped; the visible handler picks the right loop on return. */
+  const onMotionChange = (): void => {
+    if (!document.hidden) start();
+  };
+
   toggle.addEventListener('click', onToggle);
   document.addEventListener('visibilitychange', onVisibility);
-  reduced.addEventListener('change', start);
+  reduced.addEventListener('change', onMotionChange);
   nameFace();
   syncToggle();
   start();
@@ -175,7 +197,7 @@ export function createWatch(section: HTMLElement, { now, onTick, getFace, getLan
       stop();
       toggle.removeEventListener('click', onToggle);
       document.removeEventListener('visibilitychange', onVisibility);
-      reduced.removeEventListener('change', start);
+      reduced.removeEventListener('change', onMotionChange);
       teardownMovement();
       face.destroy();
     },

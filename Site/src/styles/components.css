@@ -327,17 +327,23 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
   transition: opacity .9s var(--ease), transform .9s var(--ease);
 }
 #watch-box.is-movement #movement-mount svg { opacity: 1; transform: none; }
-/* The digits sit just under the square, over the gap above the toggle. */
+/* The digits sit just under the square. Their line is reserved whenever the face has a
+   movement, so neither the dial nor the toggle moves on Show movement; they fade with it. */
 #watch-digital {
   position: absolute;
   inset-block-start: 100%;
   inset-inline: 0;
   text-align: center;
-  font: 800 clamp(2rem, 1.4rem + 2vw, 3rem) var(--font-ui);
+  font: 800 clamp(2rem, 1.4rem + 2vw, 3rem) / 1.2 var(--font-ui);
   font-feature-settings: "lnum";
-  line-height: 1.2;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .9s var(--ease), visibility .9s;
 }
-#watch-box:has(#watch-digital:not([hidden])) { margin-block-end: calc(clamp(2rem, 1.4rem + 2vw, 3rem) * 1.2); }
+#watch-box.is-movement #watch-digital { opacity: 1; visibility: visible; }
+#clock-section:has(#movement-toggle:not([hidden])) #watch-box {
+  margin-block-end: calc(clamp(2rem, 1.4rem + 2vw, 3rem) * 1.2);
+}
 #movement-toggle {
   background: none; border: 1px solid var(--control-border); color: var(--text);
   border-radius: 999px; padding: 0.25rem 0.8rem; cursor: pointer; font: inherit; font-size: 0.85rem;
@@ -347,7 +353,9 @@ legend { display: flex; align-items: center; gap: 0.5rem; }
 /* Landscape phones: keep the today panel reachable without scrolling past the dial. */
 @media (max-height: 480px) { #watch-box { width: min(60vh, 92vw); } }
 /* Wide screens: the watch fills the sticky left half (see base.css for the columns). */
-@media (min-width: 1024px) { #watch-box { width: min(40vw, 72vh); } }
+/* Wide screens: the watch fills the sticky left half (see base.css for the columns), but never
+   so large that the column (digits, toggle, today lines) overflows a short viewport. */
+@media (min-width: 1024px) { #watch-box { width: min(40vw, 72vh, calc(100dvh - 22rem)); } }
 
 @media (max-width: 560px) {
   #converter-form { flex-direction: column; align-items: center; gap: 1.1rem; }

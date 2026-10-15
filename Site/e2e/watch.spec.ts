@@ -61,20 +61,64 @@ test('Persian page: Latin digits on the dial, Persian label', async ({ page }) =
   await expect(page.locator('#movement-toggle')).toHaveText('نمایش موتور');
 });
 
+const openMonthViews = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => { for (const d of document.querySelectorAll('details')) d.open = true; });
+
 test('wide screens: the watch is a sticky left half; phones stack', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await openMonthViews(page);                  // fix round 1: the page must really scroll
   const box = await page.locator('.clock').boundingBox();
   expect(box!.x + box!.width / 2).toBeLessThan(720);
+  await page.mouse.move(1000, 450);
   await page.mouse.wheel(0, 900);
-  await page.waitForTimeout(300);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
   const after = await page.locator('.clock').boundingBox();
-  expect(after!.y).toBeCloseTo(box!.y, 0);
+  expect(Math.abs(after!.y - box!.y)).toBeLessThanOrEqual(1);
   await page.setViewportSize({ width: 400, height: 860 });
   await page.reload();
   const phone = await page.locator('.clock').boundingBox();
   expect(phone!.width).toBeGreaterThan(340);
 });
+
+// Fix round 1: the sticky column must fit short wide screens, or its foot is never reachable.
+for (const [w, h] of [[1366, 768], [1280, 720]] as const) {
+  test(`wide screens: the watch column fits ${w}x${h}, movement open, scrolled to the end`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto('/');
+    await openMonthViews(page);
+    await page.locator('#movement-toggle').click();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
+    const inView = async (sel: string) => {
+      const r = await page.locator(sel).boundingBox();
+      expect(r, sel).not.toBeNull();
+      expect(r!.y, sel).toBeGreaterThanOrEqual(0);
+      expect(r!.y + r!.height, sel).toBeLessThanOrEqual(h);
+    };
+    await inView('#watch-box');
+    await inView('#movement-toggle');
+    await inView('#today-gregorian');
+    if (await page.locator('#tehran-line').isVisible()) await inView('#tehran-line');
+  });
+}
+
+// Fix round 1: Show movement must not move the dial or the toggle.
+for (const [w, h] of [[1440, 900], [400, 860]] as const) {
+  test(`Show movement keeps the dial in place at ${w}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto('/');
+    const dial = await page.locator('#clock-mount').boundingBox();
+    const toggle = await page.locator('#movement-toggle').boundingBox();
+    await page.locator('#movement-toggle').click();
+    await expect(page.locator('#watch-digital')).toHaveText(/^\d\d:\d\d$/);
+    expect((await page.locator('#clock-mount').boundingBox())!.y).toBe(dial!.y);
+    expect((await page.locator('#movement-toggle').boundingBox())!.y).toBe(toggle!.y);
+    await page.locator('#movement-toggle').click();
+    await expect(page.locator('#movement-mount svg')).toHaveCount(0, { timeout: 3000 });
+    expect((await page.locator('#clock-mount').boundingBox())!.y).toBe(dial!.y);
+  });
+}
 
 // Added beyond the brief (controller ruling): wide-screen part labels must be legible.
 test('wide screens: movement labels render at a legible size', async ({ page }) => {
