@@ -83,17 +83,20 @@ describe('time settings', () => {
     expect(text('set-time-status')).toBe('Syncing…');
   });
 
-  it('runs a test, disabling the button meanwhile, and reports the result', async () => {
+  it('runs a test, marking the button aria-disabled meanwhile, and reports the result', async () => {
     let answer: (result: ProbeResult) => void = () => {};
     probe.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
     const button = byId<HTMLButtonElement>('set-time-test');
 
     clickOn(button);
-    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.disabled).toBe(false);
     expect(text('set-time-test-result')).toBe('Testing…');
+    clickOn(button);
+    expect(probe).toHaveBeenCalledTimes(1);
 
     answer({ ok: true, rttMs: 84, offsetMs: 300 });
-    await vi.waitFor(() => { expect(button.disabled).toBe(false); });
+    await vi.waitFor(() => { expect(button.hasAttribute('aria-disabled')).toBe(false); });
     expect(text('set-time-test-result')).toBe('OK · 84 ms · device 0.3 s slow');
   });
 
@@ -110,12 +113,22 @@ describe('time settings', () => {
     expect(text('set-time-test-result')).toBe('');
   });
 
+  it('keeps "Testing…" when the dialog reopens mid-test', async () => {
+    let answer: (result: ProbeResult) => void = () => {};
+    probe.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+    clickOn(byId('set-time-test'));
+    clickOn(byId('settings-toggle'));
+    expect(text('set-time-test-result')).toBe('Testing…');
+    answer({ ok: false });
+    await vi.waitFor(() => { expect(text('set-time-test-result')).toBe('Unreachable'); });
+  });
+
   it('re-renders the status and the last result in the new language', async () => {
     clickOn(byId('set-time-test'));
     await vi.waitFor(() => { expect(text('set-time-test-result')).toMatch(/^OK/); });
     lang = 'fa';
     panel.rerender();
-    expect(text('set-time-status')).toBe('همگام نشد — ساعت همین دستگاه');
+    expect(text('set-time-status')).toBe('همگام نشد — از ساعت همین دستگاه استفاده می‌شود');
     expect(text('set-time-test-result')).toBe('برقرار · ۸۴ میلی‌ثانیه · ساعت دستگاه دقیق است');
   });
 });

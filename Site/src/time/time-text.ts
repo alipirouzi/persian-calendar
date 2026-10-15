@@ -10,7 +10,8 @@ const seconds = (ms: number, lang: Lang): string => {
 /** offset = server − device, so a positive offset means the device is behind. */
 export function driftText(offsetMs: number, lang: Lang): string {
   const strings = STRINGS[lang];
-  if (offsetMs === 0) return strings.driftNone;
+  // Below 50 ms the one-decimal value would read 0.0, so call it accurate.
+  if (Math.abs(offsetMs) < 50) return strings.driftNone;
   const template = offsetMs > 0 ? strings.driftSlow : strings.driftFast;
   return formatTemplate(template, { s: seconds(offsetMs, lang) }, lang);
 }

@@ -39,7 +39,8 @@ export function setupTimeSettings({ store, time, getLang }: Deps): { rerender: (
 
   toggle.addEventListener('click', () => {
     source.value = store.get().time.source;
-    lastResult = null;
+    // A test still in flight keeps showing "Testing…" rather than blank and then a result.
+    if (lastResult !== 'testing') lastResult = null;
     renderResult();
     renderStatus();
   });
@@ -47,12 +48,14 @@ export function setupTimeSettings({ store, time, getLang }: Deps): { rerender: (
     store.update((s) => ({ ...s, time: { source: source.value as TimeSourceSetting } }));
   });
   testButton.addEventListener('click', () => {
-    testButton.disabled = true;
+    // aria-disabled, not disabled: a disabled button would drop focus inside the modal.
+    if (lastResult === 'testing') return;
+    testButton.setAttribute('aria-disabled', 'true');
     lastResult = 'testing';
     renderResult();
     void time.probe().then((result) => {
       lastResult = result;
-      testButton.disabled = false;
+      testButton.removeAttribute('aria-disabled');
       renderResult();
     });
   });

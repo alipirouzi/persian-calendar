@@ -10,6 +10,12 @@ describe('driftText', () => {
     expect(driftText(-1_250, 'en')).toBe('device 1.3 s fast');
   });
 
+  it('calls anything that would round to 0.0 s accurate', () => {
+    expect(driftText(49, 'en')).toBe('device clock accurate');
+    expect(driftText(-49, 'en')).toBe('device clock accurate');
+    expect(driftText(50, 'en')).toBe('device 0.1 s slow');
+  });
+
   it('uses Persian digits and the Persian decimal separator', () => {
     expect(driftText(300, 'fa')).toBe('ساعت دستگاه ۰٫۳ ثانیه عقب است');
     expect(driftText(-1_250, 'fa')).toBe('ساعت دستگاه ۱٫۳ ثانیه جلو است');
@@ -28,7 +34,7 @@ describe('statusText', () => {
     expect(statusText({ kind: 'synced', atMs: AT, offsetMs: 300 }, 'en', 'UTC'))
       .toBe('Synced 14:02 · device 0.3 s slow');
     expect(statusText({ kind: 'synced', atMs: AT, offsetMs: 0 }, 'fa', 'UTC'))
-      .toBe('همگام‌شده ۱۴:۰۲ · ساعت دستگاه دقیق است');
+      .toBe('همگام‌شده در ۱۴:۰۲ · ساعت دستگاه دقیق است');
   });
 
   it('defaults to the viewer\'s time zone', () => {
