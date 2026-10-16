@@ -74,7 +74,7 @@ PersianCalendar/
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/api/holidays/ir/   official holiday data, one {year}.json per Persian year
-│   │                         (added by reviewed PRs from the crawler; absent until the first one merges)
+│   │                         (added and updated by reviewed PRs from the crawler)
 │   ├── tests/              Vitest (589 tests at 100% coverage, incl. .NET parity and the crawler;
 │   │                         tests/dom/ runs the DOM units under jsdom)
 │   └── e2e/                Playwright (172 tests, incl. converter-ux.spec.ts, watch.spec.ts,
