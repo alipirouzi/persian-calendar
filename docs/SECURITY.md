@@ -47,6 +47,7 @@ grew a backend.
 | Dedicated non-root deploy identity | user `deploy` (uid 1001); CI no longer authenticates as root | `id deploy` |
 | Deploy key cannot get a shell | `authorized_keys` entry is `command="/usr/local/bin/time-app-deploy",restrict` — `restrict` disables pty, port/agent/X11 forwarding, and user rc | verified: a request for `whoami` and a request for `cat /etc/shadow` both ran the deploy script instead and leaked nothing |
 | Deploy credentials never in the repo | `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS` exist only as GitHub Actions secrets in the branch-restricted `production` environment (no repo-scoped copies remain); the private key was generated, installed, and shredded from local disk in one session and never echoed | `gh secret list --env production` / empty `gh secret list`, 2026-07-31 |
+| Crawler PR token least-privilege | `HOLIDAYS_PR_TOKEN` is a repository secret holding a fine-grained PAT scoped to this repo only, with Contents and Pull requests read/write; used only by the `create-pull-request` step, never persisted to `.git/config` | `gh secret list`, `.github/workflows/holidays-ir.yml`, 2026-10-16 |
 | Host key pinning in CI | `DEPLOY_KNOWN_HOSTS` is pre-seeded, so a rebuilt or spoofed host fails the deploy instead of being trusted | `.github/workflows/ci.yml` |
 
 ### Network security (CC6.6, CC6.7)

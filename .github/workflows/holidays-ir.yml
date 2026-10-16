@@ -40,6 +40,8 @@ jobs:
         working-directory: Site
       - uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
+          # A PAT, not GITHUB_TOKEN: PRs opened with GITHUB_TOKEN don't trigger CI.
+          token: ${{ secrets.HOLIDAYS_PR_TOKEN }}
           branch: holidays/ir-update
           delete-branch: true
           add-paths: Site/public/api/holidays/ir/*.json

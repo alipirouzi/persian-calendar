@@ -387,6 +387,8 @@ current and next Persian year.
   any of the 16 lunar holidays is skipped with a workflow warning, and the existing file is kept.
 - **Pull request** — only a change in the holiday list writes a file (the `fetched` date alone does
   not), and then `peter-evans/create-pull-request@v7` opens a PR on the branch `holidays/ir-update`.
+  It authenticates with the repository secret `HOLIDAYS_PR_TOKEN`, a fine-grained PAT scoped to this
+  repo (Contents and Pull requests: read and write); a PR opened with `GITHUB_TOKEN` would not trigger CI.
   **Check the dates against the official calendar before merging**: moon sighting can move a
   lunar holiday, and next year's dates may be provisional. Until a PR is merged the site keeps its
   previous data or its labelled estimates.
