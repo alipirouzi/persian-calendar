@@ -89,9 +89,11 @@ test.describe('offline, with the service worker active', () => {
   test.use({ timezoneId: 'Asia/Tehran' });
 
   // sw.js returns early for /api/time, so the route still pins the clock to Nowruz.
-  // Nothing is routed for holidays: there is no official file, so only estimates can show.
+  // The official files are hidden so only estimates can show. context.route also
+  // intercepts the service worker's own fetches; page.route would not.
   test('offline, the month view still renders with estimated holidays', async ({ page, context }) => {
     await fixTime(page);
+    await context.route('**/api/holidays/ir/*.json', (route) => route.fulfill({ status: 404, body: '' }));
     await page.goto('/');
     await page.evaluate(async () => { await navigator.serviceWorker.ready; });
     await page.reload();
