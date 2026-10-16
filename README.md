@@ -74,7 +74,7 @@ PersianCalendar/
 │   │   │                     format.ts — weekday name + shareable copy sentence
 │   │   └── styles/         tokens.css, base.css, components.css
 │   ├── public/api/holidays/ir/   official holiday data, one {year}.json per Persian year
-│   │                         (added by reviewed PRs from the crawler; absent until the first one merges)
+│   │                         (added and updated by reviewed PRs from the crawler)
 │   ├── tests/              Vitest (589 tests at 100% coverage, incl. .NET parity and the crawler;
 │   │                         tests/dom/ runs the DOM units under jsdom)
 │   └── e2e/                Playwright (172 tests, incl. converter-ux.spec.ts, watch.spec.ts,
@@ -387,6 +387,8 @@ current and next Persian year.
   any of the 16 lunar holidays is skipped with a workflow warning, and the existing file is kept.
 - **Pull request** — only a change in the holiday list writes a file (the `fetched` date alone does
   not), and then `peter-evans/create-pull-request@v7` opens a PR on the branch `holidays/ir-update`.
+  It authenticates with the repository secret `HOLIDAYS_PR_TOKEN`, a fine-grained PAT scoped to this
+  repo (Contents and Pull requests: read and write); a PR opened with `GITHUB_TOKEN` would not trigger CI.
   **Check the dates against the official calendar before merging**: moon sighting can move a
   lunar holiday, and next year's dates may be provisional. Until a PR is merged the site keeps its
   previous data or its labelled estimates.
